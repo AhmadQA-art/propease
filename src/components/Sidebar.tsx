@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  Users,
+  Home,
   Building2,
   FileText,
   DollarSign,
@@ -16,7 +16,7 @@ import UserProfile from './UserProfile';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
-  { icon: Users, label: 'Residents', href: '/residents' },
+  { icon: Home, label: 'Rentals', href: '/rentals' },
   { icon: Building2, label: 'Properties', href: '/properties' },
   { icon: FileText, label: 'Documents', href: '/documents' },
   { icon: DollarSign, label: 'Finances', href: '/finances' },
@@ -34,7 +34,7 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-64 h-screen bg-[#F8F8F8] border-r border-gray-200 flex flex-col fixed left-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
+    <div className="w-64 h-screen bg-[#F8F8F8] flex flex-col fixed left-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
       <div className="p-6">
         <Link to="/" className="block">
           <img
@@ -54,7 +54,7 @@ export default function Sidebar() {
               className={`flex items-center px-4 py-3 rounded-lg group transition-colors ${
                 isActive(item.href)
                   ? 'bg-white text-[#2C3539] shadow-sm'
-                  : 'text-[#2C3539] hover:bg-white'
+                  : 'text-[#2C3539] hover:bg-white/60'
               }`}
             >
               <item.icon className="h-5 w-5 mr-3" />
@@ -67,7 +67,7 @@ export default function Sidebar() {
       <div className="p-4 border-t border-gray-200">
         <Link
           to="/help"
-          className="flex items-center px-4 py-3 rounded-lg text-[#2C3539] hover:bg-white mb-4"
+          className="flex items-center px-4 py-3 rounded-lg text-[#2C3539] hover:bg-white/60 mb-4"
         >
           <HelpCircle className="h-5 w-5 mr-3" />
           <span>Help Center</span>
