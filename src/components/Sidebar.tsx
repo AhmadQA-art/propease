@@ -34,13 +34,13 @@ export default function Sidebar() {
   };
 
   return (
-    <div className="w-64 h-screen bg-[#F8F8F8] border-r border-gray-200 flex flex-col fixed left-0 overflow-y-auto">
+    <div className="w-64 h-screen bg-[#F8F8F8] border-r border-gray-200 flex flex-col fixed left-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
       <div className="p-6">
         <Link to="/" className="block">
           <img
-            src="/logo.svg"
+            src="/Untitled_design__2_-removebg.png"
             alt="PropEase"
-            className="h-8"
+            className="h-12 w-auto"
           />
         </Link>
       </div>
