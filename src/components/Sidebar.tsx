@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Home,
-  Building2,
   FileText,
   DollarSign,
   CreditCard,
@@ -19,13 +18,12 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
   { icon: Home, label: 'Rentals', href: '/rentals' },
   { icon: FileSignature, label: 'Leases', href: '/leases' },
-  { icon: Building2, label: 'Properties', href: '/properties' },
+  { icon: Wrench, label: 'Maintenance', href: '/maintenance' },
   { icon: FileText, label: 'Documents', href: '/documents' },
   { icon: DollarSign, label: 'Finances', href: '/finances' },
   { icon: CreditCard, label: 'Payments', href: '/payments' },
-  { icon: Users2, label: 'Team', href: '/team' },
+  { icon: Users2, label: 'People', href: '/people' },
   { icon: MessageSquare, label: 'Communications', href: '/communications' },
-  { icon: Wrench, label: 'Maintenance', href: '/maintenance' },
 ];
 
 export default function Sidebar() {

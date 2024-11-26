@@ -3,14 +3,13 @@ import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Dashboard from '../pages/Dashboard';
 import Rentals from '../pages/Rentals';
-import RentalDetailsPage from '../pages/RentalDetails.tsx';
+import RentalDetailsPage from '../pages/RentalDetails';
 import AddRentalForm from './AddRentalForm';
 import AddLeaseForm from './AddLeaseForm';
-import Properties from '../pages/Properties';
 import Documents from '../pages/Documents';
 import Finances from '../pages/Finances';
 import Payments from '../pages/Payments';
-import Team from '../pages/Team';
+import People from '../pages/People';
 import Communications from '../pages/Communications';
 import Maintenance from '../pages/Maintenance';
 import Leases from '../pages/Leases';
@@ -159,11 +158,10 @@ export default function Layout() {
                   />
                 } 
               />
-              <Route path="/properties" element={<Properties />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/finances" element={<Finances />} />
               <Route path="/payments" element={<Payments />} />
-              <Route path="/team" element={<Team />} />
+              <Route path="/people" element={<People />} />
               <Route path="/communications" element={<Communications />} />
               <Route path="/maintenance" element={<Maintenance />} />
               <Route path="/leases" element={<Leases leases={leases} />} />
