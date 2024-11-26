@@ -62,8 +62,8 @@ export default function Rentals({ rentals }: RentalsProps) {
         <div className="mb-2">
           <div className="flex items-center p-2">
             <div className="flex-1 text-sm font-medium text-[#6B7280]">Property</div>
-            <div className="px-4 min-w-[200px] text-sm font-medium text-[#6B7280]">Type</div>
-            <div className="px-4 min-w-[150px] text-sm font-medium text-[#6B7280]">Active Units</div>
+            <div className="flex items-center px-4 min-w-[200px] text-sm font-medium text-[#6B7280]">Type</div>
+            <div className="flex items-center px-4 min-w-[150px] justify-end text-sm font-medium text-[#6B7280]">Active Units</div>
             <div className="w-10"></div>
           </div>
         </div>

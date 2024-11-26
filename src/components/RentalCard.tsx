@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Building2, Warehouse, MapPin, MoreVertical } from 'lucide-react';
+import { Home, Building2, Warehouse, MapPin, DoorOpen } from 'lucide-react';
 import { RentalDetails } from '../types/rental';
 
 interface RentalCardProps {
@@ -18,9 +18,22 @@ const getPropertyTypeIcon = (type: RentalDetails['type']) => {
   }
 };
 
+const getPropertyLocation = (propertyName: string) => {
+  const locations = {
+    'Sunset Gardens': '742 Sunset Boulevard, Los Angeles, CA',
+    'Downtown Business Center': '100 Financial District, San Francisco, CA',
+    'Harbor View Apartments': '456 Ocean Drive, Miami Beach, FL',
+    'Innovation Hub': '789 Tech Park Way, Austin, TX',
+    'Green Valley Residences': '321 Mountain View Rd, Denver, CO',
+    'Retail Plaza': '567 Shopping Avenue, Chicago, IL'
+  };
+  return locations[propertyName] || '123 Example St, City, State';
+};
+
 export default function RentalCard({ rental, onClick }: RentalCardProps) {
   const PropertyTypeIcon = getPropertyTypeIcon(rental.type);
   const hasMaintenanceIssues = Math.random() < 0.3; // Mock data - replace with actual maintenance status
+  const location = getPropertyLocation(rental.propertyName);
 
   return (
     <div 
@@ -47,33 +60,26 @@ export default function RentalCard({ rental, onClick }: RentalCardProps) {
               )}
             </div>
             <div className="flex items-center text-xs text-[#6B7280] mt-1">
-              <MapPin className="w-3 h-3 mr-1" />
-              123 Example St, City, State
+              <MapPin className="w-4 h-4 mr-1" />
+              {location}
             </div>
           </div>
         </div>
 
         {/* Property Type */}
         <div className="flex items-center px-4 min-w-[200px]">
-          <PropertyTypeIcon className="w-4 h-4 text-[#6B7280] mr-2" />
+          <PropertyTypeIcon className="w-5 h-5 text-[#6B7280] mr-2" />
           <span className="text-sm text-[#2C3539] capitalize">{rental.type}</span>
         </div>
 
         {/* Active Units */}
-        <div className="flex items-center px-4 min-w-[150px]">
-          <span className="text-sm text-[#2C3539]">Unit {rental.unit}</span>
+        <div className="flex items-center px-4 min-w-[150px] justify-end">
+          <DoorOpen className="w-5 h-5 text-[#6B7280] mr-2" />
+          <span className="text-sm text-[#2C3539]">{rental.unit} unit{rental.unit !== 1 ? 's' : ''}</span>
         </div>
 
-        {/* Actions */}
-        <button 
-          className="p-2 hover:bg-gray-100 rounded-full"
-          onClick={(e) => {
-            e.stopPropagation();
-            // Add menu handling logic here
-          }}
-        >
-          <MoreVertical className="w-4 h-4 text-[#6B7280]" />
-        </button>
+        {/* Placeholder for alignment */}
+        <div className="w-10"></div>
       </div>
     </div>
   );

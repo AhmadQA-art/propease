@@ -10,6 +10,13 @@ export interface Property {
     isAvailable: boolean;
   }
   
+  export interface Resident {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+  }
+  
   export interface RentalDetails {
     id: string;
     propertyId: string;
@@ -20,10 +27,7 @@ export interface Property {
     endDate: string;
     rentAmount: number;
     paymentFrequency: 'monthly' | 'quarterly' | 'annually';
-    resident: {
-      name: string;
-      imageUrl: string;
-    };
+    resident: Resident;
     owner: string;
     manager: string;
     status: 'active' | 'pending' | 'expired';

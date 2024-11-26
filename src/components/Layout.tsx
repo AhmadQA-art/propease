@@ -14,6 +14,7 @@ import Communications from '../pages/Communications';
 import Maintenance from '../pages/Maintenance';
 import Leases from '../pages/Leases';
 import { NewRentalDetails, RentalDetails, Property } from '../types/rental';
+import { dummyRentals } from '../data/dummyRentals';
 
 // Mock properties data
 const mockProperties = [
@@ -36,51 +37,9 @@ const mockProperties = [
   }
 ];
 
-// Mock rentals data
-const mockRentals = [
-  {
-    id: 'R001',
-    propertyId: 'P001',
-    propertyName: 'Sunset Apartments',
-    unit: '206',
-    type: 'residential',
-    startDate: '2024-01-01',
-    endDate: '2024-12-31',
-    rentAmount: 2500,
-    paymentFrequency: 'monthly',
-    resident: {
-      name: 'John Doe',
-      imageUrl: 'https://i.pravatar.cc/150?u=john'
-    },
-    owner: 'Sarah Wilson',
-    manager: 'Mike Thompson',
-    status: 'active',
-    agreementFile: 'rental-agreement-r001.pdf'
-  },
-  {
-    id: 'R002',
-    propertyId: 'P001',
-    propertyName: 'Sunset Apartments',
-    unit: '204',
-    type: 'residential',
-    startDate: '2024-02-01',
-    endDate: '2024-08-31',
-    rentAmount: 2200,
-    paymentFrequency: 'monthly',
-    resident: {
-      name: 'Emma Johnson',
-      imageUrl: null
-    },
-    owner: 'Sarah Wilson',
-    manager: 'Mike Thompson',
-    status: 'pending',
-    agreementFile: null
-  }
-];
-
 export default function Layout() {
   const navigate = useNavigate();
-  const [rentals, setRentals] = React.useState(mockRentals);
+  const [rentals, setRentals] = React.useState(dummyRentals);
   const [leases, setLeases] = React.useState([]);
 
   const handleAddLease = (leaseData) => {
