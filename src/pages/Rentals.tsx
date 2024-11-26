@@ -105,38 +105,26 @@ export default function Rentals({ rentals }: RentalsProps) {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex gap-4 flex-1">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search rentals..."
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <select
-              className="pl-10 pr-8 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent appearance-none bg-white"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as 'all' | RentalDetails['status'])}
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="expired">Expired</option>
-            </select>
-          </div>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="flex-1 relative">
+          <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search leases..."
+            className="w-full pl-10 pr-4 h-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-        <button
+        <button 
           onClick={() => navigate('/rentals/add')}
-          className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+          className="h-10 flex items-center px-4 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-5 h-5 mr-2" />
           Add Rental
+        </button>
+        <button className="h-10 px-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <Filter className="w-5 h-5 text-[#2C3539]" />
         </button>
       </div>
 

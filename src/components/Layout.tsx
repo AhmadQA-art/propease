@@ -3,7 +3,7 @@ import { Routes, Route, useParams, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Dashboard from '../pages/Dashboard';
 import Rentals from '../pages/Rentals';
-import RentalDetailsPage from '../pages/RentalDetails';
+import RentalDetailsPage from '../pages/RentalDetails.tsx';
 import AddRentalForm from './AddRentalForm';
 import AddLeaseForm from './AddLeaseForm';
 import Properties from '../pages/Properties';
