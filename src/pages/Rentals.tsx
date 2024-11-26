@@ -1,30 +1,16 @@
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, User, Home, Clock, Plus } from 'lucide-react';
-import { format } from 'date-fns';
+import { Search, Filter, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RentalDetails } from '../types/rental';
+import RentalCard from '../components/RentalCard';
 
 interface RentalsProps {
   rentals: RentalDetails[];
 }
 
-const getStatusColor = (status: RentalDetails['status']) => {
-  switch (status) {
-    case 'active':
-      return 'bg-green-100 text-green-800';
-    case 'expired':
-      return 'bg-red-100 text-red-800';
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
 export default function Rentals({ rentals }: RentalsProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | RentalDetails['status']>('all');
 
   const filteredRentals = rentals.filter(rental => {
     const matchesSearch = 
@@ -32,13 +18,11 @@ export default function Rentals({ rentals }: RentalsProps) {
       rental.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rental.resident.name.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === 'all' || rental.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
+    return matchesSearch;
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-[#2C3539]">Rentals</h1>
@@ -73,84 +57,27 @@ export default function Rentals({ rentals }: RentalsProps) {
         </div>
       </div>
 
-      {/* Rentals List */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Property</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Resident</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Duration</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Next Payment</th>
-                <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filteredRentals.map((rental) => {
-                const nextPaymentDate = new Date();
-                nextPaymentDate.setDate(1);
-                nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
-                
-                return (
-                  <tr
-                    key={rental.id}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => navigate(`/rentals/${rental.id}`)}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <Home className="w-5 h-5 text-[#6B7280] mr-3" />
-                        <div>
-                          <div className="text-sm font-medium text-[#2C3539]">{rental.propertyName}</div>
-                          <div className="text-xs text-[#6B7280]">Unit {rental.unit}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        {rental.resident.imageUrl ? (
-                          <img
-                            src={rental.resident.imageUrl}
-                            alt={rental.resident.name}
-                            className="w-8 h-8 rounded-full mr-3 object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full mr-3 bg-gray-200 flex items-center justify-center">
-                            <User className="w-4 h-4 text-gray-500" />
-                          </div>
-                        )}
-                        <span className="text-sm text-[#2C3539]">{rental.resident.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <Clock className="w-4 h-4 text-[#6B7280] mr-2" />
-                        <div>
-                          <div className="text-sm text-[#2C3539]">
-                            {format(new Date(rental.startDate), 'MMM d, yyyy')} - {format(new Date(rental.endDate), 'MMM d, yyyy')}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <Calendar className="w-4 h-4 text-[#6B7280] mr-2" />
-                        <span className="text-sm text-[#2C3539]">
-                          {format(nextPaymentDate, 'MMM d, yyyy')}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(rental.status)}`}>
-                        {rental.status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <div>
+        {/* List Header */}
+        <div className="mb-2">
+          <div className="flex items-center p-2">
+            <div className="flex-1 text-sm font-medium text-[#6B7280]">Property</div>
+            <div className="px-4 min-w-[200px] text-sm font-medium text-[#6B7280]">Type</div>
+            <div className="px-4 min-w-[150px] text-sm font-medium text-[#6B7280]">Active Units</div>
+            <div className="w-10"></div>
+          </div>
+        </div>
+
+        {/* Rentals List */}
+        <div className="space-y-4">
+          {filteredRentals.map((rental) => (
+            <div key={rental.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all">
+              <RentalCard
+                rental={rental}
+                onClick={() => navigate(`/rentals/${rental.id}`)}
+              />
+            </div>
+          ))}
         </div>
       </div>
 
