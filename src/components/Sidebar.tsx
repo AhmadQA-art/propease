@@ -10,13 +10,15 @@ import {
   Users2,
   MessageSquare,
   Wrench,
-  HelpCircle
+  HelpCircle,
+  FileSignature
 } from 'lucide-react';
 import UserProfile from './UserProfile';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
   { icon: Home, label: 'Rentals', href: '/rentals' },
+  { icon: FileSignature, label: 'Leases', href: '/leases' },
   { icon: Building2, label: 'Properties', href: '/properties' },
   { icon: FileText, label: 'Documents', href: '/documents' },
   { icon: DollarSign, label: 'Finances', href: '/finances' },

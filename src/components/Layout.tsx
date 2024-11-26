@@ -4,7 +4,8 @@ import Sidebar from './Sidebar';
 import Dashboard from '../pages/Dashboard';
 import Rentals from '../pages/Rentals';
 import RentalDetailsPage from '../pages/RentalDetails';
-import AddRentalForm from './AddRentalForm'; 
+import AddRentalForm from './AddRentalForm';
+import AddLeaseForm from './AddLeaseForm';
 import Properties from '../pages/Properties';
 import Documents from '../pages/Documents';
 import Finances from '../pages/Finances';
@@ -12,7 +13,8 @@ import Payments from '../pages/Payments';
 import Team from '../pages/Team';
 import Communications from '../pages/Communications';
 import Maintenance from '../pages/Maintenance';
-import { NewRentalDetails } from '../types/rental';
+import Leases from '../pages/Leases';
+import { NewRentalDetails, RentalDetails, Property } from '../types/rental';
 
 // Mock properties data
 const mockProperties = [
@@ -74,55 +76,32 @@ const mockRentals = [
     manager: 'Mike Thompson',
     status: 'pending',
     agreementFile: null
-  },
-  {
-    id: 'R003',
-    propertyId: 'P002',
-    propertyName: 'Harbor View Complex',
-    unit: '512',
-    type: 'commercial',
-    startDate: '2023-06-01',
-    endDate: '2023-12-31',
-    rentAmount: 4500,
-    paymentFrequency: 'quarterly',
-    resident: {
-      name: 'Tech Solutions Inc.',
-      imageUrl: null
-    },
-    owner: 'Robert Chen',
-    manager: 'Lisa Parker',
-    status: 'expired',
-    agreementFile: 'rental-agreement-r003.pdf'
-  },
-  {
-    id: 'R004',
-    propertyId: 'P002',
-    propertyName: 'Harbor View Complex',
-    unit: '513',
-    type: 'commercial',
-    startDate: '2024-01-15',
-    endDate: '2025-01-14',
-    rentAmount: 5000,
-    paymentFrequency: 'monthly',
-    resident: {
-      name: 'Creative Studios Co.',
-      imageUrl: 'https://i.pravatar.cc/150?u=creative'
-    },
-    owner: 'Robert Chen',
-    manager: 'Lisa Parker',
-    status: 'active',
-    agreementFile: 'rental-agreement-r004.pdf'
   }
 ];
 
 export default function Layout() {
+  const navigate = useNavigate();
   const [rentals, setRentals] = React.useState(mockRentals);
+  const [leases, setLeases] = React.useState([]);
+
+  const handleAddLease = (leaseData) => {
+    const newLease = {
+      ...leaseData,
+      id: `L${String(leases.length + 1).padStart(3, '0')}`,
+      status: 'active' as const
+    };
+    setLeases([...leases, newLease]);
+  };
 
   const handleAddRental = (rental: NewRentalDetails) => {
     const newRental = {
       ...rental,
       id: `R${String(rentals.length + 1).padStart(3, '0')}`,
-      status: 'active' as const
+      status: 'active' as const,
+      resident: {
+        ...rental.resident,
+        imageUrl: rental.resident.imageUrl || null
+      }
     };
     setRentals([...rentals, newRental]);
   };
@@ -149,33 +128,36 @@ export default function Layout() {
           <div className="p-6">
             <Routes>
               <Route path="/" element={<Dashboard />} />
-              <Route 
-                path="/rentals" 
-                element={<Rentals rentals={rentals} />} 
-              />
+              <Route path="/rentals" element={<Rentals rentals={rentals} />} />
               <Route 
                 path="/rentals/add" 
-                element={<AddRentalForm 
-                  properties={mockProperties}
-                  onSubmit={handleAddRental}
-                  mode="add"
-                />} 
+                element={
+                  <AddRentalForm 
+                    properties={mockProperties}
+                    onSubmit={handleAddRental}
+                    mode="add"
+                  />
+                } 
               />
               <Route 
                 path="/rentals/:id/edit" 
-                element={<RentalFormWrapper 
-                  properties={mockProperties}
-                  rentals={rentals}
-                  onSubmit={handleEditRental}
-                />} 
+                element={
+                  <RentalFormWrapper 
+                    properties={mockProperties}
+                    rentals={rentals}
+                    onSubmit={handleEditRental}
+                  />
+                } 
               />
               <Route 
                 path="/rentals/:id" 
-                element={<RentalDetailsPageWrapper 
-                  rentals={rentals} 
-                  onEdit={handleEditRental} 
-                  onDelete={handleDeleteRental} 
-                />} 
+                element={
+                  <RentalDetailsPageWrapper 
+                    rentals={rentals} 
+                    onEdit={handleEditRental} 
+                    onDelete={handleDeleteRental} 
+                  />
+                } 
               />
               <Route path="/properties" element={<Properties />} />
               <Route path="/documents" element={<Documents />} />
@@ -184,6 +166,20 @@ export default function Layout() {
               <Route path="/team" element={<Team />} />
               <Route path="/communications" element={<Communications />} />
               <Route path="/maintenance" element={<Maintenance />} />
+              <Route path="/leases" element={<Leases leases={leases} />} />
+              <Route 
+                path="/leases/add" 
+                element={
+                  <AddLeaseForm 
+                    properties={mockProperties}
+                    onSubmit={(leaseData, rentalData) => {
+                      handleAddRental(rentalData);
+                      handleAddLease(leaseData);
+                      navigate('/leases');
+                    }}
+                  />
+                } 
+              />
             </Routes>
           </div>
         </div>
@@ -192,7 +188,19 @@ export default function Layout() {
   );
 }
 
-function RentalDetailsPageWrapper({ rentals, onEdit, onDelete }) {
+interface RentalDetailsWrapperProps {
+  rentals: RentalDetails[];
+  onEdit: (id: string, rental: NewRentalDetails) => void;
+  onDelete: (id: string) => void;
+}
+
+interface RentalFormWrapperProps {
+  properties: Property[];
+  rentals: RentalDetails[];
+  onSubmit: (id: string, rental: NewRentalDetails) => void;
+}
+
+function RentalDetailsPageWrapper({ rentals, onEdit, onDelete }: RentalDetailsWrapperProps) {
   const { id } = useParams();
   const rental = rentals.find(r => r.id === id);
 
@@ -205,7 +213,7 @@ function RentalDetailsPageWrapper({ rentals, onEdit, onDelete }) {
   );
 }
 
-function RentalFormWrapper({ properties, rentals, onSubmit }) {
+function RentalFormWrapper({ properties, rentals, onSubmit }: RentalFormWrapperProps) {
   const { id } = useParams();
   const navigate = useNavigate();
   const rental = rentals.find(r => r.id === id);
