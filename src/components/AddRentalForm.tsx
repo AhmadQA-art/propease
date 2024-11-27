@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import PersonSelect from './PersonSelect';
-import { NewRentalDetails, RentalDetails, Person } from '../types/rental';
+import { NewRentalDetails, RentalDetails, Person, Unit } from '../types/rental';
 
 interface AddRentalFormProps {
   onSubmit: (rental: Omit<RentalDetails, 'id' | 'status'>) => void;
@@ -21,18 +21,11 @@ export default function AddRentalForm({
 }: AddRentalFormProps) {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<Partial<Omit<RentalDetails, 'id' | 'status'>>>({
-    propertyId: '',
     propertyName: '',
     type: 'residential',
-    unit: '',
-    startDate: '',
-    endDate: '',
-    rentAmount: 0,
-    paymentFrequency: 'monthly',
-    resident: { id: '', name: '', email: '' },
     owner: null,
     manager: null,
-    agreementFile: null
+    units: [],
   });
 
   // Initialize form with existing data if in edit mode
@@ -42,18 +35,11 @@ export default function AddRentalForm({
       const selectedOwner = propertyOwners.find(o => o.id === initialData.owner?.id);
 
       setFormData({
-        propertyId: initialData.propertyId,
         propertyName: initialData.propertyName,
         type: initialData.type,
-        unit: initialData.unit,
-        startDate: initialData.startDate,
-        endDate: initialData.endDate,
-        rentAmount: initialData.rentAmount,
-        paymentFrequency: initialData.paymentFrequency,
-        resident: initialData.resident,
         owner: selectedOwner || null,
         manager: selectedManager || null,
-        agreementFile: initialData.agreementFile
+        units: initialData.units || [],
       });
     }
   }, [initialData, mode, propertyManagers, propertyOwners]);
@@ -62,6 +48,36 @@ export default function AddRentalForm({
     e.preventDefault();
     onSubmit(formData as Omit<RentalDetails, 'id' | 'status'>);
     navigate('/rentals');
+  };
+
+  const addUnit = () => {
+    setFormData(prev => ({
+      ...prev,
+      units: [
+        ...(prev.units || []),
+        {
+          name: '',
+          rentAmount: 0,
+          occupancyStatus: 'vacant' as const,
+        },
+      ],
+    }));
+  };
+
+  const updateUnit = (index: number, updatedUnit: Partial<Unit>) => {
+    setFormData(prev => ({
+      ...prev,
+      units: prev.units?.map((unit, i) => 
+        i === index ? { ...unit, ...updatedUnit } : unit
+      ) || [],
+    }));
+  };
+
+  const removeUnit = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      units: prev.units?.filter((_, i) => i !== index) || [],
+    }));
   };
 
   return (
@@ -85,21 +101,6 @@ export default function AddRentalForm({
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-[#2C3539] mb-4">General Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Property ID */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Property ID
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                value={formData.propertyId || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, propertyId: e.target.value }))}
-                placeholder="Enter property ID"
-                required
-              />
-            </div>
-
             {/* Property Name */}
             <div>
               <label className="block text-sm font-medium text-[#2C3539] mb-2">
@@ -131,128 +132,6 @@ export default function AddRentalForm({
               </select>
             </div>
 
-            {/* Unit */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Unit
-              </label>
-              <input
-                type="text"
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                value={formData.unit || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, unit: e.target.value }))}
-                placeholder="Enter unit number/name"
-                required
-              />
-            </div>
-
-            {/* Start Date */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Start Date
-              </label>
-              <input
-                type="date"
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                value={formData.startDate || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                required
-              />
-            </div>
-
-            {/* End Date */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                End Date
-              </label>
-              <input
-                type="date"
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                value={formData.endDate || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                required
-              />
-            </div>
-
-            {/* Rent Amount */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Rent Amount
-              </label>
-              <input
-                type="number"
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                value={formData.rentAmount || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, rentAmount: parseFloat(e.target.value) }))}
-                placeholder="Enter rent amount"
-                required
-                min="0"
-                step="0.01"
-              />
-            </div>
-
-            {/* Payment Frequency */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Payment Frequency
-              </label>
-              <select
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                value={formData.paymentFrequency}
-                onChange={(e) => setFormData(prev => ({ ...prev, paymentFrequency: e.target.value as 'monthly' | 'weekly' | 'yearly' }))}
-                required
-              >
-                <option value="monthly">Monthly</option>
-                <option value="weekly">Weekly</option>
-                <option value="yearly">Yearly</option>
-              </select>
-            </div>
-
-            {/* Resident Information */}
-            <div className="md:col-span-2">
-              <h3 className="text-md font-medium text-[#2C3539] mb-4">Resident Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                    Resident Name
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                    value={formData.resident?.name || ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      resident: { 
-                        ...prev.resident!, 
-                        name: e.target.value 
-                      } 
-                    }))}
-                    placeholder="Enter resident name"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                    Resident Email
-                  </label>
-                  <input
-                    type="email"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                    value={formData.resident?.email || ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      resident: { 
-                        ...prev.resident!, 
-                        email: e.target.value 
-                      } 
-                    }))}
-                    placeholder="Enter resident email"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
             {/* Property Manager */}
             <PersonSelect
               persons={propertyManagers}
@@ -270,24 +149,121 @@ export default function AddRentalForm({
               placeholder="Search for property owner..."
               label="Property Owner"
             />
+          </div>
+        </div>
 
-            {/* Agreement File */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Agreement File
-              </label>
-              <input
-                type="file"
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    setFormData(prev => ({ ...prev, agreementFile: file }));
-                  }
-                }}
-                accept=".pdf,.doc,.docx"
-              />
-            </div>
+        {/* Units Section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-[#2C3539]">Units</h2>
+            <button
+              type="button"
+              onClick={addUnit}
+              className="flex items-center px-4 py-2 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Unit
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {formData.units?.map((unit, index) => (
+              <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Unit Name */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                      Unit Name/Number
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
+                      value={unit.name}
+                      onChange={(e) => updateUnit(index, { name: e.target.value })}
+                      placeholder="e.g., Unit A1"
+                      required
+                    />
+                  </div>
+
+                  {/* Rent Amount */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                      Rent Amount
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
+                      value={unit.rentAmount}
+                      onChange={(e) => updateUnit(index, { rentAmount: parseFloat(e.target.value) })}
+                      placeholder="Enter rent amount"
+                      min="0"
+                      step="0.01"
+                      required
+                    />
+                  </div>
+
+                  {/* Occupancy Status */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                      Occupancy Status
+                    </label>
+                    <select
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
+                      value={unit.occupancyStatus}
+                      onChange={(e) => updateUnit(index, { 
+                        occupancyStatus: e.target.value as 'occupied' | 'vacant',
+                        resident: e.target.value === 'vacant' ? undefined : unit.resident
+                      })}
+                      required
+                    >
+                      <option value="vacant">Vacant</option>
+                      <option value="occupied">Occupied</option>
+                    </select>
+                  </div>
+
+                  {/* Resident Information (if occupied) */}
+                  {unit.occupancyStatus === 'occupied' && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                        Resident Name
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
+                        value={unit.resident?.name || ''}
+                        onChange={(e) => updateUnit(index, { 
+                          resident: { 
+                            id: unit.resident?.id || '', 
+                            name: e.target.value,
+                            email: unit.resident?.email || ''
+                          } 
+                        })}
+                        placeholder="Enter resident name"
+                        required={unit.occupancyStatus === 'occupied'}
+                      />
+                    </div>
+                  )}
+
+                  {/* Remove Unit Button */}
+                  <div className="flex items-center justify-end md:col-span-2 lg:col-span-4">
+                    <button
+                      type="button"
+                      onClick={() => removeUnit(index)}
+                      className="flex items-center px-3 py-1 text-sm text-red-600 hover:text-red-700 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Remove Unit
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {formData.units?.length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                No units added yet. Click "Add Unit" to add your first unit.
+              </div>
+            )}
           </div>
         </div>
 
