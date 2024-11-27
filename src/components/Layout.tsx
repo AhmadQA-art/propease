@@ -37,6 +37,19 @@ const mockProperties = [
   }
 ];
 
+// Mock data for property managers and owners
+const mockPropertyManagers = [
+  { id: '1', name: 'John Manager', email: 'john@example.com' },
+  { id: '2', name: 'Sarah Manager', email: 'sarah@example.com' },
+  { id: '3', name: 'Mike Manager', email: 'mike@example.com' },
+];
+
+const mockPropertyOwners = [
+  { id: '1', name: 'Alice Owner', email: 'alice@example.com' },
+  { id: '2', name: 'Bob Owner', email: 'bob@example.com' },
+  { id: '3', name: 'Charlie Owner', email: 'charlie@example.com' },
+];
+
 export default function Layout() {
   const navigate = useNavigate();
   const [rentals, setRentals] = React.useState(dummyRentals);
@@ -55,13 +68,10 @@ export default function Layout() {
     const newRental = {
       ...rental,
       id: `R${String(rentals.length + 1).padStart(3, '0')}`,
-      status: 'active' as const,
-      resident: {
-        ...rental.resident,
-        imageUrl: rental.resident.imageUrl || null
-      }
+      status: 'active' as const
     };
     setRentals([...rentals, newRental]);
+    navigate('/rentals');
   };
 
   const handleEditRental = (id: string, updatedRental: NewRentalDetails) => {
@@ -91,9 +101,10 @@ export default function Layout() {
                 path="/rentals/add" 
                 element={
                   <AddRentalForm 
-                    properties={mockProperties}
                     onSubmit={handleAddRental}
                     mode="add"
+                    propertyManagers={mockPropertyManagers}
+                    propertyOwners={mockPropertyOwners}
                   />
                 } 
               />
@@ -101,9 +112,10 @@ export default function Layout() {
                 path="/rentals/:id/edit" 
                 element={
                   <RentalFormWrapper 
-                    properties={mockProperties}
                     rentals={rentals}
                     onSubmit={handleEditRental}
+                    propertyManagers={mockPropertyManagers}
+                    propertyOwners={mockPropertyOwners}
                   />
                 } 
               />
@@ -152,9 +164,10 @@ interface RentalDetailsWrapperProps {
 }
 
 interface RentalFormWrapperProps {
-  properties: Property[];
   rentals: RentalDetails[];
   onSubmit: (id: string, rental: NewRentalDetails) => void;
+  propertyManagers: Person[];
+  propertyOwners: Person[];
 }
 
 function RentalDetailsPageWrapper({ rentals, onEdit, onDelete }: RentalDetailsWrapperProps) {
@@ -170,7 +183,7 @@ function RentalDetailsPageWrapper({ rentals, onEdit, onDelete }: RentalDetailsWr
   );
 }
 
-function RentalFormWrapper({ properties, rentals, onSubmit }: RentalFormWrapperProps) {
+function RentalFormWrapper({ rentals, onSubmit, propertyManagers, propertyOwners }: RentalFormWrapperProps) {
   const { id } = useParams();
   const navigate = useNavigate();
   const rental = rentals.find(r => r.id === id);
@@ -182,13 +195,14 @@ function RentalFormWrapper({ properties, rentals, onSubmit }: RentalFormWrapperP
 
   return (
     <AddRentalForm 
-      properties={properties}
       initialData={rental}
       onSubmit={(updatedRental) => {
         onSubmit(id, updatedRental);
         navigate('/rentals');
       }}
       mode="edit"
+      propertyManagers={propertyManagers}
+      propertyOwners={propertyOwners}
     />
   );
 }

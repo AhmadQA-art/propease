@@ -26,7 +26,7 @@ export default function UnitDetailsDrawer({ unit, isOpen, onClose }: UnitDetails
     : null;
 
   return (
-    <div className="absolute right-0 top-0 h-full w-96 bg-white shadow-lg z-50">
+    <div className="fixed right-0 top-0 h-screen w-96 bg-white shadow-lg z-50">
       {/* Header - Fixed */}
       <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 border-b bg-white z-10">
         <h2 className="text-lg font-semibold text-[#2C3539]">Unit Details</h2>
@@ -75,7 +75,6 @@ export default function UnitDetailsDrawer({ unit, isOpen, onClose }: UnitDetails
             <div className="space-y-2">
               <label className="text-sm text-[#6B7280]">Rent Amount</label>
               <div className="flex items-center space-x-2">
-                <BadgeDollarSign className="w-5 h-5 text-[#2C3539]" />
                 <span className="text-[#2C3539]">${unit.rentAmount.toLocaleString()}/month</span>
               </div>
             </div>

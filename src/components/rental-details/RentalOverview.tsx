@@ -1,6 +1,8 @@
-import React from 'react';
-import { Edit2, Building2, DoorOpen, UserCog, Users2, DollarSign, Home, PercentCircle, Image as ImageIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit2, Building2, DoorOpen, UserCog, Users2, DollarSign, Home, PercentCircle, Image as ImageIcon, MapPin, ClipboardList, FileText } from 'lucide-react';
 import { RentalDetails } from '../../types/rental';
+import AddTaskDrawer from './AddTaskDrawer';
+import AddApplicationDrawer from './AddApplicationDrawer';
 
 interface RentalOverviewProps {
   rental: RentalDetails;
@@ -8,6 +10,9 @@ interface RentalOverviewProps {
 }
 
 export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) {
+  const [isAddTaskDrawerOpen, setIsAddTaskDrawerOpen] = useState(false);
+  const [isAddApplicationDrawerOpen, setIsAddApplicationDrawerOpen] = useState(false);
+
   // Sample images - replace with actual data
   const propertyImages = [
     'https://images.unsplash.com/photo-1568605114967-8130f3a36994',
@@ -15,10 +20,50 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
     'https://images.unsplash.com/photo-1512917774080-9991f1c4c750'
   ];
 
+  const handleAddTask = (taskData: {
+    title: string;
+    description: string;
+    dueDate: string;
+    assignee: string;
+    owner: string;
+  }) => {
+    // TODO: Implement task creation logic
+    console.log('Create new task:', taskData);
+    setIsAddTaskDrawerOpen(false);
+  };
+
+  const handleAddApplication = (applicationData: {
+    applicant: {
+      name: string;
+      email: string;
+      phone: string;
+    };
+    desiredMoveIn: string;
+    income: number;
+  }) => {
+    // TODO: Implement application creation logic
+    console.log('Create new application:', applicationData);
+    setIsAddApplicationDrawerOpen(false);
+  };
+
   return (
     <div>
       {/* Action Buttons */}
-      <div className="flex justify-end -mt-1 mb-2">
+      <div className="flex justify-end items-center -mt-1 mb-2 space-x-2">
+        <button
+          onClick={() => setIsAddTaskDrawerOpen(true)}
+          className="flex items-center px-3 py-1.5 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
+          <span className="text-sm">Add Task</span>
+        </button>
+        <button
+          onClick={() => setIsAddApplicationDrawerOpen(true)}
+          className="flex items-center px-3 py-1.5 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          <FileText className="w-3.5 h-3.5 mr-1.5" />
+          <span className="text-sm">New Application</span>
+        </button>
         <button
           onClick={() => onEdit(rental.id)}
           className="flex items-center px-3 py-1.5 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -67,6 +112,13 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
                 <p>Property Type</p>
               </div>
               <p className="text-[#2C3539] font-medium mt-1 capitalize">{rental.type}</p>
+            </div>
+            <div className="col-span-2">
+              <div className="flex items-center space-x-2 text-sm text-[#6B7280]">
+                <MapPin className="w-4 h-4" />
+                <p>Location</p>
+              </div>
+              <p className="text-[#2C3539] font-medium mt-1">{rental.address}</p>
             </div>
           </div>
         </div>
@@ -122,6 +174,36 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
             ))}
           </div>
         </div>
+      )}
+
+      {/* Add Task Drawer */}
+      <AddTaskDrawer
+        isOpen={isAddTaskDrawerOpen}
+        onClose={() => setIsAddTaskDrawerOpen(false)}
+        onSubmit={handleAddTask}
+        users={[
+          { id: '1', name: 'John Doe', imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e' },
+          { id: '2', name: 'Jane Smith', imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80' }
+        ]}
+        currentUser={{ id: '1', name: 'John Doe', imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e' }}
+      />
+
+      {/* Add Application Drawer */}
+      <AddApplicationDrawer
+        isOpen={isAddApplicationDrawerOpen}
+        onClose={() => setIsAddApplicationDrawerOpen(false)}
+        onSubmit={handleAddApplication}
+      />
+
+      {/* Backdrop */}
+      {(isAddTaskDrawerOpen || isAddApplicationDrawerOpen) && (
+        <div 
+          className="fixed inset-0 bg-black/25 z-40"
+          onClick={() => {
+            setIsAddTaskDrawerOpen(false);
+            setIsAddApplicationDrawerOpen(false);
+          }}
+        />
       )}
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DoorOpen, Calendar, Wrench, User } from 'lucide-react';
+import { DoorOpen, Calendar, Wrench, User, Search } from 'lucide-react';
 import UnitDetailsDrawer from './UnitDetailsDrawer';
 import AddUnitForm from './AddUnitForm';
 
@@ -46,31 +46,50 @@ export default function RentalUnits() {
   const [selectedUnit, setSelectedUnit] = useState<typeof units[0] | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleAddUnit = (unitData: any) => {
     // TODO: Implement unit addition logic
     console.log('Adding new unit:', unitData);
   };
 
+  const filteredUnits = units.filter(unit => 
+    unit.number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    unit.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (unit.resident?.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="space-y-4">
+    <div className="h-full">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center p-4 bg-white">
         <div>
           <h2 className="text-lg font-semibold text-[#2C3539]">Units</h2>
           <p className="text-sm text-[#6B7280]">Manage your property units</p>
         </div>
-        <button 
-          onClick={() => setIsFormOpen(true)}
-          className="px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
-        >
-          Add Unit
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search units..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 h-9 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent text-sm"
+            />
+          </div>
+          <button 
+            onClick={() => setIsFormOpen(true)}
+            className="h-9 px-4 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors text-sm"
+          >
+            Add Unit
+          </button>
+        </div>
       </div>
 
       {/* Units List */}
-      <div className="grid gap-4">
-        {units.map((unit) => (
+      <div className="p-4 space-y-4">
+        {filteredUnits.map((unit) => (
           <div
             key={unit.id}
             onClick={() => {
@@ -135,6 +154,18 @@ export default function RentalUnits() {
           </div>
         ))}
       </div>
+
+      {/* Backdrop */}
+      {(isDrawerOpen || isFormOpen) && (
+        <div 
+          className="fixed inset-0 bg-black/25 z-40"
+          onClick={() => {
+            setIsDrawerOpen(false);
+            setIsFormOpen(false);
+            setSelectedUnit(null);
+          }}
+        />
+      )}
 
       {/* Unit Details Drawer */}
       <UnitDetailsDrawer
