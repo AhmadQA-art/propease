@@ -18,12 +18,11 @@ const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
   { icon: Home, label: 'Rentals', href: '/rentals' },
   { icon: FileSignature, label: 'Leases', href: '/leases' },
-  { icon: Wrench, label: 'Maintenance', href: '/maintenance' },
-  { icon: FileText, label: 'Documents', href: '/documents' },
-  { icon: DollarSign, label: 'Finances', href: '/finances' },
-  { icon: CreditCard, label: 'Payments', href: '/payments' },
   { icon: Users2, label: 'People', href: '/people' },
+  { icon: Wrench, label: 'Maintenance', href: '/maintenance' },
   { icon: MessageSquare, label: 'Communications', href: '/communications' },
+  { icon: CreditCard, label: 'Payments', href: '/payments' },
+  { icon: DollarSign, label: 'Finances', href: '/finances' },
 ];
 
 export default function Sidebar() {
@@ -35,7 +34,7 @@ export default function Sidebar() {
 
   return (
     <div className="w-64 h-screen bg-[#F8F8F8] flex flex-col fixed left-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-      <div className="p-6">
+      <div className="p-4">
         <Link to="/" className="block">
           <img
             src="/Untitled_design__2_-removebg.png"
