@@ -13,7 +13,7 @@ import People from '../pages/People';
 import Communications from '../pages/Communications';
 import Maintenance from '../pages/Maintenance';
 import Leases from '../pages/Leases';
-import { NewRentalDetails, RentalDetails, Property } from '../types/rental';
+import { NewRentalDetails, RentalDetails, Person } from '../types/rental';
 import { dummyRentals } from '../data/dummyRentals';
 
 // Mock properties data
@@ -91,8 +91,8 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-[#F8F8F8]">
       <Sidebar />
-      <div className="flex-1 ml-64 p-4 overflow-y-auto">
-        <div className="bg-white rounded-lg shadow-sm min-h-[calc(100vh-2rem)]">
+      <div className="flex-1 ml-64">
+        <div className="h-full bg-white">
           <div className="p-6">
             <Routes>
               <Route path="/" element={<Dashboard />} />
