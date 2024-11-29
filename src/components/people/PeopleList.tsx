@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, User, ChevronDown } from 'lucide-react';
+import { Search, Plus, User } from 'lucide-react';
 import { Person, PersonType } from '../../types/people';
 import PersonCard from './PersonCard';
 import AddPersonDialog from './AddPersonDialog';
@@ -64,8 +64,7 @@ export default function PeopleList({ people }: PeopleListProps) {
             className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Person
-            <ChevronDown className="w-4 h-4 ml-2" />
+            Add New
           </button>
 
           {isDropdownOpen && (
@@ -79,19 +78,19 @@ export default function PeopleList({ people }: PeopleListProps) {
                   onClick={() => handleAddPerson('team')}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
                 >
-                  Add Team Member
+                  Team Member
                 </button>
                 <button
                   onClick={() => handleAddPerson('tenant')}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
                 >
-                  Add Tenant
+                  Tenant
                 </button>
                 <button
                   onClick={() => handleAddPerson('vendor')}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
                 >
-                  Add Vendor
+                  Vendor
                 </button>
               </div>
             </>
