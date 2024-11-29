@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "update-build": "git fetch origin && git pull origin main && npm run build",
+    "deploy-view": "git fetch origin && git pull origin main && npm run build && npm run dev"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",

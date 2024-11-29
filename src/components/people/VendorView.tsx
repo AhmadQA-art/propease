@@ -1,81 +1,143 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Vendor } from '../../types/people';
-import { Star, Calendar, DollarSign, Activity, MapPin } from 'lucide-react';
+import { Star, Activity, Plus, Search, Filter } from 'lucide-react';
+import AddVendorDialog from './AddVendorDialog';
 
 interface VendorViewProps {
   vendors: Vendor[];
 }
 
 export default function VendorView({ vendors }: VendorViewProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedType, setSelectedType] = useState<string>('all');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
+
+  const handleTypeSelect = (type: string) => {
+    setSelectedType(type);
+    setIsFilterDropdownOpen(false);
+  };
+
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex-1 flex items-center gap-4">
+          <div className="flex-1 relative">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder="Search vendors..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] text-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="relative">
+            <button 
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Filter className="w-5 h-5 text-[#2C3539]" />
+            </button>
+            {isFilterDropdownOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsFilterDropdownOpen(false)}
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-20">
+                  <button
+                    onClick={() => handleTypeSelect('all')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                  >
+                    All Types
+                  </button>
+                  <button
+                    onClick={() => handleTypeSelect('plumbing')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                  >
+                    Plumbing
+                  </button>
+                  <button
+                    onClick={() => handleTypeSelect('electrical')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                  >
+                    Electrical
+                  </button>
+                  <button
+                    onClick={() => handleTypeSelect('hvac')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                  >
+                    HVAC
+                  </button>
+                  <button
+                    onClick={() => handleTypeSelect('cleaning')}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                  >
+                    Cleaning
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <button 
+          onClick={() => setIsAddVendorDialogOpen(true)}
+          className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Vendor
+        </button>
+      </div>
+
       {vendors.map((vendor) => (
-        <div key={vendor.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-start justify-between mb-6">
+        <div key={vendor.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="flex items-center justify-between">
             <div className="flex items-center">
               {vendor.imageUrl ? (
                 <img
                   src={vendor.imageUrl}
                   alt={vendor.name}
-                  className="w-16 h-16 rounded-lg object-cover"
+                  className="w-12 h-12 rounded-lg object-cover"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center">
-                  <Activity className="w-8 h-8 text-gray-500" />
+                <div className="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center">
+                  <Activity className="w-6 h-6 text-gray-500" />
                 </div>
               )}
               <div className="ml-4">
-                <h3 className="text-xl font-semibold text-[#2C3539]">{vendor.company}</h3>
-                <p className="text-[#6B7280]">{vendor.service}</p>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <Star className="w-5 h-5 text-yellow-400" />
-              <span className="ml-1 font-medium">{vendor.rating}/5</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <h4 className="text-sm font-medium text-[#6B7280] mb-2">Contact Information</h4>
-              <div className="space-y-2">
-                <p className="text-sm text-[#2C3539]">
-                  <span className="font-medium">Contact Person:</span> {vendor.name}
-                </p>
-                <p className="text-sm text-[#2C3539]">
-                  <span className="font-medium">Email:</span> {vendor.email}
-                </p>
-                <p className="text-sm text-[#2C3539]">
-                  <span className="font-medium">Phone:</span> {vendor.phone}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium text-[#6B7280] mb-2">Service History</h4>
-              <div className="space-y-2">
-                <div className="flex items-center text-sm text-[#2C3539]">
-                  <Activity className="w-4 h-4 mr-2 text-[#6B7280]" />
-                  {vendor.totalServices} Total Services
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-[#2C3539]">{vendor.company}</h3>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    vendor.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {vendor.status}
+                  </span>
                 </div>
-                <div className="flex items-center text-sm text-[#2C3539]">
-                  <Calendar className="w-4 h-4 mr-2 text-[#6B7280]" />
-                  Last Service: {new Date(vendor.lastService).toLocaleDateString()}
+                <div className="flex items-center gap-4 mt-1">
+                  <p className="text-[#6B7280]">{vendor.service}</p>
+                  <p className="text-[#6B7280]">{vendor.name}</p>
+                  <div className="flex items-center">
+                    <Star className="w-4 h-4 text-yellow-400" />
+                    <span className="ml-1 text-sm">{vendor.rating}/5</span>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <div>
-              <h4 className="text-sm font-medium text-[#6B7280] mb-2">Status</h4>
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                vendor.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}>
-                {vendor.status}
-              </span>
+            <div className="flex items-center text-sm text-[#6B7280]">
+              <Activity className="w-4 h-4 mr-1" />
+              {vendor.totalServices} Services
             </div>
           </div>
         </div>
       ))}
+      {/* Add Vendor Dialog */}
+      <AddVendorDialog
+        isOpen={isAddVendorDialogOpen}
+        onClose={() => setIsAddVendorDialogOpen(false)}
+      />
     </div>
   );
 }

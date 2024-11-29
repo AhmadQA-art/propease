@@ -1,65 +1,31 @@
 import React, { useState } from 'react';
 import { Dialog } from '@headlessui/react';
-import { X, User, Building2, Briefcase } from 'lucide-react';
-import { PersonType } from '../../types/people';
+import { X, Building2 } from 'lucide-react';
 
-interface AddPersonDialogProps {
+interface AddTenantDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  personType: PersonType | null;
 }
 
-interface FormData {
+interface TenantFormData {
   name: string;
   email: string;
-  role: string;
-  jobTitle: string;
+  phone: string;
 }
 
-export default function AddPersonDialog({ isOpen, onClose, personType }: AddPersonDialogProps) {
-  const [formData, setFormData] = useState<FormData>({
+export default function AddTenantDialog({ isOpen, onClose }: AddTenantDialogProps) {
+  const [formData, setFormData] = useState<TenantFormData>({
     name: '',
     email: '',
-    role: '',
-    jobTitle: '',
+    phone: '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Handle form submission
-    console.log('Form submitted:', formData);
+    console.log('Tenant form submitted:', formData);
     onClose();
   };
-
-  const getDialogTitle = () => {
-    switch (personType) {
-      case 'team':
-        return 'Add Team Member';
-      case 'tenant':
-        return 'Add Tenant';
-      case 'vendor':
-        return 'Add Vendor';
-      default:
-        return 'Add Person';
-    }
-  };
-
-  const getDialogIcon = () => {
-    switch (personType) {
-      case 'team':
-        return User;
-      case 'tenant':
-        return Building2;
-      case 'vendor':
-        return Briefcase;
-      default:
-        return User;
-    }
-  };
-
-  const DialogIcon = getDialogIcon();
-
-  if (!personType) return null;
 
   return (
     <Dialog
@@ -74,10 +40,10 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-[#2C3539] bg-opacity-10 flex items-center justify-center mr-3">
-                <DialogIcon className="w-5 h-5 text-[#2C3539]" />
+                <Building2 className="w-5 h-5 text-[#2C3539]" />
               </div>
               <Dialog.Title className="text-xl font-semibold text-[#2C3539]">
-                {getDialogTitle()}
+                Add New Tenant
               </Dialog.Title>
             </div>
             <button
@@ -99,7 +65,7 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                placeholder="Enter full name"
+                placeholder="Enter tenant's full name"
               />
             </div>
 
@@ -113,39 +79,21 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                placeholder="Enter email address"
+                placeholder="Enter tenant's email"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Role
-              </label>
-              <select
-                required
-                value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-              >
-                <option value="">Select role</option>
-                <option value="admin">Administrator</option>
-                <option value="manager">Property Manager</option>
-                <option value="maintenance">Maintenance Staff</option>
-                <option value="leasing">Leasing Agent</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Job Title
+                Phone
               </label>
               <input
-                type="text"
+                type="tel"
                 required
-                value={formData.jobTitle}
-                onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                placeholder="Enter job title"
+                placeholder="Enter tenant's phone number"
               />
             </div>
 
@@ -161,7 +109,7 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
                 type="submit"
                 className="px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors text-sm font-medium"
               >
-                {personType === 'team' ? 'Send Invitation' : 'Add Person'}
+                Add Tenant
               </button>
             </div>
           </form>

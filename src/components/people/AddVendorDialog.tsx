@@ -1,65 +1,49 @@
 import React, { useState } from 'react';
 import { Dialog } from '@headlessui/react';
-import { X, User, Building2, Briefcase } from 'lucide-react';
-import { PersonType } from '../../types/people';
+import { X, Building2 } from 'lucide-react';
 
-interface AddPersonDialogProps {
+interface AddVendorDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  personType: PersonType | null;
 }
 
-interface FormData {
-  name: string;
+interface VendorFormData {
+  vendorName: string;
+  vendorType: string;
+  contactPersonName: string;
   email: string;
-  role: string;
-  jobTitle: string;
+  phone: string;
+  status: 'active' | 'inactive' | 'pending';
 }
 
-export default function AddPersonDialog({ isOpen, onClose, personType }: AddPersonDialogProps) {
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
+const vendorTypes = [
+  'General Maintenance',
+  'Plumbing',
+  'Electrical',
+  'HVAC',
+  'Landscaping',
+  'Cleaning',
+  'Security',
+  'Pest Control',
+  'Other'
+];
+
+export default function AddVendorDialog({ isOpen, onClose }: AddVendorDialogProps) {
+  const [formData, setFormData] = useState<VendorFormData>({
+    vendorName: '',
+    vendorType: '',
+    contactPersonName: '',
     email: '',
-    role: '',
-    jobTitle: '',
+    phone: '',
+    status: 'active'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Handle form submission
-    console.log('Form submitted:', formData);
+    console.log('Vendor form submitted:', formData);
     onClose();
   };
-
-  const getDialogTitle = () => {
-    switch (personType) {
-      case 'team':
-        return 'Add Team Member';
-      case 'tenant':
-        return 'Add Tenant';
-      case 'vendor':
-        return 'Add Vendor';
-      default:
-        return 'Add Person';
-    }
-  };
-
-  const getDialogIcon = () => {
-    switch (personType) {
-      case 'team':
-        return User;
-      case 'tenant':
-        return Building2;
-      case 'vendor':
-        return Briefcase;
-      default:
-        return User;
-    }
-  };
-
-  const DialogIcon = getDialogIcon();
-
-  if (!personType) return null;
 
   return (
     <Dialog
@@ -74,10 +58,10 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <div className="w-10 h-10 rounded-full bg-[#2C3539] bg-opacity-10 flex items-center justify-center mr-3">
-                <DialogIcon className="w-5 h-5 text-[#2C3539]" />
+                <Building2 className="w-5 h-5 text-[#2C3539]" />
               </div>
               <Dialog.Title className="text-xl font-semibold text-[#2C3539]">
-                {getDialogTitle()}
+                Add New Vendor
               </Dialog.Title>
             </div>
             <button
@@ -91,15 +75,46 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Full Name
+                Vendor Name
               </label>
               <input
                 type="text"
                 required
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                value={formData.vendorName}
+                onChange={(e) => setFormData(prev => ({ ...prev, vendorName: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                placeholder="Enter full name"
+                placeholder="Enter vendor company name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                Vendor Type
+              </label>
+              <select
+                required
+                value={formData.vendorType}
+                onChange={(e) => setFormData(prev => ({ ...prev, vendorType: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+              >
+                <option value="">Select vendor type</option>
+                {vendorTypes.map((type) => (
+                  <option key={type} value={type}>{type}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                Contact Person Name
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.contactPersonName}
+                onChange={(e) => setFormData(prev => ({ ...prev, contactPersonName: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                placeholder="Enter contact person name"
               />
             </div>
 
@@ -113,40 +128,38 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                placeholder="Enter email address"
+                placeholder="Enter contact email"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Role
+                Phone
+              </label>
+              <input
+                type="tel"
+                required
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                placeholder="Enter contact phone number"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                Status
               </label>
               <select
                 required
-                value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                value={formData.status}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as VendorFormData['status'] }))}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
               >
-                <option value="">Select role</option>
-                <option value="admin">Administrator</option>
-                <option value="manager">Property Manager</option>
-                <option value="maintenance">Maintenance Staff</option>
-                <option value="leasing">Leasing Agent</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+                <option value="pending">Pending</option>
               </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                Job Title
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.jobTitle}
-                onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                placeholder="Enter job title"
-              />
             </div>
 
             <div className="flex justify-end space-x-3 pt-4">
@@ -161,7 +174,7 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
                 type="submit"
                 className="px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors text-sm font-medium"
               >
-                {personType === 'team' ? 'Send Invitation' : 'Add Person'}
+                Add Vendor
               </button>
             </div>
           </form>

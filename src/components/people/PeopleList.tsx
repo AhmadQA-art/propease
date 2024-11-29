@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Search, Plus, User } from 'lucide-react';
+import { Search, Plus, User, Filter } from 'lucide-react';
 import { Person, PersonType } from '../../types/people';
 import PersonCard from './PersonCard';
 import AddPersonDialog from './AddPersonDialog';
+import AddVendorDialog from './AddVendorDialog';
+import AddTenantDialog from './AddTenantDialog';
 
 interface PeopleListProps {
   people: Person[];
@@ -12,13 +14,27 @@ export default function PeopleList({ people }: PeopleListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<PersonType | 'all'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isVendorDialogOpen, setIsVendorDialogOpen] = useState(false);
+  const [isTenantDialogOpen, setIsTenantDialogOpen] = useState(false);
   const [addingPersonType, setAddingPersonType] = useState<PersonType | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
   const handleAddPerson = (type: PersonType) => {
-    setAddingPersonType(type);
-    setIsAddDialogOpen(true);
+    if (type === 'vendor') {
+      setIsVendorDialogOpen(true);
+    } else if (type === 'tenant') {
+      setIsTenantDialogOpen(true);
+    } else {
+      setAddingPersonType(type);
+      setIsAddDialogOpen(true);
+    }
     setIsDropdownOpen(false);
+  };
+
+  const handleTypeSelect = (type: PersonType | 'all') => {
+    setSelectedType(type);
+    setIsFilterDropdownOpen(false);
   };
 
   const filteredPeople = people.filter(person => {
@@ -47,16 +63,48 @@ export default function PeopleList({ people }: PeopleListProps) {
           />
         </div>
 
-        <select
-          className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-          value={selectedType}
-          onChange={(e) => setSelectedType(e.target.value as PersonType | 'all')}
-        >
-          <option value="all">All Types</option>
-          <option value="team">Team Members</option>
-          <option value="tenant">Tenants</option>
-          <option value="vendor">Vendors</option>
-        </select>
+        <div className="relative">
+          <button 
+            onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+            className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Filter className="w-5 h-5 text-[#2C3539]" />
+          </button>
+          {isFilterDropdownOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-10"
+                onClick={() => setIsFilterDropdownOpen(false)}
+              />
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 z-20">
+                <button
+                  onClick={() => handleTypeSelect('all')}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                >
+                  All Types
+                </button>
+                <button
+                  onClick={() => handleTypeSelect('team')}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                >
+                  Team Members
+                </button>
+                <button
+                  onClick={() => handleTypeSelect('tenant')}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                >
+                  Tenants
+                </button>
+                <button
+                  onClick={() => handleTypeSelect('vendor')}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                >
+                  Vendors
+                </button>
+              </div>
+            </>
+          )}
+        </div>
 
         <div className="relative">
           <button
@@ -173,6 +221,18 @@ export default function PeopleList({ people }: PeopleListProps) {
           setAddingPersonType(null);
         }}
         personType={addingPersonType}
+      />
+
+      {/* Add Vendor Dialog */}
+      <AddVendorDialog 
+        isOpen={isVendorDialogOpen}
+        onClose={() => setIsVendorDialogOpen(false)}
+      />
+
+      {/* Add Tenant Dialog */}
+      <AddTenantDialog
+        isOpen={isTenantDialogOpen}
+        onClose={() => setIsTenantDialogOpen(false)}
       />
     </div>
   );
