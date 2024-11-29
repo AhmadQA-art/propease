@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Plus, Search, Filter } from 'lucide-react';
+import { Activity, Plus, Search, Filter, Users2, Wrench, User } from 'lucide-react';
 import { TeamMember, Task, Activity as ActivityType } from '../../types/people';
 import { format } from 'date-fns';
 import TeamMemberCard from './TeamMemberCard';
@@ -12,6 +12,19 @@ interface TeamViewProps {
   tasks: Task[];
   activities: ActivityType[];
 }
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'completed':
+      return 'bg-green-100 text-green-800';
+    case 'in-progress':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'pending':
+      return 'bg-purple-100 text-purple-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
 
 export default function TeamView({ teamMembers, tasks, activities }: TeamViewProps) {
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
@@ -41,8 +54,8 @@ export default function TeamView({ teamMembers, tasks, activities }: TeamViewPro
 
   return (
     <div className="space-y-8">
-      {/* Team Members Grid */}
-      <div>
+      {/* Team Members Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-lg font-semibold text-[#2C3539]">Team Members</h2>
           <button
@@ -101,21 +114,23 @@ export default function TeamView({ teamMembers, tasks, activities }: TeamViewPro
                     <h3 className="text-sm font-medium text-[#2C3539]">{task.title}</h3>
                     <p className="text-sm text-[#6B7280] mt-1">{task.description}</p>
                   </div>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    task.priority === 'high' ? 'bg-red-100 text-red-800' :
-                    task.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {task.priority}
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>
+                    {task.status.replace('-', ' ')}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-4">
                   <div className="flex items-center space-x-2">
-                    <img
-                      src={task.assignee.imageUrl}
-                      alt={task.assignee.name}
-                      className="w-6 h-6 rounded-full"
-                    />
+                    {task.assignee.imageUrl ? (
+                      <img
+                        src={task.assignee.imageUrl}
+                        alt={task.assignee.name}
+                        className="w-6 h-6 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                        <User className="w-3 h-3 text-gray-500" />
+                      </div>
+                    )}
                     <span className="text-sm text-[#6B7280]">{task.assignee.name}</span>
                   </div>
                   <span className="text-sm text-[#6B7280]">
