@@ -3,7 +3,8 @@ import TabHeader from '../components/tabs/TabHeader';
 import PeopleList from '../components/people/PeopleList';
 import TeamView from '../components/people/TeamView';
 import VendorView from '../components/people/VendorView';
-import { Person, TeamMember, Vendor, Task, Activity } from '../types/people';
+import TenantView from '../components/people/TenantView';
+import { Person, TeamMember, Vendor, Task, Activity, Tenant } from '../types/people';
 
 const mockPeople: Person[] = [
   {
@@ -89,13 +90,14 @@ const mockActivities: Activity[] = [
   }
 ];
 
-const tabs = ['All People', 'Team', 'Vendors'];
+const tabs = ['All People', 'Team', 'Tenants', 'Vendors'];
 
 export default function People() {
   const [activeTab, setActiveTab] = useState('All People');
 
   const teamMembers = mockPeople.filter((person): person is TeamMember => person.type === 'team');
   const vendors = mockPeople.filter((person): person is Vendor => person.type === 'vendor');
+  const tenants = mockPeople.filter((person): person is Tenant => person.type === 'tenant');
 
   const renderContent = () => {
     switch (activeTab) {
@@ -103,6 +105,8 @@ export default function People() {
         return <PeopleList people={mockPeople} />;
       case 'Team':
         return <TeamView teamMembers={teamMembers} tasks={mockTasks} activities={mockActivities} />;
+      case 'Tenants':
+        return <TenantView tenants={tenants} />;
       case 'Vendors':
         return <VendorView vendors={vendors} />;
       default:
