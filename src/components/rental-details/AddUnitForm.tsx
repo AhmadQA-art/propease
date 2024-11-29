@@ -67,7 +67,7 @@ export default function AddUnitForm({ isOpen, onClose, onSubmit }: AddUnitFormPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-screen w-96 bg-white shadow-lg z-50">
+    <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50">
       {/* Header - Fixed */}
       <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 border-b bg-white z-10">
         <h2 className="text-lg font-semibold text-[#2C3539]">Add New Unit</h2>

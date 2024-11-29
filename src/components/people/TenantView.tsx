@@ -102,8 +102,8 @@ export default function TenantView({ tenants }: TenantViewProps) {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex-1 flex items-center gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -247,14 +247,17 @@ export default function TenantView({ tenants }: TenantViewProps) {
 
       {/* Backdrop for drawer */}
       {isDetailsDrawerOpen && (
-        <div 
-          className="fixed inset-0 bg-black/25 z-40"
-          onClick={() => {
-            setIsDetailsDrawerOpen(false);
-            setSelectedTenant(null);
-          }}
-        />
-      )}
+  <TenantDetailsDrawer
+    tenant={selectedTenant}
+    isOpen={isDetailsDrawerOpen}
+    onClose={() => {
+      setIsDetailsDrawerOpen(false);
+      setSelectedTenant(null);
+    }}
+  />
+)}
+
+
     </div>
   );
 }

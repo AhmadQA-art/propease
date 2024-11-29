@@ -126,7 +126,7 @@ export default function Leases() {
   };
 
   return (
-    <div className="space-y-8 max-w-[1600px] mx-auto">
+    <div className="min-h-screen flex flex-col">
       {/* Header */}
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-[#2C3539]">Leases</h1>

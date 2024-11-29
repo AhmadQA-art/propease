@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Vendor } from '../../types/people';
 import { Star, Activity, Plus, Search, Filter } from 'lucide-react';
 import AddVendorDialog from './AddVendorDialog';
+import VendorDetailsDrawer from './VendorDetailsDrawer';
 
 interface VendorViewProps {
   vendors: Vendor[];
@@ -12,15 +13,22 @@ export default function VendorView({ vendors }: VendorViewProps) {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isAddVendorDialogOpen, setIsAddVendorDialogOpen] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [isVendorDetailsOpen, setIsVendorDetailsOpen] = useState(false);
 
   const handleTypeSelect = (type: string) => {
     setSelectedType(type);
     setIsFilterDropdownOpen(false);
   };
 
+  const handleVendorClick = (vendor: Vendor) => {
+    setSelectedVendor(vendor);
+    setIsVendorDetailsOpen(true);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="min-h-screen flex flex-col">
+      <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex-1 flex items-center gap-4">
           <div className="flex-1 relative">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
@@ -93,7 +101,11 @@ export default function VendorView({ vendors }: VendorViewProps) {
       </div>
 
       {vendors.map((vendor) => (
-        <div key={vendor.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div 
+          key={vendor.id} 
+          className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 cursor-pointer hover:border-gray-200 transition-colors"
+          onClick={() => handleVendorClick(vendor)}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               {vendor.imageUrl ? (
@@ -137,6 +149,15 @@ export default function VendorView({ vendors }: VendorViewProps) {
       <AddVendorDialog
         isOpen={isAddVendorDialogOpen}
         onClose={() => setIsAddVendorDialogOpen(false)}
+      />
+
+      <VendorDetailsDrawer
+        isOpen={isVendorDetailsOpen}
+        onClose={() => {
+          setIsVendorDetailsOpen(false);
+          setSelectedVendor(null);
+        }}
+        vendor={selectedVendor}
       />
     </div>
   );
