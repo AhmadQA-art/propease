@@ -39,7 +39,7 @@ export default function UnitDetailsDrawer({ unit, isOpen, onClose }: UnitDetails
       </div>
 
       {/* Content - Scrollable */}
-      <div className="h-full overflow-y-auto pt-[73px] pb-4">
+      <div className="h-full overflow-y-auto pt-[73px] pb-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
         <div className="p-6 space-y-6">
           {/* Unit Name */}
           <div className="space-y-2">

@@ -47,7 +47,7 @@ export default function TenantDetailsDrawer({tenant, isOpen, onClose} : TenantDe
         <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50"
             onClick={onClose}>
             <div className={
-                    `w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out h-full overflow-y-auto ${
+                    `w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out h-full flex flex-col ${
                         isOpen ? 'translate-x-0' : 'translate-x-full'
                     }`
                 }
@@ -56,17 +56,23 @@ export default function TenantDetailsDrawer({tenant, isOpen, onClose} : TenantDe
                 }
                 // Prevent closing when clicking inside
             >
-                {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b">
-                    <h2 className="text-xl font-semibold text-[#2C3539]">Tenant Details</h2>
-                    <button onClick={onClose}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <X className="w-5 h-5 text-gray-500"/>
-                    </button>
+                {/* Header - Fixed */}
+                <div className="flex-shrink-0 bg-white border-b border-gray-200">
+                    <div className="px-6 py-4 flex items-center justify-between">
+                        <h2 className="text-lg font-semibold text-[#2C3539]">
+                            Tenant Details
+                        </h2>
+                        <button
+                            className="p-1 rounded-md text-gray-400 hover:text-gray-500"
+                            onClick={onClose}
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
 
-                {/* Content */}
-                <div className="overflow-y-auto h-[calc(100vh-76px)]">
+                {/* Content - Scrollable */}
+                <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                     <div className="p-6 space-y-6">
                         {/* Tenant Info */}
                         <div className="flex items-center space-x-4">

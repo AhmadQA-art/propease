@@ -134,7 +134,7 @@ export default function Leases() {
       </div>
 
       {/* Search and Actions */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <input

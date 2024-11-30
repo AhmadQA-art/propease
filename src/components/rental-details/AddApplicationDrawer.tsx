@@ -41,7 +41,7 @@ export default function AddApplicationDrawer({ isOpen, onClose, onSubmit }: AddA
       </div>
 
       {/* Content - Scrollable */}
-      <div className="h-full overflow-y-auto pt-[73px] pb-4">
+      <div className="h-full overflow-y-auto pt-[73px] pb-4 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Applicant Information */}
           <div className="space-y-4">

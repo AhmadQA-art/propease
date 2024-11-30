@@ -51,20 +51,22 @@ export default function TaskDrawer({ isOpen, onClose, onSubmit, users, currentUs
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50">
+    <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b">
-        <h2 className="text-xl font-semibold text-[#2C3539]">New Task</h2>
-        <button
-          onClick={onClose}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <X className="w-5 h-5 text-gray-500" />
-        </button>
+      <div className="flex-shrink-0 border-b">
+        <div className="flex items-center justify-between p-6">
+          <h2 className="text-xl font-semibold text-[#2C3539]">New Task</h2>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="overflow-y-auto h-[calc(100vh-76px)]">
+      <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Owner */}
           <div className="space-y-2">

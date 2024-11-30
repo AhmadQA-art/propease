@@ -69,7 +69,7 @@ export default function TicketDrawer({ ticket, isOpen, onClose }: TicketDrawerPr
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                 {/* Ticket Info */}
                 <div className="px-6 py-4">
                   <h3 className="text-xl font-semibold text-[#2C3539] mb-1">

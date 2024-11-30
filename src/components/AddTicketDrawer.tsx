@@ -61,7 +61,7 @@ export default function AddTicketDrawer({ isOpen, onClose, onSubmit }: AddTicket
               </div>
 
               {/* Content */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                 <div className="px-6 py-4 space-y-6">
                   {/* Title */}
                   <div>
