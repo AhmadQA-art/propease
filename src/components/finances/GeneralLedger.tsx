@@ -1,68 +1,73 @@
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, ChevronDown, ChevronRight, FileText, Download } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronDown, ChevronRight, FileText, Download, Eye, MessageSquare, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import DateRangeSelector from './DateRangeSelector';
 
 interface Transaction {
   id: string;
-  date: Date;
+  date: string;
   account: string;
-  description: string;
-  amount: number;
-  type: 'credit' | 'debit';
-  category: string;
-  attachments?: string[];
-  details?: string;
+  transactionType: string;
+  debit: number | null;
+  credit: number | null;
+  balance: number;
+  linkedEntity: string;
+  propertyName: string;
+  description?: string;
 }
 
 const mockTransactions: Transaction[] = [
   {
-    id: 'TXN001',
-    date: new Date(2024, 2, 15),
-    account: 'Rental Income',
-    description: 'Monthly Rent - Unit 204',
-    amount: 2500,
-    type: 'credit',
-    category: 'Income',
-    attachments: ['receipt.pdf'],
-    details: 'Rent payment for March 2024'
+    id: 'T001',
+    date: '2024-01-12',
+    account: 'Operating Bank Account',
+    transactionType: 'Rent Payment',
+    debit: 1200,
+    credit: null,
+    balance: 26200,
+    linkedEntity: 'Tenant A',
+    propertyName: 'Sunrise Apartments'
   },
   {
-    id: 'TXN002',
-    date: new Date(2024, 2, 14),
-    account: 'Maintenance Expense',
-    description: 'HVAC Repair',
-    amount: 450,
-    type: 'debit',
-    category: 'Expense',
-    attachments: ['invoice.pdf', 'work_order.pdf'],
-    details: 'Emergency HVAC repair in Unit 301'
+    id: 'T002',
+    date: '2024-03-12',
+    account: 'Accounts Payable',
+    transactionType: 'Maintenance Expense',
+    debit: null,
+    credit: 800,
+    balance: -800,
+    linkedEntity: 'Contractor XYZ',
+    propertyName: 'Sunset Villas'
+  },
+  {
+    id: 'T003',
+    date: '2024-05-12',
+    account: 'Utilities',
+    transactionType: 'Operating Expense',
+    debit: null,
+    credit: 300,
+    balance: -300,
+    linkedEntity: 'Utility Company ABC',
+    propertyName: 'Sunrise Apartments'
   }
 ];
 
 export default function GeneralLedger() {
-  const [expandedTransactions, setExpandedTransactions] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDateRange, setSelectedDateRange] = useState('monthly');
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-
-  const toggleTransaction = (id: string) => {
-    setExpandedTransactions(prev =>
-      prev.includes(id) ? prev.filter(txnId => txnId !== id) : [...prev, id]
-    );
-  };
 
   const filteredTransactions = mockTransactions.filter(transaction => {
     const matchesSearch = 
-      transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.account.toLowerCase().includes(searchQuery.toLowerCase());
+      transaction.account.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.transactionType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.linkedEntity.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      transaction.propertyName.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesType = selectedType === 'all' || transaction.type === selectedType;
-    const matchesCategory = selectedCategory === 'all' || transaction.category === selectedCategory;
+    const matchesAccount = selectedAccount === 'all' || transaction.account === selectedAccount;
     
-    return matchesSearch && matchesType && matchesCategory;
+    return matchesSearch && matchesAccount;
   });
 
   return (
@@ -96,124 +101,86 @@ export default function GeneralLedger() {
 
           {isFilterDropdownOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-100 p-4 z-10">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#6B7280] mb-2">
-                    Transaction Type
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                  >
-                    <option value="all">All Types</option>
-                    <option value="credit">Credit</option>
-                    <option value="debit">Debit</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#6B7280] mb-2">
-                    Category
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="Income">Income</option>
-                    <option value="Expense">Expense</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-[#6B7280] mb-2">
+                  Account
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg"
+                  value={selectedAccount}
+                  onChange={(e) => setSelectedAccount(e.target.value)}
+                >
+                  <option value="all">All Accounts</option>
+                  <option value="Operating Bank Account">Operating Bank Account</option>
+                  <option value="Accounts Payable">Accounts Payable</option>
+                  <option value="Utilities">Utilities</option>
+                </select>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Transactions List */}
+      {/* Transactions Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">
-                  Account
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">
-                  Amount
-                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Account</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Transaction Type</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Debit ($)</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Credit ($)</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Balance ($)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Linked Entity</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Property Name</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredTransactions.map((transaction) => (
-                <React.Fragment key={transaction.id}>
-                  <tr
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => toggleTransaction(transaction.id)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
-                      {format(transaction.date, 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
-                      {transaction.account}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-[#2C3539]">
-                      <div className="flex items-center">
-                        {expandedTransactions.includes(transaction.id) ? (
-                          <ChevronDown className="w-4 h-4 mr-2 text-[#6B7280]" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 mr-2 text-[#6B7280]" />
-                        )}
-                        {transaction.description}
-                      </div>
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${
-                      transaction.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {transaction.type === 'credit' ? '+' : '-'}${transaction.amount.toLocaleString()}
-                    </td>
-                  </tr>
-
-                  {/* Expanded Details */}
-                  {expandedTransactions.includes(transaction.id) && (
-                    <tr className="bg-gray-50">
-                      <td colSpan={4} className="px-6 py-4">
-                        <div className="space-y-4">
-                          <div>
-                            <h4 className="text-sm font-medium text-[#2C3539] mb-2">Details</h4>
-                            <p className="text-sm text-[#6B7280]">{transaction.details}</p>
-                          </div>
-
-                          {transaction.attachments && transaction.attachments.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium text-[#2C3539] mb-2">Attachments</h4>
-                              <div className="flex gap-2">
-                                {transaction.attachments.map((attachment, index) => (
-                                  <button
-                                    key={index}
-                                    className="flex items-center px-3 py-1.5 text-sm text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-                                  >
-                                    <FileText className="w-4 h-4 mr-2" />
-                                    {attachment}
-                                    <Download className="w-4 h-4 ml-2" />
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
+                <tr key={transaction.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {format(new Date(transaction.date), 'MMM d, yyyy')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {transaction.account}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {transaction.transactionType}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2C3539]">
+                    {transaction.debit?.toLocaleString() || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2C3539]">
+                    {transaction.credit?.toLocaleString() || '-'}
+                  </td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
+                    transaction.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {transaction.balance.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {transaction.linkedEntity}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {transaction.propertyName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    <div className="flex justify-end space-x-2">
+                      <button className="p-1.5 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button className="p-1.5 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
+                        <MessageSquare className="w-4 h-4" />
+                      </button>
+                      <button className="p-1.5 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
+                        <Bell className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>

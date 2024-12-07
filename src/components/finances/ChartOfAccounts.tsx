@@ -1,100 +1,125 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, FileText } from 'lucide-react';
-import AccountEntry from './AccountEntry';
+import { ChevronDown, ChevronRight, Plus, FileText, Download, Edit2, Trash2 } from 'lucide-react';
 
 interface Account {
-  id: string;
+  number: string;
   name: string;
-  type: 'asset' | 'liability' | 'income' | 'expense' | 'equity';
-  balance: number;
-  children?: Account[];
+  category: 'Asset' | 'Liability' | 'Income' | 'Expense' | 'Equity';
+  description: string;
+  balance?: number;
 }
 
 const mockAccounts: Account[] = [
   {
-    id: '1',
-    name: 'Assets',
-    type: 'asset',
-    balance: 250000,
-    children: [
-      {
-        id: '1.1',
-        name: 'Accounts Receivable',
-        type: 'asset',
-        balance: 75000
-      },
-      {
-        id: '1.2',
-        name: 'Operating Bank Account',
-        type: 'asset',
-        balance: 125000
-      },
-      {
-        id: '1.3',
-        name: 'Security Deposits',
-        type: 'asset',
-        balance: 50000
-      }
-    ]
+    number: '1000',
+    name: 'Operating Bank Account',
+    category: 'Asset',
+    description: 'Primary bank account for operations.',
+    balance: 250000
   },
   {
-    id: '2',
-    name: 'Liabilities',
-    type: 'liability',
-    balance: 85000,
-    children: [
-      {
-        id: '2.1',
-        name: 'Accounts Payable',
-        type: 'liability',
-        balance: 35000
-      },
-      {
-        id: '2.2',
-        name: 'Security Deposit Liability',
-        type: 'liability',
-        balance: 50000
-      }
-    ]
+    number: '1001',
+    name: 'Security Deposits Held',
+    category: 'Asset',
+    description: 'Funds held as tenant security deposits.',
+    balance: 75000
   },
   {
-    id: '3',
-    name: 'Income',
-    type: 'income',
-    balance: 180000,
-    children: [
-      {
-        id: '3.1',
-        name: 'Rental Income',
-        type: 'income',
-        balance: 150000
-      },
-      {
-        id: '3.2',
-        name: 'Late Fees',
-        type: 'income',
-        balance: 5000
-      },
-      {
-        id: '3.3',
-        name: 'Service Fees',
-        type: 'income',
-        balance: 25000
-      }
-    ]
+    number: '1002',
+    name: 'Accounts Receivable',
+    category: 'Asset',
+    description: 'Rent and other payments due from tenants.',
+    balance: 15000
+  },
+  {
+    number: '2000',
+    name: 'Accounts Payable',
+    category: 'Liability',
+    description: 'Amounts owed to vendors or contractors.',
+    balance: -35000
+  },
+  {
+    number: '2001',
+    name: 'Security Deposit Liability',
+    category: 'Liability',
+    description: 'Liability for tenant security deposits.',
+    balance: -75000
+  },
+  {
+    number: '3000',
+    name: 'Rental Income',
+    category: 'Income',
+    description: 'Income from tenant rents collected.',
+    balance: 180000
+  },
+  {
+    number: '3001',
+    name: 'Management Fee Income',
+    category: 'Income',
+    description: 'Revenue from property management services.',
+    balance: 25000
+  },
+  {
+    number: '4000',
+    name: 'Maintenance Expenses',
+    category: 'Expense',
+    description: 'Costs of property repairs and upkeep.',
+    balance: -45000
+  },
+  {
+    number: '4001',
+    name: 'Utilities',
+    category: 'Expense',
+    description: 'Utility costs (electricity, water, gas).',
+    balance: -12000
+  },
+  {
+    number: '4002',
+    name: 'Office Supplies',
+    category: 'Expense',
+    description: 'Costs for office equipment and supplies.',
+    balance: -3500
+  },
+  {
+    number: '5000',
+    name: 'Retained Earnings',
+    category: 'Equity',
+    description: 'Accumulated profits not distributed to owners.',
+    balance: 150000
   }
 ];
 
-export default function ChartOfAccounts() {
-  const [expandedAccounts, setExpandedAccounts] = useState<string[]>(['1', '2', '3']);
+const getCategoryColor = (category: Account['category']) => {
+  switch (category) {
+    case 'Asset':
+      return 'bg-blue-100 text-blue-800';
+    case 'Liability':
+      return 'bg-red-100 text-red-800';
+    case 'Income':
+      return 'bg-green-100 text-green-800';
+    case 'Expense':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'Equity':
+      return 'bg-purple-100 text-purple-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
 
-  const toggleAccount = (accountId: string) => {
-    setExpandedAccounts(prev =>
-      prev.includes(accountId)
-        ? prev.filter(id => id !== accountId)
-        : [...prev, accountId]
-    );
-  };
+export default function ChartOfAccounts() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  const filteredAccounts = mockAccounts.filter(account => {
+    const matchesSearch = 
+      account.number.includes(searchQuery) ||
+      account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      account.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = selectedCategory === 'all' || account.category === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="space-y-6">
@@ -106,24 +131,62 @@ export default function ChartOfAccounts() {
             Add Account
           </button>
           <button className="flex items-center px-4 py-2 text-sm border border-[#2C3539] text-[#2C3539] rounded-lg hover:bg-gray-50 transition-colors">
-            <FileText className="w-4 h-4 mr-2" />
+            <Download className="w-4 h-4 mr-2" />
             Export
           </button>
         </div>
       </div>
 
-      {/* Accounts List */}
+      {/* Accounts Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 space-y-4">
-          {mockAccounts.map((account) => (
-            <AccountEntry
-              key={account.id}
-              account={account}
-              isExpanded={expandedAccounts.includes(account.id)}
-              onToggle={() => toggleAccount(account.id)}
-              level={0}
-            />
-          ))}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Account Number</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Account Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Category</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Description</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Balance ($)</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredAccounts.map((account) => (
+                <tr key={account.number} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2C3539]">
+                    {account.number}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {account.name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getCategoryColor(account.category)}`}>
+                      {account.category}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-[#6B7280]">
+                    {account.description}
+                  </td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
+                    account.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {account.balance?.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                    <div className="flex justify-end space-x-2">
+                      <button className="p-1.5 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button className="p-1.5 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
