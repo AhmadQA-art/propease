@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, ChevronDown, ChevronRight, FileText, Download } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronDown, ChevronRight, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import DateRangeSelector from './DateRangeSelector';
 
@@ -152,13 +152,13 @@ export default function GeneralLedger() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider w-8"></th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Account</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Debit ($)</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Credit ($)</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Balance ($)</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider w-8"></th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -168,13 +168,6 @@ export default function GeneralLedger() {
                     className="hover:bg-gray-50 cursor-pointer"
                     onClick={() => toggleRow(transaction.id)}
                   >
-                    <td className="px-6 py-4">
-                      {expandedRows.has(transaction.id) ? (
-                        <ChevronDown className="w-4 h-4 text-gray-500" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-500" />
-                      )}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
                       {format(new Date(transaction.date), 'MMM d, yyyy')}
                     </td>
@@ -194,6 +187,13 @@ export default function GeneralLedger() {
                       transaction.balance >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {transaction.balance.toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      {expandedRows.has(transaction.id) ? (
+                        <ChevronDown className="w-4 h-4 text-gray-500 ml-auto" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-gray-500 ml-auto" />
+                      )}
                     </td>
                   </tr>
                   {expandedRows.has(transaction.id) && (
@@ -240,20 +240,6 @@ export default function GeneralLedger() {
                                   </a>
                                 ))}
                               </div>
-                            </div>
-                          )}
-
-                          {/* Receipt */}
-                          {transaction.receipt && (
-                            <div className="flex items-center gap-4">
-                              <button className="flex items-center px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-[#2C3539] hover:bg-gray-50">
-                                <Download className="w-4 h-4 mr-2 text-[#6B7280]" />
-                                Download Receipt
-                              </button>
-                              <button className="flex items-center px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-[#2C3539] hover:bg-gray-50">
-                                <FileText className="w-4 h-4 mr-2 text-[#6B7280]" />
-                                Print Receipt
-                              </button>
                             </div>
                           )}
                         </div>
