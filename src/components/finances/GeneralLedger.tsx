@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { Search, Filter, Calendar, ChevronDown, ChevronRight, FileText, Printer } from 'lucide-react';
 import { format } from 'date-fns';
 import DateRangeSelector from './DateRangeSelector';
 
@@ -94,6 +94,14 @@ export default function GeneralLedger() {
     
     return matchesSearch && matchesAccount;
   });
+
+  const handlePrintReceipt = (transactionId: string) => {
+    const transaction = mockTransactions.find(t => t.id === transactionId);
+    if (transaction?.receipt) {
+      // Here you would implement the actual print functionality
+      window.open(transaction.receipt.url, '_blank');
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -200,8 +208,8 @@ export default function GeneralLedger() {
                     <tr className="bg-gray-50">
                       <td colSpan={7} className="px-6 py-4">
                         <div className="space-y-4">
-                          {/* Property and Entity */}
-                          <div className="grid grid-cols-2 gap-4">
+                          {/* Property, Entity and Receipt */}
+                          <div className="grid grid-cols-3 gap-4">
                             {transaction.property && (
                               <div>
                                 <p className="text-sm font-medium text-[#6B7280]">Property</p>
@@ -212,6 +220,20 @@ export default function GeneralLedger() {
                               <div>
                                 <p className="text-sm font-medium text-[#6B7280]">Linked Entity</p>
                                 <p className="text-sm text-[#2C3539]">{transaction.linkedEntity}</p>
+                              </div>
+                            )}
+                            {transaction.receipt && (
+                              <div className="flex items-end justify-end">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePrintReceipt(transaction.id);
+                                  }}
+                                  className="flex items-center px-3 py-1.5 bg-[#2C3539] text-white rounded-lg text-sm hover:bg-[#3d474c] transition-colors"
+                                >
+                                  <Printer className="w-4 h-4 mr-2" />
+                                  Print Receipt
+                                </button>
                               </div>
                             )}
                           </div>

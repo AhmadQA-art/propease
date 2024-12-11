@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, FileText, Download, Edit2, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, FileText, Download } from 'lucide-react';
 
 interface Account {
   number: string;
@@ -148,7 +148,6 @@ export default function ChartOfAccounts() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Category</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[#6B7280] uppercase tracking-wider">Description</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Balance ($)</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -172,16 +171,6 @@ export default function ChartOfAccounts() {
                     account.balance >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
                     {account.balance?.toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                    <div className="flex justify-end space-x-2">
-                      <button className="p-1.5 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-1.5 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
                   </td>
                 </tr>
               ))}

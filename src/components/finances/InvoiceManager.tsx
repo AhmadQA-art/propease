@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, FileText, Download, MoreHorizontal, Calendar, DollarSign } from 'lucide-react';
+import { Search, Plus, FileText, Download, Calendar, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Invoice {
@@ -154,14 +154,9 @@ export default function InvoiceManager() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button className="p-2 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <button className="p-2 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
+                      <Download className="w-4 h-4" />
+                    </button>
                   </td>
                 </tr>
               ))}

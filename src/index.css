@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e5e7eb; /* gray-200 */
+  border-radius: 9999px;
+}
+
 body {
   font-family: 'Inter', sans-serif;
 }
