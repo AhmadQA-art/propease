@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Filter, Plus, Calendar, DollarSign, ArrowUpRight, ArrowDownRight, MoreHorizontal } from 'lucide-react';
+import { X, Search, Filter, Calendar, Plus, ArrowUpRight, ArrowDownRight, Repeat, Clock, ArrowDownToLine } from 'lucide-react';
 import { format } from 'date-fns';
-import TransactionEntryDrawer from './TransactionEntryDrawer';
-import RecurringPaymentsDrawer from './RecurringPaymentsDrawer';
+import TransactionDetailsDrawer from './TransactionDetailsDrawer';
+import AddRecurringPaymentDrawer from './AddRecurringPaymentDrawer';
 
 interface Transaction {
   id: string;
@@ -14,6 +14,7 @@ interface Transaction {
   account: string;
   status: 'completed' | 'pending' | 'failed';
   reference?: string;
+  transactionType: 'recurring' | 'one-time';
 }
 
 const mockTransactions: Transaction[] = [
@@ -26,7 +27,8 @@ const mockTransactions: Transaction[] = [
     category: 'Rent',
     account: 'Operations Account',
     status: 'completed',
-    reference: 'PMT-2024-001'
+    reference: 'PMT-2024-001',
+    transactionType: 'recurring'
   },
   {
     id: 'TXN002',
@@ -36,7 +38,8 @@ const mockTransactions: Transaction[] = [
     amount: 450,
     category: 'Maintenance',
     account: 'Operations Account',
-    status: 'completed'
+    status: 'completed',
+    transactionType: 'one-time'
   },
   {
     id: 'TXN003',
@@ -46,9 +49,13 @@ const mockTransactions: Transaction[] = [
     amount: 3000,
     category: 'Security Deposit',
     account: 'Trust Account',
-    status: 'pending'
+    status: 'pending',
+    transactionType: 'one-time'
   }
-];
+].map(transaction => ({
+  ...transaction,
+  transactionType: transaction.transactionType || 'one-time'
+}));
 
 const getStatusColor = (status: Transaction['status']) => {
   switch (status) {
@@ -63,19 +70,35 @@ const getStatusColor = (status: Transaction['status']) => {
   }
 };
 
-export default function TransactionsView() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isEntryDrawerOpen, setIsEntryDrawerOpen] = useState(false);
-  const [isRecurringDrawerOpen, setIsRecurringDrawerOpen] = useState(false);
+const getTransactionTypeIcon = (transactionType: string) => {
+  switch (transactionType) {
+    case 'recurring':
+      return (
+        <Repeat className="w-4 h-4 text-[#6B7280]" />
+      );
+    case 'one-time':
+      return (
+        <ArrowDownToLine className="w-4 h-4 text-[#6B7280]" />
+      );
+    default:
+      return null;
+  }
+};
 
-  const handleAddTransaction = (transactionData: any) => {
-    // Implement transaction creation logic
-    console.log('New transaction:', transactionData);
-    setIsEntryDrawerOpen(false);
-  };
+export default function TransactionsView({ 
+  isOpen, 
+  onClose 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+}) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isAddRecurringPaymentOpen, setIsAddRecurringPaymentOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen flex flex-col">
       {/* Controls */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex-1 relative">
@@ -90,41 +113,48 @@ export default function TransactionsView() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <Filter className="w-5 h-5 text-[#2C3539]" />
+          </button>
+
           <button
-            onClick={() => setIsRecurringDrawerOpen(true)}
+            onClick={() => setIsAddRecurringPaymentOpen(true)}
             className="flex items-center px-4 py-2 border border-[#2C3539] text-[#2C3539] rounded-lg hover:bg-gray-50"
           >
             <Calendar className="w-4 h-4 mr-2" />
-            Recurring
-          </button>
-          <button
-            onClick={() => setIsEntryDrawerOpen(true)}
-            className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c]"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Transaction
+            Add Recurring Payment
           </button>
         </div>
       </div>
 
       {/* Transactions Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-8">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100">
+                <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Type</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Date</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Description</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Category</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Account</th>
                 <th className="px-6 py-4 text-right text-sm font-medium text-[#6B7280]">Amount</th>
                 <th className="px-6 py-4 text-left text-sm font-medium text-[#6B7280]">Status</th>
-                <th className="px-6 py-4 text-right text-sm font-medium text-[#6B7280]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {mockTransactions.map((transaction) => (
-                <tr key={transaction.id} className="hover:bg-gray-50">
+                <tr 
+                  key={transaction.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedTransaction(transaction)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {getTransactionTypeIcon(transaction.transactionType)}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
                     {format(new Date(transaction.date), 'MMM d, yyyy')}
                   </td>
@@ -159,11 +189,6 @@ export default function TransactionsView() {
                       {transaction.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                    <button className="p-2 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -171,15 +196,17 @@ export default function TransactionsView() {
         </div>
       </div>
 
-      <TransactionEntryDrawer
-        isOpen={isEntryDrawerOpen}
-        onClose={() => setIsEntryDrawerOpen(false)}
-        onSubmit={handleAddTransaction}
+      {/* Add Recurring Payment Drawer */}
+      <AddRecurringPaymentDrawer
+        isOpen={isAddRecurringPaymentOpen}
+        onClose={() => setIsAddRecurringPaymentOpen(false)}
       />
 
-      <RecurringPaymentsDrawer
-        isOpen={isRecurringDrawerOpen}
-        onClose={() => setIsRecurringDrawerOpen(false)}
+      {/* Transaction Details Drawer */}
+      <TransactionDetailsDrawer
+        transaction={selectedTransaction}
+        isOpen={!!selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
       />
     </div>
   );

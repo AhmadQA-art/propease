@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Filter, Calendar, ChevronDown, ChevronRight, FileText, Printer } from 'lucide-react';
+import { Search, Filter, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import DateRangeSelector from './DateRangeSelector';
+import TransactionDetailsDrawer from './TransactionDetailsDrawer';
 
 interface Transaction {
   id: string;
@@ -73,17 +74,7 @@ export default function GeneralLedger() {
   const [selectedDateRange, setSelectedDateRange] = useState('monthly');
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-
-  const toggleRow = (id: string) => {
-    const newExpandedRows = new Set(expandedRows);
-    if (expandedRows.has(id)) {
-      newExpandedRows.delete(id);
-    } else {
-      newExpandedRows.add(id);
-    }
-    setExpandedRows(newExpandedRows);
-  };
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
 
   const filteredTransactions = mockTransactions.filter(transaction => {
     const matchesSearch = 
@@ -94,14 +85,6 @@ export default function GeneralLedger() {
     
     return matchesSearch && matchesAccount;
   });
-
-  const handlePrintReceipt = (transactionId: string) => {
-    const transaction = mockTransactions.find(t => t.id === transactionId);
-    if (transaction?.receipt) {
-      // Here you would implement the actual print functionality
-      window.open(transaction.receipt.url, '_blank');
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -166,114 +149,48 @@ export default function GeneralLedger() {
                 <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Debit ($)</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Credit ($)</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider">Balance ($)</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-[#6B7280] uppercase tracking-wider w-8"></th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredTransactions.map((transaction) => (
-                <React.Fragment key={transaction.id}>
-                  <tr 
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => toggleRow(transaction.id)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
-                      {format(new Date(transaction.date), 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
-                      {transaction.account}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
-                      {transaction.transactionType}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2C3539]">
-                      {transaction.debit?.toLocaleString() || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2C3539]">
-                      {transaction.credit?.toLocaleString() || '-'}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
-                      transaction.balance >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {transaction.balance.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      {expandedRows.has(transaction.id) ? (
-                        <ChevronDown className="w-4 h-4 text-gray-500 ml-auto" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-gray-500 ml-auto" />
-                      )}
-                    </td>
-                  </tr>
-                  {expandedRows.has(transaction.id) && (
-                    <tr className="bg-gray-50">
-                      <td colSpan={7} className="px-6 py-4">
-                        <div className="space-y-4">
-                          {/* Property, Entity and Receipt */}
-                          <div className="grid grid-cols-3 gap-4">
-                            {transaction.property && (
-                              <div>
-                                <p className="text-sm font-medium text-[#6B7280]">Property</p>
-                                <p className="text-sm text-[#2C3539]">{transaction.property}</p>
-                              </div>
-                            )}
-                            {transaction.linkedEntity && (
-                              <div>
-                                <p className="text-sm font-medium text-[#6B7280]">Linked Entity</p>
-                                <p className="text-sm text-[#2C3539]">{transaction.linkedEntity}</p>
-                              </div>
-                            )}
-                            {transaction.receipt && (
-                              <div className="flex items-end justify-end">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePrintReceipt(transaction.id);
-                                  }}
-                                  className="flex items-center px-3 py-1.5 bg-[#2C3539] text-white rounded-lg text-sm hover:bg-[#3d474c] transition-colors"
-                                >
-                                  <Printer className="w-4 h-4 mr-2" />
-                                  Print Receipt
-                                </button>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Notes */}
-                          {transaction.notes && (
-                            <div>
-                              <p className="text-sm font-medium text-[#6B7280]">Notes</p>
-                              <p className="text-sm text-[#2C3539]">{transaction.notes}</p>
-                            </div>
-                          )}
-
-                          {/* Files */}
-                          {transaction.files && transaction.files.length > 0 && (
-                            <div>
-                              <p className="text-sm font-medium text-[#6B7280] mb-2">Files</p>
-                              <div className="flex flex-wrap gap-2">
-                                {transaction.files.map((file, index) => (
-                                  <a
-                                    key={index}
-                                    href={file.url}
-                                    className="flex items-center px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm text-[#2C3539] hover:bg-gray-50"
-                                  >
-                                    <FileText className="w-4 h-4 mr-2 text-[#6B7280]" />
-                                    {file.name}
-                                  </a>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
+                <tr 
+                  key={transaction.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedTransaction(transaction)}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {format(new Date(transaction.date), 'MMM d, yyyy')}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {transaction.account}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[#2C3539]">
+                    {transaction.transactionType}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2C3539]">
+                    {transaction.debit?.toLocaleString() || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-[#2C3539]">
+                    {transaction.credit?.toLocaleString() || '-'}
+                  </td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
+                    transaction.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {transaction.balance.toLocaleString()}
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Transaction Details Drawer */}
+      <TransactionDetailsDrawer 
+        transaction={selectedTransaction}
+        isOpen={!!selectedTransaction}
+        onClose={() => setSelectedTransaction(null)}
+      />
     </div>
   );
 }

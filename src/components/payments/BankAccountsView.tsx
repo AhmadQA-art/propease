@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Plus, Building2, DollarSign, TrendingUp, MoreHorizontal, Link } from 'lucide-react';
+import { Plus, Landmark, Building2, TrendingUp, Link } from 'lucide-react';
 import AddBankAccountDrawer from './AddBankAccountDrawer';
 
 interface BankAccount {
   id: string;
   name: string;
-  type: 'trust' | 'operations' | 'reserve' | 'security';
-  accountNumber: string;
+  type: string;
   balance: number;
   institution: string;
-  status: 'active' | 'inactive';
-  lastSync?: string;
+  accountNumber: string;
+  lastSync: string;
+  status: 'active' | 'pending' | 'inactive';
 }
 
 const mockAccounts: BankAccount[] = [
@@ -84,9 +84,8 @@ export default function BankAccountsView() {
     <div className="space-y-6">
       {/* Header Actions */}
       <div className="flex justify-between items-center">
-        <div className="flex gap-4">
+        <div>
           <div className="flex items-center px-4 py-2 bg-white rounded-lg border border-gray-200">
-            <DollarSign className="w-5 h-5 text-[#2C3539] mr-2" />
             <div>
               <p className="text-sm text-[#6B7280]">Total Balance</p>
               <p className="text-lg font-semibold text-[#2C3539]">
@@ -94,10 +93,6 @@ export default function BankAccountsView() {
               </p>
             </div>
           </div>
-          <button className="flex items-center px-4 py-2 bg-white rounded-lg border border-gray-200 text-[#2C3539] hover:bg-gray-50">
-            <Link className="w-4 h-4 mr-2" />
-            Connect Bank
-          </button>
         </div>
         <button
           onClick={() => setIsAddAccountDrawerOpen(true)}
@@ -108,55 +103,35 @@ export default function BankAccountsView() {
         </button>
       </div>
 
-      {/* Accounts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Accounts List */}
+      <div className="space-y-3">
         {mockAccounts.map((account) => (
           <div
             key={account.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
+            className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center">
-                <Building2 className="w-10 h-10 text-[#2C3539] mr-3" />
-                <div>
-                  <h3 className="text-lg font-semibold text-[#2C3539]">{account.name}</h3>
-                  <p className="text-sm text-[#6B7280]">{account.institution}</p>
-                </div>
+            <div className="flex items-center space-x-4">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Landmark className="w-5 h-5 text-[#2C3539]" />
               </div>
-              <button className="p-2 text-[#6B7280] hover:bg-gray-100 rounded-lg transition-colors">
-                <MoreHorizontal className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
               <div>
-                <p className="text-sm text-[#6B7280] mb-1">Account Number</p>
-                <p className="text-[#2C3539]">{account.accountNumber}</p>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-[#6B7280] mb-1">Current Balance</p>
-                  <p className="text-xl font-semibold text-[#2C3539]">
-                    ${account.balance.toLocaleString()}
-                  </p>
+                <div className="flex items-center space-x-2">
+                  <p className="font-medium text-[#2C3539]">{account.name}</p>
+                  <span className="text-sm text-gray-500">•</span>
+                  <p className="text-sm text-gray-500">{account.institution}</p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${getAccountTypeColor(account.type)}`}>
-                  {account.type.charAt(0).toUpperCase() + account.type.slice(1)}
-                </span>
-              </div>
-
-              {account.lastSync && (
-                <div className="pt-4 border-t border-gray-100">
-                  <div className="flex items-center justify-between text-sm text-[#6B7280]">
-                    <span>Last synced {new Date(account.lastSync).toLocaleTimeString()}</span>
-                    <div className="flex items-center text-green-600">
-                      <TrendingUp className="w-4 h-4 mr-1" />
-                      <span>Active</span>
-                    </div>
-                  </div>
+                <div className="flex items-center space-x-2 text-sm text-gray-500">
+                  <span>{account.type} Account</span>
+                  <span>•</span>
+                  <span>Last synced {new Date(account.lastSync).toLocaleTimeString()}</span>
+                  <span>•</span>
+                  <span className={`text-${account.status === 'active' ? 'green' : 'red'}-600`}>{account.status}</span>
                 </div>
-              )}
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="font-medium text-[#2C3539]">${account.balance.toLocaleString()}</p>
+              <p className="text-sm text-gray-500">Available Balance</p>
             </div>
           </div>
         ))}

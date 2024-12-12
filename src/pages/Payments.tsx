@@ -7,11 +7,19 @@ const tabs = ['Transactions', 'Bank Accounts'];
 
 export default function Payments() {
   const [activeTab, setActiveTab] = useState('Transactions');
+  const [isTransactionsDrawerOpen, setIsTransactionsDrawerOpen] = useState(false);
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'Transactions':
-        return <TransactionsView />;
+        return (
+          <div className="relative">
+            <TransactionsView 
+              isOpen={isTransactionsDrawerOpen}
+              onClose={() => setIsTransactionsDrawerOpen(false)}
+            />
+          </div>
+        );
       case 'Bank Accounts':
         return <BankAccountsView />;
       default:
