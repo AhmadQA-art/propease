@@ -37,9 +37,16 @@ export default function Sidebar() {
       <div className="p-4 pb-0">
         <Link to="/" className="block">
           <img
-            src="/PropEase.png"
+            src="/propease.png"
             alt="PropEase"
             className="h-16 w-auto"
+            onError={(e) => {
+              console.error('Error loading logo:', e, 'Current src:', e.currentTarget.src);
+              const target = e.currentTarget as HTMLImageElement;
+              target.onerror = null; // Prevent infinite error loops
+              target.style.display = 'none';
+              target.insertAdjacentHTML('afterend', '<div className="h-16 w-auto text-gray-500">PropEase Logo Failed</div>');
+            }}
           />
         </Link>
       </div>
