@@ -1,116 +1,27 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Plus, FileText, Download } from 'lucide-react';
+import { Plus, Download, Search } from 'lucide-react';
+import { mockAccounts, Account } from '../../data/mockFinancialData';
 
-interface Account {
-  number: string;
-  name: string;
-  category: 'Asset' | 'Liability' | 'Income' | 'Expense' | 'Equity';
-  description: string;
-  balance?: number;
-}
-
-const mockAccounts: Account[] = [
-  {
-    number: '1000',
-    name: 'Operating Bank Account',
-    category: 'Asset',
-    description: 'Primary bank account for operations.',
-    balance: 250000
-  },
-  {
-    number: '1001',
-    name: 'Security Deposits Held',
-    category: 'Asset',
-    description: 'Funds held as tenant security deposits.',
-    balance: 75000
-  },
-  {
-    number: '1002',
-    name: 'Accounts Receivable',
-    category: 'Asset',
-    description: 'Rent and other payments due from tenants.',
-    balance: 15000
-  },
-  {
-    number: '2000',
-    name: 'Accounts Payable',
-    category: 'Liability',
-    description: 'Amounts owed to vendors or contractors.',
-    balance: -35000
-  },
-  {
-    number: '2001',
-    name: 'Security Deposit Liability',
-    category: 'Liability',
-    description: 'Liability for tenant security deposits.',
-    balance: -75000
-  },
-  {
-    number: '3000',
-    name: 'Rental Income',
-    category: 'Income',
-    description: 'Income from tenant rents collected.',
-    balance: 180000
-  },
-  {
-    number: '3001',
-    name: 'Management Fee Income',
-    category: 'Income',
-    description: 'Revenue from property management services.',
-    balance: 25000
-  },
-  {
-    number: '4000',
-    name: 'Maintenance Expenses',
-    category: 'Expense',
-    description: 'Costs of property repairs and upkeep.',
-    balance: -45000
-  },
-  {
-    number: '4001',
-    name: 'Utilities',
-    category: 'Expense',
-    description: 'Utility costs (electricity, water, gas).',
-    balance: -12000
-  },
-  {
-    number: '4002',
-    name: 'Office Supplies',
-    category: 'Expense',
-    description: 'Costs for office equipment and supplies.',
-    balance: -3500
-  },
-  {
-    number: '5000',
-    name: 'Retained Earnings',
-    category: 'Equity',
-    description: 'Accumulated profits not distributed to owners.',
-    balance: 150000
-  }
-];
-
+// Helper function to get category color
 const getCategoryColor = (category: Account['category']) => {
   switch (category) {
-    case 'Asset':
-      return 'bg-blue-100 text-blue-800';
-    case 'Liability':
-      return 'bg-red-100 text-red-800';
-    case 'Income':
-      return 'bg-green-100 text-green-800';
-    case 'Expense':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'Equity':
-      return 'bg-purple-100 text-purple-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
+    case 'Asset': return 'bg-green-100 text-green-800';
+    case 'Liability': return 'bg-red-100 text-red-800';
+    case 'Equity': return 'bg-blue-100 text-blue-800';
+    case 'Income': return 'bg-purple-100 text-purple-800';
+    case 'Expense': return 'bg-yellow-100 text-yellow-800';
+    default: return 'bg-gray-100 text-gray-800';
   }
 };
+
+// Define account categories for dropdown
+const accountCategories = ['all', 'Asset', 'Liability', 'Equity', 'Income', 'Expense'];
 
 export default function ChartOfAccounts() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const filteredAccounts = mockAccounts.filter(account => {
+  const filteredAccounts = mockAccounts.filter((account: Account) => {
     const matchesSearch = 
       account.number.includes(searchQuery) ||
       account.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -123,16 +34,44 @@ export default function ChartOfAccounts() {
 
   return (
     <div className="space-y-6">
-      {/* Header Actions */}
+      {/* Header Actions and Search */}
       <div className="flex justify-between items-center">
-        <div className="flex gap-3">
-          <button className="flex items-center px-4 py-2 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Account
-          </button>
+        <div className="flex-1 flex items-center space-x-3">
+          {/* Search and Filter Container */}
+          <div className="relative flex-1">
+            <input 
+              type="text" 
+              placeholder="Search accounts by number, name, or description" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B7280] w-5 h-5" />
+          </div>
+
+          {/* Category Dropdown */}
+          <select 
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+          >
+            {accountCategories.map(category => (
+              <option key={category} value={category}>
+                {category === 'all' ? 'All Categories' : category}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="ml-4 flex items-center space-x-3">
           <button className="flex items-center px-4 py-2 text-sm border border-[#2C3539] text-[#2C3539] rounded-lg hover:bg-gray-50 transition-colors">
             <Download className="w-4 h-4 mr-2" />
             Export
+          </button>
+          <button className="flex items-center px-4 py-2 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Account
           </button>
         </div>
       </div>
@@ -151,7 +90,7 @@ export default function ChartOfAccounts() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAccounts.map((account) => (
+              {filteredAccounts.map((account: Account) => (
                 <tr key={account.number} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#2C3539]">
                     {account.number}
@@ -168,7 +107,7 @@ export default function ChartOfAccounts() {
                     {account.description}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
-                    account.balance >= 0 ? 'text-green-600' : 'text-red-600'
+                    account.balance && account.balance >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
                     {account.balance?.toLocaleString()}
                   </td>
@@ -176,6 +115,13 @@ export default function ChartOfAccounts() {
               ))}
             </tbody>
           </table>
+          
+          {/* No Results State */}
+          {filteredAccounts.length === 0 && (
+            <div className="text-center py-10 text-[#6B7280]">
+              No accounts found matching your search criteria.
+            </div>
+          )}
         </div>
       </div>
     </div>

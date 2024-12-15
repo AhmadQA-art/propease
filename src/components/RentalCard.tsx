@@ -18,7 +18,7 @@ const getPropertyTypeIcon = (type: RentalDetails['type']) => {
   }
 };
 
-const getPropertyLocation = (propertyName: string) => {
+export const getPropertyLocation = (propertyName: string) => {
   const locations = {
     'Sunset Gardens': '742 Sunset Boulevard, Los Angeles, CA',
     'Downtown Business Center': '100 Financial District, San Francisco, CA',

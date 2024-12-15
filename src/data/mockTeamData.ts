@@ -55,7 +55,63 @@ export const mockTeamMembers: TeamMember[] = [
     role: 'Financial Analyst',
     department: 'Finance',
     assignedTasks: 4,
-    lastActive: '2024-03-15T11:30:00Z'
+    lastActive: '2024-03-15T11:20:00Z'
+  },
+  {
+    id: '5',
+    type: 'team',
+    name: 'Jessica Taylor',
+    email: 'jessica.t@propease.com',
+    phone: '(555) 567-8901',
+    imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    status: 'active',
+    createdAt: '2024-02-20',
+    role: 'Marketing Manager',
+    department: 'Marketing',
+    assignedTasks: 3,
+    lastActive: '2024-03-15T15:45:00Z'
+  },
+  {
+    id: '6',
+    type: 'team',
+    name: 'Marcus Wilson',
+    email: 'marcus.w@propease.com',
+    phone: '(555) 678-9012',
+    imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    status: 'busy',
+    createdAt: '2024-03-01',
+    role: 'Maintenance Technician',
+    department: 'Maintenance',
+    assignedTasks: 6,
+    lastActive: '2024-03-15T16:30:00Z'
+  },
+  {
+    id: '7',
+    type: 'team',
+    name: 'Rachel Martinez',
+    email: 'rachel.m@propease.com',
+    phone: '(555) 789-0123',
+    imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    status: 'active',
+    createdAt: '2024-03-05',
+    role: 'Customer Service Rep',
+    department: 'Support',
+    assignedTasks: 4,
+    lastActive: '2024-03-15T14:15:00Z'
+  },
+  {
+    id: '8',
+    type: 'team',
+    name: 'Thomas Lee',
+    email: 'thomas.l@propease.com',
+    phone: '(555) 890-1234',
+    imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
+    status: 'offline',
+    createdAt: '2024-03-10',
+    role: 'IT Specialist',
+    department: 'Technology',
+    assignedTasks: 2,
+    lastActive: '2024-03-14T17:30:00Z'
   }
 ];
 

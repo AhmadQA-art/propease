@@ -3,6 +3,7 @@ import { Edit2, Building2, DoorOpen, UserCog, Users2, DollarSign, Home, PercentC
 import { RentalDetails } from '../../types/rental';
 import AddTaskDrawer from './AddTaskDrawer';
 import AddApplicationDrawer from './AddApplicationDrawer';
+import { getPropertyLocation } from '../RentalCard';
 
 interface RentalOverviewProps {
   rental: RentalDetails;
@@ -62,33 +63,48 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
           className="flex items-center px-3 py-1.5 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
         >
           <FileText className="w-3.5 h-3.5 mr-1.5" />
-          <span className="text-sm">New Application</span>
+          <span className="text-sm">New Rental Application</span>
         </button>
         <button
           onClick={() => onEdit(rental.id)}
           className="flex items-center px-3 py-1.5 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          <Edit2 className="w-3.5 h-3.5" />
+          <Edit2 className="w-3.5 h-3.5 mr-1.5" />
+          <span className="text-sm">Edit</span>
         </button>
       </div>
 
-      {/* Stakeholder Details */}
+      {/* Stakeholders */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Stakeholder Details</h2>
+        <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Stakeholders</h2>
         <div className="grid grid-cols-2 gap-6">
           <div>
             <div className="flex items-center space-x-2 text-sm text-[#6B7280]">
               <Users2 className="w-4 h-4" />
               <p>Owner</p>
             </div>
-            <p className="text-[#2C3539] font-medium mt-1">{rental.owner}</p>
+            <div className="flex items-center space-x-3 mt-3">
+              <img 
+                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330"
+                alt="Owner profile"
+                className="w-10 h-10 rounded-full object-cover"
+              />
+              <p className="text-[#2C3539] font-medium">{rental.owner}</p>
+            </div>
           </div>
           <div>
             <div className="flex items-center space-x-2 text-sm text-[#6B7280]">
               <UserCog className="w-4 h-4" />
               <p>Property Manager</p>
             </div>
-            <p className="text-[#2C3539] font-medium mt-1">{rental.manager}</p>
+            <div className="flex items-center space-x-3 mt-3">
+              <img 
+                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d"
+                alt="Manager profile"
+                className="w-10 h-10 rounded-full object-cover"
+              />
+              <p className="text-[#2C3539] font-medium">{rental.manager}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -97,7 +113,7 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
       <div className="grid grid-cols-2 gap-6 mb-6">
         {/* Basic Info */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Basic Information</h2>
+          <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Property Information</h2>
           <div className="grid grid-cols-2 gap-x-6 gap-y-4">
             <div>
               <div className="flex items-center space-x-2 text-sm text-[#6B7280]">
@@ -113,12 +129,12 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
               </div>
               <p className="text-[#2C3539] font-medium mt-1 capitalize">{rental.type}</p>
             </div>
-            <div className="col-span-2">
+            <div>
               <div className="flex items-center space-x-2 text-sm text-[#6B7280]">
                 <MapPin className="w-4 h-4" />
                 <p>Location</p>
               </div>
-              <p className="text-[#2C3539] font-medium mt-1">{rental.address}</p>
+              <p className="text-[#6B7280] text-sm mt-1">{getPropertyLocation(rental.propertyName)}</p>
             </div>
           </div>
         </div>
@@ -141,7 +157,7 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
               </div>
               <p className="text-[#2C3539] font-medium mt-1">12</p>
             </div>
-            <div className="col-span-2">
+            <div>
               <div className="flex items-center space-x-2 text-sm text-[#6B7280]">
                 <PercentCircle className="w-4 h-4" />
                 <p>Occupancy Rate</p>

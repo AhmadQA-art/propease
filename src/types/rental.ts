@@ -14,12 +14,25 @@ export interface Unit {
 
 export interface RentalDetails {
   id: string;
+  propertyId: string;
   propertyName: string;
+  address: string;
+  unit: string;
   type: 'residential' | 'commercial';
-  owner: Person | null;
-  manager: Person | null;
-  units: Unit[];
+  startDate: string;
+  endDate: string;
+  rentAmount: number;
+  paymentFrequency: 'monthly' | 'yearly';
+  resident: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+  owner: string;
+  manager: string;
   status: 'active' | 'inactive';
+  agreementFile: string;
 }
 
 export type NewRentalDetails = Omit<RentalDetails, 'id' | 'status'>;
