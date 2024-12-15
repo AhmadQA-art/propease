@@ -5,6 +5,8 @@ export interface Ticket {
   openDate: string;
   priority: 'low' | 'normal' | 'high';
   status: 'new' | 'in-progress' | 'resolved';
+  vendorId?: number;
+  scheduledDate?: string;
 }
 
 export interface TicketHistory {

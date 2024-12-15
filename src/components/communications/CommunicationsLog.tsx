@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Filter, Mail, MessageSquare, Bell } from 'lucide-react';
 import { format } from 'date-fns';
+import CommunicationsFilterPopup from './CommunicationsFilterPopup';
 
 interface Communication {
   id: string;
@@ -80,15 +81,31 @@ const getStatusColor = (status: Communication['status']) => {
 
 export default function CommunicationsLog() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterPopupOpen, setIsFilterPopupOpen] = useState(false);
+  const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
+  const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
 
-  const filteredCommunications = mockCommunications.filter(communication =>
-    communication.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    communication.recipient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    communication.content.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCommunications = mockCommunications.filter(communication => {
+    const matchesSearch = 
+      communication.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      communication.recipient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      communication.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesDateFilter = 
+      (!filterStartDate || communication.timestamp >= filterStartDate) &&
+      (!filterEndDate || communication.timestamp <= filterEndDate);
+
+    return matchesSearch && matchesDateFilter;
+  });
+
+  const handleApplyFilter = (startDate: Date | null, endDate: Date | null) => {
+    setFilterStartDate(startDate);
+    setFilterEndDate(endDate);
+    setIsFilterPopupOpen(false);
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen flex flex-col">
       {/* Controls */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1">
@@ -101,13 +118,16 @@ export default function CommunicationsLog() {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <button className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+        <button
+          onClick={() => setIsFilterPopupOpen(true)}
+          className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        >
           <Filter className="w-5 h-5 text-[#2C3539]" />
         </button>
       </div>
 
       {/* Communications List */}
-      <div className="space-y-4">
+      <div className="mt-8 flex-1 overflow-y-auto space-y-4">
         {filteredCommunications.map((communication) => {
           const TypeIcon = getTypeIcon(communication.type);
           return (
@@ -142,6 +162,12 @@ export default function CommunicationsLog() {
           );
         })}
       </div>
+
+      <CommunicationsFilterPopup
+        isOpen={isFilterPopupOpen}
+        onClose={() => setIsFilterPopupOpen(false)}
+        onApplyFilter={handleApplyFilter}
+      />
     </div>
   );
 }

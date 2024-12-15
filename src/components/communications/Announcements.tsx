@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Plus, Calendar, Building2, User, Bell } from 'lucide-react';
 import CreateAnnouncementDialog from './CreateAnnouncementDialog';
+import AnnouncementDrawer from './AnnouncementDrawer';
 import { format } from 'date-fns';
 
 interface Announcement {
@@ -71,6 +72,7 @@ const getStatusColor = (status: Announcement['status']) => {
 export default function Announcements() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   const handleCreateAnnouncement = (data: any) => {
     console.log('Create announcement:', data);
@@ -83,34 +85,35 @@ export default function Announcements() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen flex flex-col">
       {/* Controls */}
       <div className="flex items-center justify-between gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Search announcements..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <button
           onClick={() => setIsCreateDialogOpen(true)}
-          className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+          className="flex items-center space-x-2 bg-[#2C3539] text-white px-4 py-2 rounded-lg hover:bg-opacity-90 transition-colors"
         >
-          <Plus className="w-4 h-4 mr-2" />
-          New Announcement
+          <Plus className="w-5 h-5" />
+          <span>Create Announcement</span>
         </button>
       </div>
 
       {/* Announcements List */}
-      <div className="space-y-4">
+      <div className="mt-8 flex-1 overflow-y-auto space-y-4">
         {filteredAnnouncements.map((announcement) => (
           <div
             key={announcement.id}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:border-gray-200 transition-colors"
+            onClick={() => setSelectedAnnouncement(announcement)}
+            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 cursor-pointer hover:shadow-md transition-shadow"
           >
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -161,6 +164,12 @@ export default function Announcements() {
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
         onSubmit={handleCreateAnnouncement}
+      />
+
+      <AnnouncementDrawer
+        announcement={selectedAnnouncement!}
+        isOpen={!!selectedAnnouncement}
+        onClose={() => setSelectedAnnouncement(null)}
       />
     </div>
   );

@@ -14,12 +14,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <DashboardCard
           title="Total Properties"
-          value="24"
+          value="306"
           trend={5.2}
           icon={<Building2 className="w-6 h-6 text-[#2C3539]" />}
         />
         <DashboardCard
-          title="Total Residents"
+          title="Active Leases"
           value="142"
           trend={3.1}
           icon={<Users className="w-6 h-6 text-[#2C3539]" />}
@@ -45,15 +45,34 @@ export default function Dashboard() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
           <h3 className="text-lg font-semibold text-[#2C3539] mb-4">Recent Activities</h3>
           <div className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                <div>
-                  <p className="text-sm font-medium text-[#2C3539]">New Maintenance Request</p>
-                  <p className="text-xs text-[#6B7280]">Unit 304, Building A</p>
-                </div>
-                <span className="text-xs text-[#6B7280]">2h ago</span>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div>
+                <p className="text-sm font-medium text-[#2C3539]">New Maintenance Request</p>
+                <p className="text-xs text-[#6B7280]">Unit 304, Building A</p>
               </div>
-            ))}
+              <span className="text-xs text-[#6B7280]">2h ago</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div>
+                <p className="text-sm font-medium text-[#2C3539]">Team Announcement</p>
+                <p className="text-xs text-[#6B7280]">Sarah Miller: Building inspection next week</p>
+              </div>
+              <span className="text-xs text-[#6B7280]">3h ago</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100">
+              <div>
+                <p className="text-sm font-medium text-[#2C3539]">Rent Payment Received</p>
+                <p className="text-xs text-[#6B7280]">$1,850 - Unit 207, John Davis</p>
+              </div>
+              <span className="text-xs text-[#6B7280]">5h ago</span>
+            </div>
+            <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+              <div>
+                <p className="text-sm font-medium text-[#2C3539]">New Tenant Message</p>
+                <p className="text-xs text-[#6B7280]">Emma Thompson: Parking inquiry</p>
+              </div>
+              <span className="text-xs text-[#6B7280]">6h ago</span>
+            </div>
           </div>
         </div>
       </div>
