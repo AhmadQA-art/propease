@@ -8,6 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  signup: (email: string, password: string, organizationName: string, role: string) => Promise<void>;
   requestAccess: (name: string, organizationName: string, jobTitle: string) => Promise<void>;
 }
 
@@ -57,6 +58,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signup = async (email: string, password: string, organizationName: string, role: string) => {
+    try {
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+
+      if (authError) throw authError;
+
+      // Create profile for the new user
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([
+          {
+            id: authData.user?.id,
+            organization_name: organizationName,
+            role: role,
+            email: email
+          }
+        ]);
+
+      if (profileError) throw profileError;
+    } catch (error) {
+      const authError = error as AuthError;
+      throw new Error(authError.message);
+    }
+  };
+
   const requestAccess = async (name: string, organizationName: string, jobTitle: string) => {
     try {
       // You'll need to create this table in your Supabase database
@@ -85,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login, 
         logout,
+        signup,
         requestAccess
       }}
     >
