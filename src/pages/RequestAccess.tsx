@@ -1,19 +1,57 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { User, Building2, Briefcase, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function RequestAccess() {
+  const { requestAccess } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     organizationName: '',
     jobTitle: '',
   });
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement request access logic
-    console.log('Request access:', formData);
+    setError('');
+    setIsLoading(true);
+
+    try {
+      await requestAccess(
+        formData.name,
+        formData.organizationName,
+        formData.jobTitle
+      );
+      setIsSuccess(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit request');
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F8F8F8] px-4">
+        <div className="w-full max-w-md text-center">
+          <h2 className="text-2xl font-bold text-[#2C3539] mb-4">Request Submitted!</h2>
+          <p className="text-[#6B7280] mb-6">
+            Thank you for your interest. We'll review your request and get back to you soon.
+          </p>
+          <Link 
+            to="/login" 
+            className="inline-flex items-center text-[#2C3539] hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back to login
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F8F8F8] px-4">
