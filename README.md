@@ -4,6 +4,10 @@ PropEase is a comprehensive property management system designed to streamline th
 
 ## Features
 
+- 🔐 Secure Authentication & User Management
+  - Complete user profiles with personal and organization details
+  - Role-based access control (Property Manager, Owner, Administrator, Staff)
+  - Request access system for new organizations
 - 📊 Dashboard with key metrics and analytics
 - 🏢 Property management and unit tracking
 - 👥 Resident management
@@ -43,6 +47,7 @@ propease/
 │   │   ├── hooks/           # Custom React hooks
 │   │   ├── layouts/         # Page layouts
 │   │   ├── pages/           # Page components
+│   │   │   └── auth/        # Authentication pages (Login, Signup, Request Access)
 │   │   ├── services/        # API services
 │   │   ├── store/           # State management
 │   │   ├── styles/          # Global styles

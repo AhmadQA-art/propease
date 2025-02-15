@@ -20,8 +20,15 @@ The platform is built as a web application with a focus on automation, user-frie
 
 ### Authentication
 
-- **Login & Signup**: Secure authentication for users.
+- **Login**: Secure authentication with email and password, including "Remember me" functionality.
+- **Signup**: Comprehensive user registration collecting:
+  - Personal Information (First Name, Last Name, Email)
+  - Contact Details (Phone Number)
+  - Organization Details (Organization Name)
+  - Role Selection (Property Manager, Owner, Administrator, Staff)
+- **Request Access**: Allow potential users to request access to the platform.
 - **User Roles & Permissions**: Role-based access control for organizations.
+- **Profile Management**: Complete user profiles with essential information.
 
 ### Dashboard
 
