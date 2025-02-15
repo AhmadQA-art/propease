@@ -37,7 +37,7 @@ export default function Sidebar() {
       <div className="p-4 pb-0">
         <Link to="/" className="block">
           <img
-            src="/propease.png"
+            src="/PropEase.png"
             alt="PropEase"
             className="h-16 w-auto"
             onError={(e) => {

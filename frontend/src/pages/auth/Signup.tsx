@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Building2, Mail, Lock, ArrowRight } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -9,8 +9,11 @@ export default function Signup() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    firstName: '',
+    lastName: '',
+    phone: '',
     organizationName: '',
-    role: ''
+    role: 'property_manager' // default role
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,8 +27,13 @@ export default function Signup() {
       await signup(
         formData.email,
         formData.password,
-        formData.organizationName,
-        formData.role
+        {
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          organization_name: formData.organizationName,
+          role: formData.role,
+          phone: formData.phone
+        }
       );
       navigate('/');
     } catch (err) {
@@ -41,7 +49,7 @@ export default function Signup() {
         {/* Logo */}
         <div className="mb-8 text-center">
           <img
-            src="/propease.png"
+            src="/PropEase.png"
             alt="PropEase"
             className="h-12 mx-auto"
           />
@@ -55,6 +63,36 @@ export default function Signup() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Name Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                  placeholder="John"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.lastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                  placeholder="Doe"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-[#2C3539] mb-2">
                 Email address
@@ -91,6 +129,20 @@ export default function Signup() {
 
             <div>
               <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                required
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                placeholder="+1 (555) 000-0000"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#2C3539] mb-2">
                 Organization Name
               </label>
               <div className="relative">
@@ -104,6 +156,23 @@ export default function Signup() {
                   placeholder="Enter organization name"
                 />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                Role
+              </label>
+              <select
+                required
+                value={formData.role}
+                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] bg-white"
+              >
+                <option value="property_manager">Property Manager</option>
+                <option value="owner">Property Owner</option>
+                <option value="admin">Administrator</option>
+                <option value="staff">Staff Member</option>
+              </select>
             </div>
 
             <div>

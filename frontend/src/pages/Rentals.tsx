@@ -4,15 +4,59 @@ import { useNavigate } from 'react-router-dom';
 import { RentalDetails } from '../types/rental';
 import RentalCard from '../components/RentalCard';
 
-interface RentalsProps {
-  rentals: RentalDetails[];
-}
+// Mock data for testing
+const mockRentals: RentalDetails[] = [
+  {
+    id: '1',
+    propertyId: 'prop1',
+    propertyName: 'Sunset Apartments',
+    address: '123 Main St',
+    unit: 'A101',
+    type: 'residential',
+    startDate: '2024-01-01',
+    endDate: '2024-12-31',
+    rentAmount: 1500,
+    paymentFrequency: 'monthly',
+    resident: {
+      id: 'res1',
+      name: 'John Doe',
+      email: 'john@example.com',
+      phone: '123-456-7890',
+    },
+    owner: 'Owner Name',
+    manager: 'Manager Name',
+    status: 'active',
+    agreementFile: 'agreement1.pdf',
+  },
+  {
+    id: '2',
+    propertyId: 'prop2',
+    propertyName: 'Ocean View Complex',
+    address: '456 Beach Rd',
+    unit: 'B202',
+    type: 'residential',
+    startDate: '2024-02-01',
+    endDate: '2025-01-31',
+    rentAmount: 2000,
+    paymentFrequency: 'monthly',
+    resident: {
+      id: 'res2',
+      name: 'Jane Smith',
+      email: 'jane@example.com',
+      phone: '987-654-3210',
+    },
+    owner: 'Owner Name',
+    manager: 'Manager Name',
+    status: 'active',
+    agreementFile: 'agreement2.pdf',
+  },
+];
 
-export default function Rentals({ rentals }: RentalsProps) {
+export default function Rentals() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredRentals = rentals.filter(rental => {
+  const filteredRentals = mockRentals.filter(rental => {
     const matchesSearch = 
       rental.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rental.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||

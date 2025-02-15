@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MoreHorizontal, LogOut, User } from 'lucide-react';
+import { supabase } from '@/services/supabase/client';
 
 interface UserProfileProps {
   name: string;
@@ -10,6 +11,7 @@ interface UserProfileProps {
 
 export default function UserProfile({ name, email, imageUrl }: UserProfileProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="relative">
@@ -40,9 +42,15 @@ export default function UserProfile({ name, email, imageUrl }: UserProfileProps)
             My Account
           </Link>
           <button
-            onClick={() => {
+            onClick={async () => {
               setIsOpen(false);
-              // Add logout logic here
+              try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                navigate('/login');
+              } catch (error) {
+                console.error('Error signing out:', error);
+              }
             }}
             className="flex items-center w-full px-4 py-2 text-sm text-[#2C3539] hover:bg-gray-50"
           >

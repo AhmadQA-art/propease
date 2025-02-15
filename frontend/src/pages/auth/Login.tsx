@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -35,7 +35,7 @@ export default function Login() {
         {/* Logo */}
         <div className="mb-8 text-center">
           <img
-            src="/propease.png"
+            src="/PropEase.png"
             alt="PropEase"
             className="h-12 mx-auto"
           />

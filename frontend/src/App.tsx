@@ -1,59 +1,76 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
-import { Toaster } from 'react-hot-toast';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
+import Login from './pages/auth/Login';
+import Signup from './pages/auth/Signup';
+import RequestAccess from './pages/auth/RequestAccess';
+import Dashboard from './pages/Dashboard';
+import Properties from './pages/Properties';
+import Rentals from './pages/Rentals';
+import RentalDetails from './pages/RentalDetails';
+import Leases from './pages/Leases';
+import Finances from './pages/Finances';
+import Payments from './pages/Payments';
+import Documents from './pages/Documents';
+import Maintenance from './pages/Maintenance';
+import Communications from './pages/Communications';
+import Team from './pages/Team';
+import People from './pages/People';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-import AuthLayout from '@layouts/AuthLayout';
-import DashboardLayout from '@layouts/DashboardLayout';
+function AppRoutes() {
+  const { isAuthenticated } = useAuth();
 
-import LoginPage from '@pages/auth/LoginPage';
-import RegisterPage from '@pages/auth/RegisterPage';
-import DashboardPage from '@pages/dashboard/DashboardPage';
-import PropertiesPage from '@pages/properties/PropertiesPage';
-import PropertyDetailsPage from '@pages/properties/PropertyDetailsPage';
-import TenantsPage from '@pages/tenants/TenantsPage';
-import MaintenancePage from '@pages/maintenance/MaintenancePage';
-import PaymentsPage from '@pages/payments/PaymentsPage';
-import SettingsPage from '@pages/settings/SettingsPage';
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={
+        !isAuthenticated ? <Login /> : <Navigate to="/" replace />
+      } />
+      <Route path="/signup" element={
+        !isAuthenticated ? <Signup /> : <Navigate to="/" replace />
+      } />
+      <Route path="/request-access" element={<RequestAccess />} />
 
-import ProtectedRoute from '@components/auth/ProtectedRoute';
-import { AuthProvider } from '@/contexts/AuthContext';
+      {/* Protected Routes - Wrap all dashboard routes */}
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? (
+            <Layout />
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      >
+        {/* Dashboard routes */}
+        <Route index element={<Dashboard />} />
+        <Route path="properties" element={<Properties />} />
+        <Route path="rentals" element={<Rentals />} />
+        <Route path="rentals/:id" element={<RentalDetails />} />
+        <Route path="leases" element={<Leases />} />
+        <Route path="finances" element={<Finances />} />
+        <Route path="payments" element={<Payments />} />
+        <Route path="documents" element={<Documents />} />
+        <Route path="maintenance" element={<Maintenance />} />
+        <Route path="communications" element={<Communications />} />
+        <Route path="team" element={<Team />} />
+        <Route path="people" element={<People />} />
+      </Route>
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
+      {/* Catch all route */}
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <Router>
-          <Routes>
-            {/* Auth Routes */}
-            <Route element={<AuthLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-            </Route>
-
-            {/* Protected Dashboard Routes */}
-            <Route element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/properties" element={<PropertiesPage />} />
-              <Route path="/properties/:id" element={<PropertyDetailsPage />} />
-              <Route path="/tenants" element={<TenantsPage />} />
-              <Route path="/maintenance" element={<MaintenancePage />} />
-              <Route path="/payments" element={<PaymentsPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-            </Route>
-          </Routes>
-        </Router>
-        <Toaster position="top-right" />
-      </AuthProvider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
   );
 }
 
