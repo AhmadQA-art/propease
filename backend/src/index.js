@@ -10,6 +10,7 @@ const propertyRoutes = require(path.join(__dirname, 'routes', 'property.routes')
 const leaseRoutes = require(path.join(__dirname, 'routes', 'lease.routes'));
 const maintenanceRoutes = require(path.join(__dirname, 'routes', 'maintenance.routes'));
 const paymentRoutes = require(path.join(__dirname, 'routes', 'payment.routes'));
+const userRoutes = require(path.join(__dirname, 'routes', 'user.routes'));
 const { errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
@@ -26,6 +27,7 @@ app.use('/api/properties', propertyRoutes);
 app.use('/api/leases', leaseRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/users', userRoutes);
 
 // Error handling
 app.use(errorHandler);

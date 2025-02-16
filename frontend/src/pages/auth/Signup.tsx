@@ -7,13 +7,17 @@ export default function Signup() {
   const navigate = useNavigate();
   const { signup } = useAuth();
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    // Personal Information
     firstName: '',
     lastName: '',
+    email: '',
+    password: '',
     phone: '',
+    role: 'admin',
+    
+    // Organization Information
     organizationName: '',
-    role: 'property_manager' // default role
+    organizationSubscription: 'trial' as 'trial' | 'basic' | 'premium' | 'enterprise'
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +36,8 @@ export default function Signup() {
           last_name: formData.lastName,
           organization_name: formData.organizationName,
           role: formData.role,
-          phone: formData.phone
+          phone: formData.phone,
+          organization_subscription: formData.organizationSubscription
         }
       );
       navigate('/');
@@ -141,39 +146,50 @@ export default function Signup() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Organization Name
-              </label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
+            {/* Organization Details Section */}
+            <div className="space-y-6 border border-gray-100 rounded-lg p-4 bg-gray-50">
+              <h3 className="text-lg font-medium text-[#2C3539]">Organization Details</h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                  Organization Name
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    required
+                    value={formData.organizationName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, organizationName: e.target.value }))}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                    placeholder="Enter organization name"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                  Subscription Plan
+                </label>
+                <select
                   required
-                  value={formData.organizationName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, organizationName: e.target.value }))}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                  placeholder="Enter organization name"
-                />
+                  value={formData.organizationSubscription}
+                  onChange={(e) => setFormData(prev => ({ ...prev, organizationSubscription: e.target.value as typeof formData.organizationSubscription }))}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] bg-white"
+                >
+                  <option value="trial">Trial (14 days)</option>
+                  <option value="basic">Basic</option>
+                  <option value="premium">Premium</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+                <p className="mt-1 text-sm text-gray-500">You can change your plan anytime after signup</p>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Role
-              </label>
-              <select
-                required
-                value={formData.role}
-                onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] bg-white"
-              >
-                <option value="property_manager">Property Manager</option>
-                <option value="owner">Property Owner</option>
-                <option value="admin">Administrator</option>
-                <option value="staff">Staff Member</option>
-              </select>
-            </div>
+            <input
+              type="hidden"
+              value={formData.role}
+            />
 
             <div>
               <label className="block text-sm font-medium text-[#2C3539] mb-2">

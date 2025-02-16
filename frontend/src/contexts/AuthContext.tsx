@@ -14,6 +14,7 @@ interface AuthContextType {
     organization_name: string;
     role: string;
     phone: string;
+    organization_subscription: 'trial' | 'basic' | 'premium' | 'enterprise';
   }) => Promise<void>;
   requestAccess: (name: string, organizationName: string, jobTitle: string) => Promise<void>;
 }
@@ -40,6 +41,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Fetch user profile when user changes
+  useEffect(() => {
+    async function fetchUserProfile() {
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from('user_profiles')
+          .select('organization_id, first_name, last_name, email, role')
+          .eq('id', user.id)
+          .single();
+
+        if (!error && profile?.organization_id) {
+          console.log('User is linked to an organization:', profile.organization_id);
+        } else {
+          console.log('User has no organization linked.');
+        }
+      }
+    }
+    fetchUserProfile();
+  }, [user]);
+  
+
   const login = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -58,6 +80,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      setUser(null); // Clear user state immediately
+      window.location.href = '/login'; // Redirect to login page
     } catch (error) {
       const authError = error as AuthError;
       throw new Error(authError.message);
@@ -70,36 +94,176 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     organization_name: string;
     role: string;
     phone: string;
+    organization_subscription: 'trial' | 'basic' | 'premium' | 'enterprise';
   }) => {
+    let userId: string | undefined;
+    let organizationId: string | undefined;
+
     try {
+      console.log('Starting signup process for:', email);
+
+      // 1. Create the user in authentication
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
-      });
-
-      if (authError) throw authError;
-
-      // Create profile for the new user
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([
-          {
-            id: authData.user?.id,
+        options: {
+          data: {
             first_name: profileData.first_name,
             last_name: profileData.last_name,
-            organization_name: profileData.organization_name,
-            role: profileData.role,
-            phone: profileData.phone,
-            email: email
+            role: profileData.role
           }
-        ]);
+        }
+      });
 
-      if (profileError) throw profileError;
+      if (authError) {
+        console.error('Authentication error:', authError);
+        throw new Error(`Authentication failed: ${authError.message}`);
+      }
+
+      if (!authData.user) {
+        console.error('No user data received after signup');
+        throw new Error('No user data received after signup');
+      }
+
+      userId = authData.user.id;
+      console.log('User created successfully with ID:', userId);
+
+      // 2. Create the organization
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .insert([
+          {
+            name: profileData.organization_name,
+            subscription_status: profileData.organization_subscription
+          }
+        ])
+        .select()
+        .single();
+
+      if (orgError) {
+        console.error('Organization creation error:', orgError);
+        throw new Error(`Failed to create organization: ${orgError.message}`);
+      }
+
+      if (!orgData) {
+        console.error('No organization data received after creation');
+        throw new Error('No organization data received after creation');
+      }
+
+      organizationId = orgData.id;
+      console.log('Organization created successfully with ID:', organizationId);
+
+      // 3. Create the user profile
+      console.log('Creating user profile for user:', userId);
+      
+      // First, check if profile already exists
+      const { data: existingProfile, error: checkError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 is the error code for no rows returned
+        console.error('Error checking existing profile:', checkError);
+        throw new Error(`Failed to check existing profile: ${checkError.message}`);
+      }
+
+      const userProfileData = {
+        id: userId,
+        email: email,
+        first_name: profileData.first_name,
+        last_name: profileData.last_name,
+        role: profileData.role,
+        organization_id: organizationId,
+        phone: profileData.phone
+      };
+
+      console.log('User profile data to be inserted:', userProfileData);
+
+      let profileResult;
+      if (existingProfile) {
+        console.log('Updating existing profile');
+        profileResult = await supabase
+          .from('user_profiles')
+          .update(userProfileData)
+          .eq('id', userId);
+      } else {
+        console.log('Creating new profile');
+        profileResult = await supabase
+          .from('user_profiles')
+          .insert([userProfileData]);
+      }
+
+      const { error: profileError } = profileResult;
+
+      if (profileError) {
+        console.error('Detailed profile error:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
+        throw new Error(`Failed to create profile: ${profileError.message}`);
+      }
+
+      console.log('User profile created successfully');
+
+      // 4. Verify everything was created
+      const { data: verifyProfile, error: verifyError } = await supabase
+        .from('user_profiles')
+        .select(`
+          id,
+          email,
+          first_name,
+          last_name,
+          role,
+          organization_id,
+          phone,
+          organizations:organization_id (id, name, subscription_status)
+        `)
+        .eq('id', userId)
+        .single();
+
+      if (verifyError) {
+        console.error('Profile verification error:', {
+          code: verifyError.code,
+          message: verifyError.message,
+          details: verifyError.details,
+          hint: verifyError.hint
+        });
+        throw new Error(`Failed to verify profile creation: ${verifyError.message}`);
+      }
+
+      if (!verifyProfile) {
+        console.error('No profile found after creation');
+        throw new Error('Profile creation failed - no profile found');
+      }
+
+      console.log('Profile verified successfully:', verifyProfile);
+
+      // Set the user immediately after successful signup
+      setUser(authData.user);
+      console.log('Signup process completed successfully');
+
     } catch (error) {
-      const authError = error as AuthError;
-      throw new Error(authError.message);
+      console.error('Signup process failed:', error);
+
+      // Attempt to clean up if we have partial creation
+      if (userId) {
+        try {
+          if (organizationId) {
+            await supabase.from('organizations').delete().eq('id', organizationId);
+          }
+          await supabase.from('user_profiles').delete().eq('id', userId);
+        } catch (cleanupError) {
+          console.error('Error during cleanup:', cleanupError);
+        }
+      }
+
+      throw error;
     }
   };
+  
 
   const requestAccess = async (name: string, organizationName: string, jobTitle: string) => {
     try {
