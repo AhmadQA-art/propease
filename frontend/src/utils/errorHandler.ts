@@ -3,7 +3,7 @@ import { AxiosError } from 'axios';
 
 export const handleError = (error: unknown) => {
   if (error instanceof AxiosError) {
-    const message = error.response?.data?.error || error.message;
+    const message = error.response?.data?.message || error.response?.data?.error || error.message;
     toast.error(message);
     return message;
   }

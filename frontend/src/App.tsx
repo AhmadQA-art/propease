@@ -17,6 +17,7 @@ import Communications from './pages/Communications';
 import Team from './pages/Team';
 import People from './pages/People';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { Toaster } from 'react-hot-toast';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -66,11 +67,14 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AuthProvider>
+    <>
+      <Toaster position="top-right" />
+      <AuthProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AuthProvider>
+    </>
   );
 }
 

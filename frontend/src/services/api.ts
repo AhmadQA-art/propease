@@ -2,7 +2,7 @@ import axios from 'axios';
 import { supabase } from './supabase/client';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000', // Update this to match your backend port
+  baseURL: 'http://localhost:5000', // Your backend URL
   headers: {
     'Content-Type': 'application/json',
   },
@@ -11,29 +11,39 @@ const api = axios.create({
 // Add auth token to requests
 api.interceptors.request.use(async (config) => {
   const { data: { session } } = await supabase.auth.getSession();
+  
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`;
+    console.log('Adding auth token to request:', session.access_token);
+  } else {
+    console.log('No auth token available');
   }
+  
+  console.log('Request config:', {
+    url: config.url,
+    method: config.method,
+    headers: config.headers
+  });
+  
   return config;
 });
 
-// Add logging for debugging
+// Add response interceptor for debugging
 api.interceptors.response.use(
   (response) => {
     console.log('API Response:', response);
     return response;
   },
   (error) => {
-    console.error('API Error:', {
-      status: error.response?.status,
-      data: error.response?.data,
-      config: error.config
-    });
+    console.error('Response Error:', error.response || error);
+    
+    // Handle auth errors
     if (error.response?.status === 401) {
-      // Handle unauthorized access
+      console.log('Auth error detected, redirecting to login');
       supabase.auth.signOut();
       window.location.href = '/login';
     }
+    
     return Promise.reject(error);
   }
 );

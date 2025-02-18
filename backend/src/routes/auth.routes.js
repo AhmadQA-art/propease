@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
+const authController = require('../controllers/auth.controller');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -8,20 +9,7 @@ const supabase = createClient(
 );
 
 // Sign up
-router.post('/signup', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) throw error;
-    res.json(data);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+router.post('/signup', authController.signup);
 
 // Sign in
 router.post('/signin', async (req, res) => {

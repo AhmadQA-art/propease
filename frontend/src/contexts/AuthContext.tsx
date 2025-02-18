@@ -1,9 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/services/supabase/client';
 
+interface UserProfile {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  organization_id: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
+  userProfile: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -19,60 +28,94 @@ interface AuthContextType {
   requestAccess: (name: string, organizationName: string, jobTitle: string) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  userProfile: null,
+  isAuthenticated: false,
+  isLoading: true,
+  login: async () => {},
+  logout: async () => {},
+  signup: async () => {},
+  requestAccess: async () => {}
+});
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Fetch user profile function
+  const fetchUserProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Check active session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setIsAuthenticated(!!session?.user);
+      
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUserProfile(profile);
+      }
+      
       setIsLoading(false);
     });
 
-    // Listen for changes on auth state
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      setIsAuthenticated(!!session?.user);
+      
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+      }
+      
       setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch user profile when user changes
-  useEffect(() => {
-    async function fetchUserProfile() {
-      if (user) {
-        const { data: profile, error } = await supabase
-          .from('user_profiles')
-          .select('organization_id, first_name, last_name, email, role')
-          .eq('id', user.id)
-          .single();
-
-        if (!error && profile?.organization_id) {
-          console.log('User is linked to an organization:', profile.organization_id);
-        } else {
-          console.log('User has no organization linked.');
-        }
-      }
-    }
-    fetchUserProfile();
-  }, [user]);
-  
-
   const login = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+      
+      if (user) {
+        const profile = await fetchUserProfile(user.id);
+        setUserProfile(profile);
+      }
     } catch (error) {
-      const authError = error as AuthError;
-      throw new Error(authError.message);
+      console.error('Login error:', error);
+      throw error;
     }
   };
 
@@ -80,11 +123,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      setUser(null); // Clear user state immediately
-      window.location.href = '/login'; // Redirect to login page
+      setUser(null);
+      setUserProfile(null);
+      setIsAuthenticated(false);
     } catch (error) {
-      const authError = error as AuthError;
-      throw new Error(authError.message);
+      console.error('Logout error:', error);
+      throw error;
     }
   };
 
@@ -289,7 +333,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider 
       value={{ 
         user, 
-        isAuthenticated: !!user, 
+        userProfile,
+        isAuthenticated, 
         isLoading,
         login, 
         logout,
@@ -300,12 +345,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth() {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-} 
+}; 
