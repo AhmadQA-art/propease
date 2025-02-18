@@ -1,8 +1,11 @@
-const supabase = require('../config/supabase');
+const { supabase } = require('../config/supabase');
 
 const authenticateToken = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(' ')[1];
+    
+    console.log('Auth headers present:', !!req.headers.authorization);
+    console.log('Token present:', !!token);
     
     if (!token) {
       return res.status(401).json({ error: 'No token provided' });
@@ -10,13 +13,20 @@ const authenticateToken = async (req, res, next) => {
 
     const { data: { user }, error } = await supabase.auth.getUser(token);
     
-    if (error) {
+    console.log('Auth response:', { 
+      userExists: !!user,
+      error: error?.message
+    });
+    
+    if (error || !user) {
+      console.error('Auth error:', error);
       return res.status(401).json({ error: 'Invalid token' });
     }
 
     req.user = user;
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     res.status(500).json({ error: 'Authentication error' });
   }
 };
