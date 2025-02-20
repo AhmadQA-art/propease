@@ -10,10 +10,11 @@
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "npm run dev --workspace=frontend",
     "dev:backend": "npm run dev --workspace=backend",
-    "build": "npm run build --workspace=frontend",
+    "build": "cd frontend && npm run build && cd ../backend && npm run build",
     "start": "npm run start --workspace=backend",
     "lint": "npm run lint --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test --workspaces",
+    "deploy": "netlify deploy --prod"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

@@ -13,6 +13,29 @@ interface AddRentalFormProps {
   propertyOwners: Person[];
 }
 
+interface FormUnit {
+  name: string;
+  rentAmount: number;
+  occupancyStatus: 'vacant' | 'occupied';
+  resident?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface FormData {
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip_code: string;
+  total_units: number;
+  owner_id: string;
+  organization_id: string;
+  units: FormUnit[];
+}
+
 export default function AddRentalForm({ 
   onSubmit, 
   onCancel, 
@@ -22,7 +45,7 @@ export default function AddRentalForm({
   propertyOwners = []
 }: AddRentalFormProps) {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: '',
     address: '',
     city: '',
@@ -30,7 +53,7 @@ export default function AddRentalForm({
     zip_code: '',
     total_units: 0,
     owner_id: '',
-    organization_id: '', // This will be set by the backend
+    organization_id: '',
     units: []
   });
 
@@ -77,7 +100,7 @@ export default function AddRentalForm({
     }));
   };
 
-  const updateUnit = (index: number, updatedUnit: Partial<Unit>) => {
+  const updateUnit = (index: number, updatedUnit: Partial<FormUnit>) => {
     setFormData(prev => ({
       ...prev,
       units: prev.units?.map((unit, i) => 

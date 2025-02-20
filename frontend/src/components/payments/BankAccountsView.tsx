@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Landmark, Building2, TrendingUp, Link } from 'lucide-react';
+import { Plus, Landmark, Building2 } from 'lucide-react';
 import AddBankAccountDrawer from './AddBankAccountDrawer';
 
 interface BankAccount {
@@ -55,21 +55,6 @@ const mockAccounts: BankAccount[] = [
     lastSync: '2024-03-15T14:30:00Z'
   }
 ];
-
-const getAccountTypeColor = (type: BankAccount['type']) => {
-  switch (type) {
-    case 'trust':
-      return 'bg-blue-100 text-blue-800';
-    case 'operations':
-      return 'bg-green-100 text-green-800';
-    case 'reserve':
-      return 'bg-purple-100 text-purple-800';
-    case 'security':
-      return 'bg-orange-100 text-orange-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
 
 export default function BankAccountsView() {
   const [isAddAccountDrawerOpen, setIsAddAccountDrawerOpen] = useState(false);

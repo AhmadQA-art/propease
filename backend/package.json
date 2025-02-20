@@ -4,20 +4,21 @@
   "description": "PropEase property management system backend",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest"
+    "build": "mkdir -p netlify/functions && cp -r src/* netlify/functions/",
+    "start": "node src/index.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.3",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.2",
+    "dotenv": "^16.0.3",
     "express": "^4.18.2",
-    "helmet": "^7.1.0",
-    "morgan": "^1.10.0"
+    "helmet": "^7.0.0",
+    "morgan": "^1.10.0",
+    "serverless-http": "^3.1.1"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "nodemon": "^3.0.3"
+    "netlify-lambda": "^2.0.15",
+    "nodemon": "^2.0.22"
   }
 }

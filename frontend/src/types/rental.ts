@@ -46,6 +46,8 @@ export interface RentalDetails extends Property {
   type: 'residential' | 'commercial' | 'industrial';
   unit: number;
   status: 'active' | 'inactive';
+  propertyName?: string;
+  manager?: string;
 }
 
 export type NewRentalDetails = Omit<RentalDetails, 'id' | 'status'>;

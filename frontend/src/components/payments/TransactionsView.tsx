@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, Search, Filter, Calendar, Plus, ArrowUpRight, ArrowDownRight, Repeat, Clock, ArrowDownToLine } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Filter, Calendar, ArrowUpRight, ArrowDownRight, Repeat, ArrowDownToLine } from 'lucide-react';
 import { format } from 'date-fns';
 import TransactionDetailsDrawer from './TransactionDetailsDrawer';
 import AddRecurringPaymentDrawer from './AddRecurringPaymentDrawer';
