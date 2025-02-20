@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/services/supabase/client';
+import toast from 'react-hot-toast';
 
 interface UserProfile {
   id: string;
@@ -55,33 +56,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
-
+      if (error) throw error;
       return data;
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      console.error('Error fetching user profile:', error);
       return null;
     }
   };
 
   useEffect(() => {
-    try {
-      // Check active session
-      const session = supabase.auth.getSession();
-      if (session) {
-        console.log('Found existing session');
-      } else {
-        console.log('No existing session found');
+    // Check and set initial session
+    const checkSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+        setIsAuthenticated(!!session?.user);
+        
+        if (session?.user) {
+          const profile = await fetchUserProfile(session.user.id);
+          setUserProfile(profile);
+        }
+      } catch (err) {
+        console.error('Error checking session:', err);
+        setError('Failed to initialize authentication');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error('Error checking session:', err);
-      setError('Failed to initialize authentication');
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null);
+      setIsAuthenticated(!!session?.user);
+      
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUserProfile(profile);
+      } else {
+        setUserProfile(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   if (error) {
@@ -94,15 +112,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const { data: { user }, error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
       
-      if (user) {
-        const profile = await fetchUserProfile(user.id);
+      if (data.user) {
+        setUser(data.user);
+        setIsAuthenticated(true);
+        const profile = await fetchUserProfile(data.user.id);
         setUserProfile(profile);
       }
     } catch (error) {
@@ -115,11 +135,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Clear all auth state
       setUser(null);
       setUserProfile(null);
       setIsAuthenticated(false);
+      
+      // Navigate to login page
+      window.location.href = '/login';  // Using window.location to ensure complete reset
     } catch (error) {
       console.error('Logout error:', error);
+      toast.error('Failed to logout. Please try again.');
       throw error;
     }
   };

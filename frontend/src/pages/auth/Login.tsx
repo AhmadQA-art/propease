@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isLoading: authLoading } = useAuth();
+  const { login } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     rememberMe: false
   });
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +22,11 @@ export default function Login() {
 
     try {
       await login(formData.email, formData.password);
+      toast.success('Logged in successfully');
       navigate('/');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in');
+    } catch (error) {
+      console.error('Login error:', error);
+      toast.error('Failed to login. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -113,7 +116,6 @@ export default function Login() {
               className="w-full flex items-center justify-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors disabled:opacity-50"
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
-              {!isLoading && <ArrowRight className="ml-2 w-4 h-4" />}
             </button>
           </form>
         </div>
