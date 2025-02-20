@@ -14,35 +14,31 @@ const mockVendors = [
 interface AddTicketDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (ticket: Omit<Ticket, 'id'>) => void;
+  onAddTicket?: (ticket: Omit<Ticket, "id" | "createdAt" | "updatedAt">) => void;
 }
 
-export default function AddTicketDrawer({ isOpen, onClose, onSubmit }: AddTicketDrawerProps) {
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    priority: 'normal' as Ticket['priority'],
-    status: 'new' as Ticket['status'],
-    scheduledDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-    vendorId: '',
-  });
+const initialFormData = {
+  title: '',
+  description: '',
+  priority: 'medium' as const,
+  status: 'new' as const,
+  openDate: new Date().toISOString(),
+  scheduledDate: '',
+  vendorId: ''
+};
+
+export default function AddTicketDrawer({ isOpen, onClose, onAddTicket }: AddTicketDrawerProps) {
+  const [formData, setFormData] = useState(initialFormData);
 
   const [vendorSearch, setVendorSearch] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({
+    onAddTicket && onAddTicket({
       ...formData,
-      openDate: new Date().toISOString()
+      scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate).toISOString() : undefined
     });
-    setFormData({
-      title: '',
-      description: '',
-      priority: 'normal',
-      status: 'new',
-      scheduledDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-      vendorId: '',
-    });
+    setFormData(initialFormData);
     onClose();
   };
 
@@ -136,10 +132,10 @@ export default function AddTicketDrawer({ isOpen, onClose, onSubmit }: AddTicket
                         required
                         className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2C3539] text-[#2C3539] appearance-none pr-8"
                         value={formData.priority}
-                        onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as Ticket['priority'] }))}
+                        onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value as 'low' | 'medium' | 'high' }))}
                       >
                         <option value="low">Low Priority</option>
-                        <option value="normal">Normal Priority</option>
+                        <option value="medium">Medium Priority</option>
                         <option value="high">High Priority</option>
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#6B7280]">

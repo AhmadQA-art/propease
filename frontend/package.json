@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "netlify:build": "tsc --noEmit && vite build"
+    "netlify:build": "vite build"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",

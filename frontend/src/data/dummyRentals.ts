@@ -3,47 +3,59 @@ import { RentalDetails } from '../types/rental';
 export const dummyRentals: RentalDetails[] = [
     {
         id: '1',
-        propertyId: 'p1',
-        propertyName: 'Sunset Gardens',
-        address: '742 Sunset Boulevard, Los Angeles, CA',
-        unit: '3',
+        name: 'Sunset Gardens',
+        address: '123 Sunset Blvd',
+        city: 'Los Angeles',
+        state: 'CA',
+        zip_code: '90001',
         type: 'residential',
-        startDate: '2024-01-01',
-        endDate: '2024-12-31',
-        rentAmount: 1500,
-        paymentFrequency: 'monthly',
-        resident: {
-            id: 'r1',
-            name: 'John Smith',
-            email: 'john@example.com',
-            phone: '123-456-7890'
-        },
-        owner: 'Sarah Wilson',
-        manager: 'Mike Thompson',
+        unit: 3,
+        total_units: 50,
+        owner_id: 'owner1',
+        organization_id: 'org1',
         status: 'active',
-        agreementFile: 'rental-agreement-001.pdf'
+        owner: {
+            id: 'owner1',
+            user: {
+                id: 'user1',
+                first_name: 'Sarah',
+                last_name: 'Wilson',
+                email: 'sarah@example.com'
+            }
+        },
+        resident: {
+            id: 'resident1',
+            name: 'John Doe',
+            email: 'john@example.com'
+        }
     },
     {
         id: '2',
-        propertyId: 'p2',
-        propertyName: 'Downtown Business Center',
-        address: '100 Financial District, San Francisco, CA',
-        unit: '12',
+        name: 'Downtown Business Center',
+        address: '100 Financial District',
+        city: 'San Francisco',
+        state: 'CA',
+        zip_code: '94111',
         type: 'commercial',
-        startDate: '2024-01-01',
-        endDate: '2025-12-31',
-        rentAmount: 5000,
-        paymentFrequency: 'monthly',
-        resident: {
-            id: 'r2',
-            name: 'Tech Solutions Inc.',
-            email: 'contact@techsolutions.com',
-            phone: '987-654-3210'
-        },
-        owner: 'Robert Brown',
-        manager: 'Lisa Chen',
+        unit: 12,
+        total_units: 20,
+        owner_id: 'owner2',
+        organization_id: 'org1',
         status: 'active',
-        agreementFile: 'rental-agreement-002.pdf'
+        owner: {
+            id: 'owner2',
+            user: {
+                id: 'user2',
+                first_name: 'Robert',
+                last_name: 'Brown',
+                email: 'robert@example.com'
+            }
+        },
+        resident: {
+            id: 'resident2',
+            name: 'Tech Solutions Inc.',
+            email: 'contact@techsolutions.com'
+        }
     },
     {
         id: '3',

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home, Building2, Warehouse, MapPin, DoorOpen } from 'lucide-react';
 import { RentalDetails } from '../types/rental';
+import { getPropertyLocation } from '../utils/locations';
 
 interface RentalCardProps {
   rental: RentalDetails;
@@ -18,16 +19,13 @@ const getPropertyTypeIcon = (type: RentalDetails['type']) => {
   }
 };
 
-export const getPropertyLocation = (propertyName: string) => {
-  const locations = {
-    'Sunset Gardens': '742 Sunset Boulevard, Los Angeles, CA',
-    'Downtown Business Center': '100 Financial District, San Francisco, CA',
-    'Harbor View Apartments': '456 Ocean Drive, Miami Beach, FL',
-    'Innovation Hub': '789 Tech Park Way, Austin, TX',
-    'Green Valley Residences': '321 Mountain View Rd, Denver, CO',
-    'Retail Plaza': '567 Shopping Avenue, Chicago, IL'
-  };
-  return locations[propertyName] || '123 Example St, City, State';
+const locations: Record<string, string> = {
+  'Sunset Gardens': '123 Sunset Blvd, Los Angeles, CA',
+  'Downtown Business Center': '456 Main St, New York, NY',
+  'Harbor View Apartments': '456 Ocean Drive, Miami Beach, FL',
+  'Innovation Hub': '789 Tech Park Way, Austin, TX',
+  'Green Valley Residences': '321 Mountain View Rd, Denver, CO',
+  'Retail Plaza': '567 Shopping Avenue, Chicago, IL'
 };
 
 export default function RentalCard({ rental, onClick }: RentalCardProps) {

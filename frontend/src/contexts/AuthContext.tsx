@@ -10,7 +10,7 @@ interface UserProfile {
   organization_id: string | null;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   isAuthenticated: boolean;

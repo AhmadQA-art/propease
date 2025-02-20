@@ -8,14 +8,23 @@ export interface Unit {
   id: string;
   property_id: string;
   unit_number: string;
+  name: string;
+  rentAmount: number;
+  occupancyStatus: 'vacant' | 'occupied';
+  status: 'vacant' | 'occupied' | 'maintenance';
+  isAvailable?: boolean;
+  number?: string;
   floor_plan?: string;
   square_feet?: number;
   bedrooms?: number;
   bathrooms?: number;
-  rent_amount?: number;
-  status: 'vacant' | 'occupied' | 'maintenance';
   created_at?: string;
   updated_at?: string;
+  resident?: {
+    id: string;
+    name: string;
+    email: string;
+  };
 }
 
 export interface Property {
@@ -45,9 +54,20 @@ export interface Property {
 export interface RentalDetails extends Property {
   type: 'residential' | 'commercial' | 'industrial';
   unit: number;
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'pending';
   propertyName?: string;
   manager?: string;
+  propertyId?: string;
+  startDate?: string;
+  endDate?: string;
+  rentAmount?: number;
+  paymentFrequency?: string;
+  resident?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  agreementFile?: string;
 }
 
 export type NewRentalDetails = Omit<RentalDetails, 'id' | 'status'>;

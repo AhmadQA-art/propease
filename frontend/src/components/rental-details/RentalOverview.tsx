@@ -3,7 +3,7 @@ import { Edit2, Building2, DoorOpen, UserCog, Users2, DollarSign, Home, PercentC
 import { RentalDetails } from '../../types/rental';
 import AddTaskDrawer from './AddTaskDrawer';
 import AddApplicationDrawer from './AddApplicationDrawer';
-import { getPropertyLocation } from '../RentalCard';
+import { getPropertyLocation } from '../../utils/locations';
 
 interface RentalOverviewProps {
   rental: RentalDetails;
@@ -89,7 +89,9 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
                 alt="Owner profile"
                 className="w-10 h-10 rounded-full object-cover"
               />
-              <p className="text-[#2C3539] font-medium">{rental.owner}</p>
+              <p className="text-[#2C3539] font-medium">
+                {rental.owner ? `${rental.owner.user.first_name} ${rental.owner.user.last_name}` : 'No owner assigned'}
+              </p>
             </div>
           </div>
           <div>
