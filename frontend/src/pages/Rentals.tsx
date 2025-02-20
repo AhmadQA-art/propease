@@ -1,134 +1,111 @@
-import React, { useState } from 'react';
-import { Search, Filter, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RentalDetails } from '../types/rental';
+import { Plus } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import { useAuth } from '../contexts/AuthContext';
 import RentalCard from '../components/RentalCard';
-
-// Mock data for testing
-const mockRentals: RentalDetails[] = [
-  {
-    id: '1',
-    propertyId: 'prop1',
-    propertyName: 'Sunset Apartments',
-    address: '123 Main St',
-    unit: 'A101',
-    type: 'residential',
-    startDate: '2024-01-01',
-    endDate: '2024-12-31',
-    rentAmount: 1500,
-    paymentFrequency: 'monthly',
-    resident: {
-      id: 'res1',
-      name: 'John Doe',
-      email: 'john@example.com',
-      phone: '123-456-7890',
-    },
-    owner: 'Owner Name',
-    manager: 'Manager Name',
-    status: 'active',
-    agreementFile: 'agreement1.pdf',
-  },
-  {
-    id: '2',
-    propertyId: 'prop2',
-    propertyName: 'Ocean View Complex',
-    address: '456 Beach Rd',
-    unit: 'B202',
-    type: 'residential',
-    startDate: '2024-02-01',
-    endDate: '2025-01-31',
-    rentAmount: 2000,
-    paymentFrequency: 'monthly',
-    resident: {
-      id: 'res2',
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '987-654-3210',
-    },
-    owner: 'Owner Name',
-    manager: 'Manager Name',
-    status: 'active',
-    agreementFile: 'agreement2.pdf',
-  },
-];
+import AddRentalForm from '../components/AddRentalForm';
+import { rentalService } from '../services/rental.service';
+import { Property } from '../types/rental';
+import { Person } from '../types/person';
 
 export default function Rentals() {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { isAuthenticated } = useAuth();
+  const [rentals, setRentals] = useState<Property[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredRentals = mockRentals.filter(rental => {
-    const matchesSearch = 
-      rental.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rental.unit.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rental.resident.name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  });
+  const propertyManagers: Person[] = [];
+  const propertyOwners: Person[] = [];
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadRentals();
+    }
+  }, [isAuthenticated]);
+
+  const loadRentals = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await rentalService.getRentals();
+      setRentals(data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load rentals';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddRental = async (rentalData: Omit<Property, 'id'>) => {
+    try {
+      await rentalService.createRental(rentalData);
+      toast.success('Rental property added successfully');
+      loadRentals();
+      setShowAddForm(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to add rental';
+      toast.error(message);
+    }
+  };
+
+  if (!isAuthenticated) {
+    return <div>Please log in to view rentals.</div>;
+  }
+
+  if (showAddForm) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <AddRentalForm
+          onSubmit={handleAddRental}
+          onCancel={() => setShowAddForm(false)}
+          propertyManagers={propertyManagers}
+          propertyOwners={propertyOwners}
+          mode="add"
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#2C3539]">Rentals</h1>
-        <p className="text-[#6B7280] mt-1">Manage and track all rental agreements</p>
+    <div className="space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-[#2C3539]">Rentals</h1>
+          <p className="text-gray-500">Manage your rental properties</p>
+        </div>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Add Rental
+        </button>
       </div>
 
-      {/* Search and Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="relative flex-1">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search rentals..."
-            className="w-full pl-10 pr-4 h-10 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      {loading ? (
+        <div className="flex justify-center items-center h-32">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2C3539]" />
         </div>
-        
-        <div className="flex items-center gap-3">
-          <button className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Filter className="w-5 h-5 text-[#2C3539]" />
-          </button>
-
-          <button 
-            onClick={() => navigate('/rentals/add')}
-            className="h-10 flex items-center px-4 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Add Rental
-          </button>
+      ) : error ? (
+        <div className="text-center text-red-600 py-8">{error}</div>
+      ) : rentals.length === 0 ? (
+        <div className="text-center py-8 text-gray-500">
+          No rental properties found. Click "Add Rental" to create one.
         </div>
-      </div>
-
-      <div>
-        {/* List Header */}
-        <div className="mb-2">
-          <div className="flex items-center p-2">
-            <div className="flex-1 text-sm font-medium text-[#6B7280]">Property</div>
-            <div className="flex items-center px-4 min-w-[200px] text-sm font-medium text-[#6B7280]">Type</div>
-            <div className="flex items-center px-4 min-w-[150px] justify-end text-sm font-medium text-[#6B7280]">Active Units</div>
-            <div className="w-10"></div>
-          </div>
-        </div>
-
-        {/* Rentals List */}
-        <div className="space-y-4">
-          {filteredRentals.map((rental) => (
-            <div key={rental.id} className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all">
-              <RentalCard
-                rental={rental}
-                onClick={() => navigate(`/rentals/${rental.id}`)}
-              />
-            </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {rentals.map((rental) => (
+            <RentalCard
+              key={rental.id}
+              rental={rental}
+              onClick={() => navigate(`/rentals/${rental.id}`)}
+            />
           ))}
-        </div>
-      </div>
-
-      {/* Empty State */}
-      {filteredRentals.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-[#6B7280]">No rentals found</p>
         </div>
       )}
     </div>

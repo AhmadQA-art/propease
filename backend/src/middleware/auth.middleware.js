@@ -3,27 +3,26 @@ const { supabase } = require('../config/supabase');
 const authenticateToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    console.log('Auth header:', authHeader);
 
     if (!authHeader) {
       console.log('No authorization header');
       return res.status(401).json({ error: 'No token provided' });
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.replace('Bearer ', '');
+    
     if (!token) {
       console.log('No token in authorization header');
       return res.status(401).json({ error: 'No token provided' });
     }
 
     const { data: { user }, error } = await supabase.auth.getUser(token);
-    
+
     if (error || !user) {
       console.error('Token validation error:', error);
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    console.log('User authenticated:', user.id);
     req.user = user;
     next();
   } catch (error) {

@@ -121,3 +121,7 @@ propease/
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+### Accessing the Application
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:5000

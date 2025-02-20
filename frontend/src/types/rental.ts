@@ -5,34 +5,47 @@ export interface Person {
 }
 
 export interface Unit {
-  id?: string;
-  name: string;
-  rentAmount: number;
-  occupancyStatus: 'occupied' | 'vacant';
-  resident?: Person;
+  id: string;
+  property_id: string;
+  unit_number: string;
+  floor_plan?: string;
+  square_feet?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  rent_amount?: number;
+  status: 'vacant' | 'occupied' | 'maintenance';
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface RentalDetails {
+export interface Property {
   id: string;
-  propertyId: string;
-  propertyName: string;
+  name: string;
   address: string;
-  unit: string;
-  type: 'residential' | 'commercial';
-  startDate: string;
-  endDate: string;
-  rentAmount: number;
-  paymentFrequency: 'monthly' | 'yearly';
-  resident: {
+  city: string;
+  state: string;
+  zip_code: string;
+  total_units: number;
+  owner_id: string;
+  organization_id: string;
+  created_at?: string;
+  updated_at?: string;
+  units?: Unit[];
+  owner?: {
     id: string;
-    name: string;
-    email: string;
-    phone: string;
+    user: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+    };
   };
-  owner: string;
-  manager: string;
+}
+
+export interface RentalDetails extends Property {
+  type: 'residential' | 'commercial' | 'industrial';
+  unit: number;
   status: 'active' | 'inactive';
-  agreementFile: string;
 }
 
 export type NewRentalDetails = Omit<RentalDetails, 'id' | 'status'>;

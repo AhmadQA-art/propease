@@ -11,16 +11,18 @@ const leaseRoutes = require(path.join(__dirname, 'routes', 'lease.routes'));
 const maintenanceRoutes = require(path.join(__dirname, 'routes', 'maintenance.routes'));
 const paymentRoutes = require(path.join(__dirname, 'routes', 'payment.routes'));
 const userRoutes = require(path.join(__dirname, 'routes', 'user.routes'));
+const rentalRoutes = require('./routes/rental.routes');
 const { errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Your frontend URL
+  origin: process.env.CORS_ORIGIN,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization']
 }));
 app.use(helmet());
 app.use(morgan('dev'));
@@ -33,6 +35,7 @@ app.use('/api/leases', leaseRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/rentals', rentalRoutes);
 
 // Error handling
 app.use(errorHandler);
