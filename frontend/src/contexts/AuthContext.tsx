@@ -44,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Fetch user profile function
   const fetchUserProfile = async (userId: string) => {
@@ -67,38 +68,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setIsAuthenticated(!!session?.user);
-      
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
-        setUserProfile(profile);
-      }
-      
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      setIsAuthenticated(!!session?.user);
-      
-      if (session?.user) {
-        const profile = await fetchUserProfile(session.user.id);
-        setUserProfile(profile);
+    try {
+      // Check active session
+      const session = supabase.auth.getSession();
+      if (session) {
+        console.log('Found existing session');
       } else {
-        setUserProfile(null);
+        console.log('No existing session found');
       }
-      
+    } catch (err) {
+      console.error('Error checking session:', err);
+      setError('Failed to initialize authentication');
+    } finally {
       setIsLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    }
   }, []);
+
+  if (error) {
+    return <div className="text-red-500">Error: {error}</div>;
+  }
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   const login = async (email: string, password: string) => {
     try {

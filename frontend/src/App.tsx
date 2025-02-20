@@ -18,6 +18,7 @@ import Team from './pages/Team';
 import People from './pages/People';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Toaster } from 'react-hot-toast';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
@@ -67,14 +68,14 @@ function AppRoutes() {
 
 function App() {
   return (
-    <>
+    <ErrorBoundary>
       <Toaster position="top-right" />
       <AuthProvider>
         <Router>
           <AppRoutes />
         </Router>
       </AuthProvider>
-    </>
+    </ErrorBoundary>
   );
 }
 

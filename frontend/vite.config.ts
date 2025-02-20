@@ -25,7 +25,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       }
-    }
+    },
+    host: true
   },
   resolve: {
     alias: {
@@ -35,5 +36,13 @@ export default defineConfig({
   define: {
     global: {},
     'process.env': {}
+  },
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   }
 });
