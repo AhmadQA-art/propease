@@ -20,7 +20,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
 
-function AppRoutes() {
+function MainRoutes() {
   const { isAuthenticated } = useAuth();
 
   return (
@@ -67,12 +67,14 @@ function AppRoutes() {
 }
 
 function App() {
+  console.log('App component rendering');
+  
   return (
     <ErrorBoundary>
       <Toaster position="top-right" />
       <AuthProvider>
         <Router>
-          <AppRoutes />
+          <MainRoutes />
         </Router>
       </AuthProvider>
     </ErrorBoundary>

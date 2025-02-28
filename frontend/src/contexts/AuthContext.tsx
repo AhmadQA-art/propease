@@ -65,31 +65,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Check and set initial session
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
-        setIsAuthenticated(!!session?.user);
-        
-        if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          setUserProfile(profile);
-        }
-      } catch (err) {
-        console.error('Error checking session:', err);
-        setError('Failed to initialize authentication');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    console.log('AuthProvider: Checking initial session');
+    checkUser();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.email);
       setUser(session?.user ?? null);
       setIsAuthenticated(!!session?.user);
+      setIsLoading(false);
       
       if (session?.user) {
         const profile = await fetchUserProfile(session.user.id);
@@ -99,15 +82,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
   }, []);
+
+  async function checkUser() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Current session:', session?.user?.email);
+      setUser(session?.user ?? null);
+      setIsAuthenticated(!!session?.user);
+      
+      if (session?.user) {
+        const profile = await fetchUserProfile(session.user.id);
+        setUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Error checking user session:', error);
+      setError('Failed to initialize authentication');
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   if (error) {
     return <div className="text-red-500">Error: {error}</div>;
   }
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   const login = async (email: string, password: string) => {
@@ -116,36 +124,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
       });
-
+      
       if (error) throw error;
       
-      if (data.user) {
-        setUser(data.user);
-        setIsAuthenticated(true);
-        const profile = await fetchUserProfile(data.user.id);
-        setUserProfile(profile);
-      }
+      setUser(data.user);
+      setIsAuthenticated(true);
     } catch (error) {
       console.error('Login error:', error);
+      toast.error('Failed to login. Please check your credentials.');
       throw error;
     }
   };
 
   const logout = async () => {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      // Clear all auth state
+      await supabase.auth.signOut();
       setUser(null);
       setUserProfile(null);
       setIsAuthenticated(false);
-      
-      // Navigate to login page
-      window.location.href = '/login';  // Using window.location to ensure complete reset
     } catch (error) {
       console.error('Logout error:', error);
-      toast.error('Failed to logout. Please try again.');
+      toast.error('Failed to logout.');
       throw error;
     }
   };

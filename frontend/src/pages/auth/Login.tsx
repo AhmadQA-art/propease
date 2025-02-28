@@ -2,26 +2,21 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
 
 export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    rememberMe: false
-  });
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
 
     try {
-      await login(formData.email, formData.password);
+      await login(email, password);
       toast.success('Logged in successfully');
       navigate('/');
     } catch (error) {
@@ -61,8 +56,8 @@ export default function Login() {
                 <input
                   type="email"
                   required
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                   placeholder="Enter your email"
                 />
@@ -78,8 +73,8 @@ export default function Login() {
                 <input
                   type="password"
                   required
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                   placeholder="Enter your password"
                 />
@@ -91,8 +86,7 @@ export default function Login() {
                 <input
                   type="checkbox"
                   id="remember-me"
-                  checked={formData.rememberMe}
-                  onChange={(e) => setFormData(prev => ({ ...prev, rememberMe: e.target.checked }))}
+                  checked={true}
                   className="h-4 w-4 text-[#2C3539] rounded border-gray-300 focus:ring-[#2C3539]"
                 />
                 <label htmlFor="remember-me" className="ml-2 text-sm text-[#6B7280]">
@@ -104,19 +98,17 @@ export default function Login() {
               </button>
             </div>
 
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg">
-                {error}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full flex items-center justify-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors disabled:opacity-50"
-            >
-              {isLoading ? 'Signing in...' : 'Sign in'}
-            </button>
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+                  isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {isLoading ? 'Signing in...' : 'Sign in'}
+              </button>
+            </div>
           </form>
         </div>
 
