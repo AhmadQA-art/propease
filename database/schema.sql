@@ -1,159 +1,186 @@
-create table payments (
-  id uuid default uuid_generate_v4() primary key,
-  lease_id uuid,
-  amount numeric not null,
-  payment_date date default now() not null,
-  payment_method character not null,
-  status character,
-  transaction_id character,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "payments" (
+  "id" uuid PRIMARY KEY,
+  "lease_id" uuid,
+  "amount" numeric NOT NULL,
+  "payment_date" date NOT NULL,
+  "payment_method" varchar(50) NOT NULL,
+  "status" varchar(50),
+  "transaction_id" varchar(100),
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table organizations (
-  id uuid default uuid_generate_v4() primary key,
-  name character not null,
-  subscription_status character,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "organizations" (
+  "id" uuid PRIMARY KEY,
+  "name" varchar(255) NOT NULL,
+  "subscription_status" varchar(50),
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table roles (
-  id uuid default uuid_generate_v4() primary key,
-  name character not null,
-  description text
+CREATE TABLE "roles" (
+  "id" uuid PRIMARY KEY,
+  "name" varchar(100) NOT NULL,
+  "description" text
 );
 
-create table demo_requests (
-  id uuid default uuid_generate_v4() primary key,
-  full_name character not null,
-  email character not null,
-  phone character,
-  company_name character not null,
-  job_title character,
-  industry character,
-  company_size character,
-  country character,
-  demo_preferences text,
-  additional_comments text,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "demo_requests" (
+  "id" uuid PRIMARY KEY,
+  "full_name" varchar(255) NOT NULL,
+  "email" varchar(255) NOT NULL,
+  "phone" varchar(50),
+  "company_name" varchar(255) NOT NULL,
+  "job_title" varchar(100),
+  "industry" varchar(100),
+  "company_size" varchar(50),
+  "country" varchar(100),
+  "demo_preferences" text,
+  "additional_comments" text,
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table public.user_profiles (
-  id uuid not null,
-  email character varying(255) not null,
-  first_name character varying(100) null,
-  last_name character varying(100) null,
-  organization_id uuid null,
-  phone character varying(50) null,
-  created_at timestamp with time zone null default CURRENT_TIMESTAMP,
-  updated_at timestamp with time zone null default CURRENT_TIMESTAMP,
-  constraint user_profiles_pkey primary key (id),
-  constraint user_profiles_email_key unique (email),
-  constraint user_profiles_id_fkey foreign KEY (id) references auth.users (id),
-  constraint user_profiles_organization_id_fkey foreign KEY (organization_id) references organizations (id)
-) TABLESPACE pg_default;
-
-create trigger update_user_profiles_updated_at BEFORE
-update on user_profiles for EACH row
-execute FUNCTION update_updated_at_column ();
-
-create table property_managers (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references user_profiles (id),
-  organization_id uuid references organizations (id),
-  assigned_properties uuid[],
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "user_profiles" (
+  "id" uuid PRIMARY KEY,
+  "email" varchar(255) NOT NULL,
+  "first_name" varchar(100),
+  "last_name" varchar(100),
+  "organization_id" uuid,
+  "phone" varchar(50),
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table notifications (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references user_profiles (id),
-  title character not null,
-  message text not null,
-  type character not null,
-  read boolean,
-  created_at timestamp default now()
+CREATE TABLE "property_managers" (
+  "id" uuid PRIMARY KEY,
+  "user_id" uuid,
+  "organization_id" uuid,
+  "assigned_properties" uuid[],
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table maintenance_requests (
-  id uuid default uuid_generate_v4() primary key,
-  unit_id uuid,
-  tenant_id uuid references user_profiles (id),
-  title character not null,
-  description text not null,
-  priority character not null,
-  status character,
-  assigned_to uuid references user_profiles (id),
-  completed_at timestamp default now(),
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "notifications" (
+  "id" uuid PRIMARY KEY,
+  "user_id" uuid,
+  "title" varchar(255) NOT NULL,
+  "message" text NOT NULL,
+  "type" varchar(50) NOT NULL,
+  "read" boolean,
+  "created_at" timestamp
 );
 
-create table owners (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references user_profiles (id),
-  organization_id uuid references organizations (id),
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "maintenance_requests" (
+  "id" uuid PRIMARY KEY,
+  "unit_id" uuid,
+  "tenant_id" uuid,
+  "title" varchar(255) NOT NULL,
+  "description" text NOT NULL,
+  "priority" varchar(50) NOT NULL,
+  "status" varchar(50),
+  "assigned_to" uuid,
+  "completed_at" timestamp,
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table user_roles (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references user_profiles (id),
-  role_id uuid references roles (id),
-  organization_id uuid references organizations (id)
+CREATE TABLE "owners" (
+  "id" uuid PRIMARY KEY,
+  "user_id" uuid,
+  "organization_id" uuid,
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table properties (
-  id uuid default uuid_generate_v4() primary key,
-  name character not null,
-  address text not null,
-  city character not null,
-  state character not null,
-  zip_code character not null,
-  total_units integer not null,
-  owner_id uuid references owners (id),
-  organization_id uuid references organizations (id),
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "user_roles" (
+  "id" uuid PRIMARY KEY,
+  "user_id" uuid,
+  "role_id" uuid,
+  "organization_id" uuid
 );
 
-create table units (
-  id uuid default uuid_generate_v4() primary key,
-  property_id uuid references properties (id),
-  unit_number character not null,
-  floor_plan character,
-  square_feet integer,
-  bedrooms integer,
-  bathrooms numeric,
-  rent_amount numeric,
-  status character,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "properties" (
+  "id" uuid PRIMARY KEY,
+  "name" varchar(255) NOT NULL,
+  "address" text NOT NULL,
+  "city" varchar(100) NOT NULL,
+  "state" varchar(100) NOT NULL,
+  "zip_code" varchar(50) NOT NULL,
+  "total_units" int NOT NULL,
+  "owner_id" uuid,
+  "organization_id" uuid,
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table tenants (
-  id uuid default uuid_generate_v4() primary key,
-  user_id uuid references user_profiles (id),
-  organization_id uuid references organizations (id),
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "units" (
+  "id" uuid PRIMARY KEY,
+  "property_id" uuid,
+  "unit_number" varchar(50) NOT NULL,
+  "floor_plan" varchar(100),
+  "square_feet" int,
+  "bedrooms" int,
+  "bathrooms" numeric,
+  "rent_amount" numeric,
+  "status" varchar(50),
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
-create table leases (
-  id uuid default uuid_generate_v4() primary key,
-  unit_id uuid references units (id),
-  tenant_id uuid references tenants (id),
-  start_date date default now() not null,
-  end_date date default now() not null,
-  rent_amount numeric not null,
-  security_deposit numeric,
-  status character,
-  lease_document_url text,
-  created_at timestamp default now(),
-  updated_at timestamp default now()
+CREATE TABLE "tenants" (
+  "id" uuid PRIMARY KEY,
+  "user_id" uuid,
+  "organization_id" uuid,
+  "created_at" timestamp,
+  "updated_at" timestamp
 );
 
+CREATE TABLE "leases" (
+  "id" uuid PRIMARY KEY,
+  "unit_id" uuid,
+  "tenant_id" uuid,
+  "start_date" date NOT NULL,
+  "end_date" date NOT NULL,
+  "rent_amount" numeric NOT NULL,
+  "security_deposit" numeric,
+  "status" varchar(50),
+  "lease_document_url" text,
+  "created_at" timestamp,
+  "updated_at" timestamp
+);
+
+ALTER TABLE "user_profiles" ADD FOREIGN KEY ("organization_id") REFERENCES "organizations" ("id");
+
+ALTER TABLE "property_managers" ADD FOREIGN KEY ("user_id") REFERENCES "user_profiles" ("id");
+
+ALTER TABLE "property_managers" ADD FOREIGN KEY ("organization_id") REFERENCES "organizations" ("id");
+
+ALTER TABLE "notifications" ADD FOREIGN KEY ("user_id") REFERENCES "user_profiles" ("id");
+
+ALTER TABLE "maintenance_requests" ADD FOREIGN KEY ("tenant_id") REFERENCES "user_profiles" ("id");
+
+ALTER TABLE "maintenance_requests" ADD FOREIGN KEY ("assigned_to") REFERENCES "user_profiles" ("id");
+
+ALTER TABLE "owners" ADD FOREIGN KEY ("user_id") REFERENCES "user_profiles" ("id");
+
+ALTER TABLE "owners" ADD FOREIGN KEY ("organization_id") REFERENCES "organizations" ("id");
+
+ALTER TABLE "user_roles" ADD FOREIGN KEY ("user_id") REFERENCES "user_profiles" ("id");
+
+ALTER TABLE "user_roles" ADD FOREIGN KEY ("role_id") REFERENCES "roles" ("id");
+
+ALTER TABLE "user_roles" ADD FOREIGN KEY ("organization_id") REFERENCES "organizations" ("id");
+
+ALTER TABLE "properties" ADD FOREIGN KEY ("owner_id") REFERENCES "owners" ("id");
+
+ALTER TABLE "properties" ADD FOREIGN KEY ("organization_id") REFERENCES "organizations" ("id");
+
+ALTER TABLE "units" ADD FOREIGN KEY ("property_id") REFERENCES "properties" ("id");
+
+ALTER TABLE "tenants" ADD FOREIGN KEY ("user_id") REFERENCES "user_profiles" ("id");
+
+ALTER TABLE "tenants" ADD FOREIGN KEY ("organization_id") REFERENCES "organizations" ("id");
+
+ALTER TABLE "leases" ADD FOREIGN KEY ("unit_id") REFERENCES "units" ("id");
+
+ALTER TABLE "leases" ADD FOREIGN KEY ("tenant_id") REFERENCES "tenants" ("id");
