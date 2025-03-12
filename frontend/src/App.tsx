@@ -21,7 +21,11 @@ import { Toaster } from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function MainRoutes() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Routes>
@@ -67,8 +71,6 @@ function MainRoutes() {
 }
 
 function App() {
-  console.log('App component rendering');
-  
   return (
     <ErrorBoundary>
       <Toaster position="top-right" />
