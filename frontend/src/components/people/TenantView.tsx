@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Filter, Plus, Home, Calendar } from 'lucide-react';
 import { Tenant } from '../../types/people';
-import AddTenantDialog from './AddTenantDialog';
+import AddPersonDialog from './AddPersonDialog';
 import TenantDetailsDrawer from './TenantDetailsDrawer';
 
 // Mock data for tenants
@@ -231,9 +231,10 @@ export default function TenantView({ tenants }: TenantViewProps) {
         )}
       </div>
 
-      <AddTenantDialog
+      <AddPersonDialog
         isOpen={isAddTenantDialogOpen}
         onClose={() => setIsAddTenantDialogOpen(false)}
+        personType="tenant"
       />
 
       <TenantDetailsDrawer

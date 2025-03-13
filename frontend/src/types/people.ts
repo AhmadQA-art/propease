@@ -1,4 +1,4 @@
-export type PersonType = 'team' | 'tenant' | 'vendor';
+export type PersonType = 'team' | 'tenant' | 'vendor' | 'owner';
 
 export interface BasePerson {
   id: string;
@@ -14,18 +14,19 @@ export interface BasePerson {
 export interface TeamMember extends BasePerson {
   type: 'team';
   role: string;
-  department: string;
-  assignedTasks: number;
-  lastActive: string;
+  department?: string;
+  jobTitle: string;
+  reportsTo?: string;
+  lastActive?: string;
 }
 
 export interface Tenant extends BasePerson {
   type: 'tenant';
   unit: string;
   property: string;
-  leaseStart?: string;
-  leaseEnd?: string;
-  rentStatus: 'current' | 'overdue' | 'paid';
+  leaseStart: string;
+  leaseEnd: string;
+  rentStatus: 'current' | 'late' | 'paid';
 }
 
 export interface Vendor extends BasePerson {
@@ -37,13 +38,22 @@ export interface Vendor extends BasePerson {
   totalServices: number;
 }
 
-export type Person = TeamMember | Tenant | Vendor;
+export interface Owner extends BasePerson {
+  type: 'owner';
+  company_name?: string;
+  properties?: Array<{
+    id: string;
+    name: string;
+  }>;
+}
+
+export type Person = TeamMember | Tenant | Vendor | Owner;
 
 export interface Task {
   id: string;
   title: string;
   description: string;
-  assignee: TeamMember;
+  assignedTo: string;
   dueDate: string;
   status: 'pending' | 'in-progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
@@ -51,8 +61,8 @@ export interface Task {
 
 export interface Activity {
   id: string;
-  user: TeamMember;
-  action: string;
-  target: string;
+  userId: string;
+  type: string;
+  description: string;
   timestamp: string;
 }

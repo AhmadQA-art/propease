@@ -484,9 +484,19 @@ Table organizations {
 Table owners {
   id uuid [default: uuid_generate_v4()] [not null]
   user_id uuid
-  organization_id uuid
   created_at timestamp without time zone [default: now()]
   updated_at timestamp without time zone [default: now()]
+  company_name varchar(255)
+  tax_id varchar(50)
+  business_type varchar(50)
+  email varchar(255)
+  address text
+  payment_method varchar(50)
+  bank_account_id uuid
+  taxpayer_id varchar(50)
+  payment_schedule varchar(50) [default: 'monthly']
+  notes text
+  status varchar(50) [default: 'active']
 
   indexes {
     unique (id) [name: 'owners_pkey']
@@ -755,10 +765,23 @@ Table tasks {
   }
 }
 
+Table team_members {
+  id uuid [default: gen_random_uuid()] [not null]
+  user_id uuid [not null]
+  role_id uuid
+  job_title varchar(100)
+  department varchar(100)
+  created_at timestamp with time zone [default: now()]
+  updated_at timestamp with time zone [default: now()]
+
+  indexes {
+    unique (id) [name: 'team_members_pkey']
+  }
+}
+
 Table tenants {
   id uuid [default: uuid_generate_v4()] [not null]
   user_id uuid
-  organization_id uuid
   created_at timestamp without time zone [default: now()]
   updated_at timestamp without time zone [default: now()]
   move_in_date date
@@ -767,6 +790,21 @@ Table tenants {
   current_unit_id uuid
   rent_amount decimal
   status varchar(50) [default: 'active']
+  emergency_contact_phone varchar(50)
+  emergency_contact_relationship varchar(100)
+  preferred_contact_methods _te[] [default: ARRAY['email']
+  language_preference varchar(50) [default: 'English']
+  payment_history jsonb
+  backgroundcheckdate date
+  background_check_passed boolean
+  pets jsonb
+  vehicles jsonb
+  eviction_history boolean [default: false]
+  special_accommodations text
+  lease_start_date date [not null]
+  emergency_contact jsonb
+  background_check_status varchar(50) [default: 'pending']
+  background_check_date date
 
   indexes {
     unique (id) [name: 'tenants_pkey']
@@ -804,13 +842,12 @@ Table units {
 Table user_profiles {
   id uuid [not null]
   email varchar(255) [not null]
-  first_name varchar(100)
-  last_name varchar(100)
+  first_name varchar(100) [not null]
+  last_name varchar(100) [not null]
   organization_id uuid
   phone varchar(50)
   created_at timestamp with time zone [default: CURRENT_TIMESTAMP]
   updated_at timestamp with time zone [default: CURRENT_TIMESTAMP]
-  auth_id varchar(255)
   profile_image_url text
   default_organization_id uuid
   status varchar(20) [default: 'active']
@@ -819,9 +856,12 @@ Table user_profiles {
   phone_verified boolean [default: false]
   two_factor_enabled boolean [default: false]
   notification_preferences jsonb
+  verification_status varchar(20) [default: 'unverified']
+  time_zone varchar(50) [default: 'UTC']
+  preferred_contact_methods _te[] [default: ARRAY['email']
+  preferred_contact_time varchar(50)
 
   indexes {
-    unique (auth_id) [name: 'user_profiles_auth_id_key']
     unique (email) [name: 'user_profiles_email_key']
     unique (id) [name: 'user_profiles_pkey']
   }
@@ -845,15 +885,18 @@ Table user_roles {
 Table vendors {
   id uuid [default: uuid_generate_v4()] [not null]
   user_id uuid
-  organization_id uuid
   service_type varchar(100) [not null]
-  contact_email varchar(255)
-  contact_phone varchar(50)
   hourly_rate decimal
-  is_approved boolean [default: false]
   notes text
   created_at timestamp without time zone [default: now()]
   updated_at timestamp without time zone [default: now()]
+  business_type varchar(50)
+  service_areas jsonb
+  service_availability jsonb
+  emergency_service boolean [default: false]
+  payment_terms varchar(100)
+  preferred_bank_account_id uuid
+  performance_rating decimal(3,2)
 
   indexes {
     unique (id) [name: 'vendors_pkey']
@@ -885,14 +928,10 @@ Ref: activity_logs.property_id > properties.id
 Ref: activity_logs.unit_id > units.id
 Ref: activity_logs.user_id > user_profiles.id
 Ref: property_metrics.property_id > properties.id
-Ref: owners.organization_id > organizations.id
-Ref: owners.user_id > user_profiles.id
 Ref: property_managers.organization_id > organizations.id
 Ref: property_managers.user_id > user_profiles.id
 Ref: leases.tenant_id > tenants.id
 Ref: leases.unit_id > units.id
-Ref: vendors.organization_id > organizations.id
-Ref: vendors.user_id > user_profiles.id
 Ref: properties.organization_id > organizations.id
 Ref: properties.owner_id > owners.id
 Ref: properties.property_manager_id > property_managers.id
@@ -901,10 +940,6 @@ Ref: tasks.organization_id > organizations.id
 Ref: tasks.owner_id > user_profiles.id
 Ref: units.current_tenant_id > user_profiles.id
 Ref: units.property_id > properties.id
-Ref: tenants.current_property_id > properties.id
-Ref: tenants.current_unit_id > units.id
-Ref: tenants.organization_id > organizations.id
-Ref: tenants.user_id > user_profiles.id
 Ref: documents.organization_id > organizations.id
 Ref: documents.uploaded_by > user_profiles.id
 Ref: user_roles.organization_id > organizations.id
@@ -935,23 +970,30 @@ Ref: payments.invoice_id > invoices.id
 Ref: payments.lease_id > leases.id
 Ref: payments.organization_id > organizations.id
 Ref: payments.payment_method_id > payment_methods.id
-Ref: user_profiles.default_organization_id > organizations.id
-Ref: user_profiles.organization_id > organizations.id
 Ref: announcement_types.organization_id > organizations.id
 Ref: announcements.announcement_type_id > announcement_types.id
 Ref: announcements.organization_id > organizations.id
 Ref: announcements.property_id > properties.id
 Ref: announcement_targets.announcement_id > announcements.id
 Ref: announcement_schedules.announcement_id > announcements.id
+Ref: user_profiles.default_organization_id > organizations.id
+Ref: user_profiles.organization_id > organizations.id
 Ref: notifications.user_id > user_profiles.id
 Ref: communication_logs.announcement_id > announcements.id
 Ref: communication_logs.organization_id > organizations.id
 Ref: bank_account_types.organization_id > organizations.id
+Ref: owners.bank_account_id > bank_accounts.id
+Ref: owners.user_id > user_profiles.id
 Ref: bank_accounts.account_type_id > bank_account_types.id
 Ref: bank_accounts.created_by > user_profiles.id
 Ref: bank_accounts.organization_id > organizations.id
+Ref: vendors.preferred_bank_account_id > bank_accounts.id
+Ref: vendors.user_id > user_profiles.id
 Ref: payment_categories.organization_id > organizations.id
 Ref: payment_methods.organization_id > organizations.id
+Ref: tenants.current_property_id > properties.id
+Ref: tenants.current_unit_id > units.id
+Ref: tenants.user_id > user_profiles.id
 Ref: payment_schedules.bank_account_id > bank_accounts.id
 Ref: payment_schedules.category_id > payment_categories.id
 Ref: payment_schedules.created_by > user_profiles.id
@@ -959,6 +1001,8 @@ Ref: payment_schedules.lease_id > leases.id
 Ref: payment_schedules.organization_id > organizations.id
 Ref: payment_transactions.organization_id > organizations.id
 Ref: payment_transactions.payment_id > payments.id
+Ref: team_members.role_id > roles.id
+Ref: team_members.user_id > user_profiles.id
 Ref: invoices.created_by > user_profiles.id
 Ref: invoices.organization_id > organizations.id
 Ref: invoices.property_id > properties.id

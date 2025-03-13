@@ -1,6 +1,6 @@
 /**
 * PropEase Database Schema TypeScript Definitions
-* Auto-generated on: Wed Mar 12 11:25:08 PM +03 2025
+* Auto-generated on: Thu Mar 13 05:04:45 AM +03 2025
 */
 
 // Type definitions for common PostgreSQL data types
@@ -399,9 +399,19 @@ active?: boolean;
 export interface Owners {
 id: UUID;
 user_id?: UUID;
-organization_id?: UUID;
 created_at?: Timestamp;
 updated_at?: Timestamp;
+company_name?: string;
+tax_id?: string;
+business_type?: string;
+email?: string;
+address?: string;
+payment_method?: string;
+bank_account_id?: UUID;
+taxpayer_id?: string;
+payment_schedule?: string;
+notes?: string;
+status?: string;
 
 }
 
@@ -619,10 +629,20 @@ updated_at?: Timestamp;
 
 }
 
+export interface TeamMembers {
+id: UUID;
+user_id: UUID;
+role_id?: UUID;
+job_title?: string;
+department?: string;
+created_at?: Timestamp;
+updated_at?: Timestamp;
+
+}
+
 export interface Tenants {
 id: UUID;
 user_id?: UUID;
-organization_id?: UUID;
 created_at?: Timestamp;
 updated_at?: Timestamp;
 move_in_date?: Date;
@@ -631,6 +651,21 @@ current_property_id?: UUID;
 current_unit_id?: UUID;
 rent_amount?: number;
 status?: string;
+emergency_contact_phone?: string;
+emergency_contact_relationship?: string;
+preferred_contact_methods?: Array<UUID>;
+language_preference?: string;
+payment_history?: JSONB;
+backgroundcheckdate?: Date;
+background_check_passed?: boolean;
+pets?: JSONB;
+vehicles?: JSONB;
+eviction_history?: boolean;
+special_accommodations?: string;
+lease_start_date: Date;
+emergency_contact?: JSONB;
+background_check_status?: string;
+background_check_date?: Date;
 
 }
 
@@ -661,13 +696,12 @@ maintenance_history?: JSONB;
 export interface UserProfiles {
 id: UUID;
 email: string;
-first_name?: string;
-last_name?: string;
+first_name: string;
+last_name: string;
 organization_id?: UUID;
 phone?: string;
 created_at?: Timestamp;
 updated_at?: Timestamp;
-auth_id?: string;
 profile_image_url?: string;
 default_organization_id?: UUID;
 status?: string;
@@ -676,6 +710,10 @@ email_verified?: boolean;
 phone_verified?: boolean;
 two_factor_enabled?: boolean;
 notification_preferences?: JSONB;
+verification_status?: string;
+time_zone?: string;
+preferred_contact_methods?: Array<UUID>;
+preferred_contact_time?: string;
 
 }
 
@@ -692,15 +730,18 @@ updated_at?: Timestamp;
 export interface Vendors {
 id: UUID;
 user_id?: UUID;
-organization_id?: UUID;
 service_type: string;
-contact_email?: string;
-contact_phone?: string;
 hourly_rate?: number;
-is_approved?: boolean;
 notes?: string;
 created_at?: Timestamp;
 updated_at?: Timestamp;
+business_type?: string;
+service_areas?: JSONB;
+service_availability?: JSONB;
+emergency_service?: boolean;
+payment_terms?: string;
+preferred_bank_account_id?: UUID;
+performance_rating?: number;
 
 }
 
@@ -744,6 +785,7 @@ property_stakeholders: PropertyStakeholders[];
 rental_applications: RentalApplications[];
 roles: Roles[];
 tasks: Tasks[];
+team_members: TeamMembers[];
 tenants: Tenants[];
 units: Units[];
 user_profiles: UserProfiles[];

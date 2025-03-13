@@ -3,8 +3,6 @@ import { Search, Plus, User, Filter } from 'lucide-react';
 import { Person, PersonType } from '../../types/people';
 import PersonCard from './PersonCard';
 import AddPersonDialog from './AddPersonDialog';
-import AddVendorDialog from './AddVendorDialog';
-import AddTenantDialog from './AddTenantDialog';
 
 interface PeopleListProps {
   people: Person[];
@@ -14,21 +12,13 @@ export default function PeopleList({ people }: PeopleListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<PersonType | 'all'>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isVendorDialogOpen, setIsVendorDialogOpen] = useState(false);
-  const [isTenantDialogOpen, setIsTenantDialogOpen] = useState(false);
   const [addingPersonType, setAddingPersonType] = useState<PersonType | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
   const handleAddPerson = (type: PersonType) => {
-    if (type === 'vendor') {
-      setIsVendorDialogOpen(true);
-    } else if (type === 'tenant') {
-      setIsTenantDialogOpen(true);
-    } else {
-      setAddingPersonType(type);
-      setIsAddDialogOpen(true);
-    }
+    setAddingPersonType(type);
+    setIsAddDialogOpen(true);
     setIsDropdownOpen(false);
   };
 
@@ -90,6 +80,12 @@ export default function PeopleList({ people }: PeopleListProps) {
                   Team Members
                 </button>
                 <button
+                  onClick={() => handleTypeSelect('owner')}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                >
+                  Owners
+                </button>
+                <button
                   onClick={() => handleTypeSelect('tenant')}
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
                 >
@@ -127,6 +123,12 @@ export default function PeopleList({ people }: PeopleListProps) {
                   className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
                 >
                   Team Member
+                </button>
+                <button
+                  onClick={() => handleAddPerson('owner')}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#2C3539]"
+                >
+                  Owner
                 </button>
                 <button
                   onClick={() => handleAddPerson('tenant')}
@@ -173,6 +175,8 @@ export default function PeopleList({ people }: PeopleListProps) {
                       ? person.role
                       : person.type === 'vendor'
                       ? person.company
+                      : person.type === 'owner'
+                      ? person.company_name || 'Property Owner'
                       : `${person.property} - Unit ${person.unit}`}
                   </p>
                 </div>
@@ -181,7 +185,7 @@ export default function PeopleList({ people }: PeopleListProps) {
               <div className="flex items-center space-x-8">
                 {person.type === 'team' && (
                   <div className="text-sm text-[#6B7280]">
-                    <span className="font-medium">{person.assignedTasks}</span> Active Tasks
+                    {person.role} • {person.department || 'General'}
                   </div>
                 )}
                 {person.type === 'tenant' && (
@@ -192,6 +196,11 @@ export default function PeopleList({ people }: PeopleListProps) {
                 {person.type === 'vendor' && (
                   <div className="text-sm text-[#6B7280]">
                     <span className="font-medium">{person.totalServices}</span> Services
+                  </div>
+                )}
+                {person.type === 'owner' && (
+                  <div className="text-sm text-[#6B7280]">
+                    <span className="font-medium">{person.properties?.length || 0}</span> Properties
                   </div>
                 )}
                 <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -221,18 +230,6 @@ export default function PeopleList({ people }: PeopleListProps) {
           setAddingPersonType(null);
         }}
         personType={addingPersonType}
-      />
-
-      {/* Add Vendor Dialog */}
-      <AddVendorDialog 
-        isOpen={isVendorDialogOpen}
-        onClose={() => setIsVendorDialogOpen(false)}
-      />
-
-      {/* Add Tenant Dialog */}
-      <AddTenantDialog
-        isOpen={isTenantDialogOpen}
-        onClose={() => setIsTenantDialogOpen(false)}
       />
     </div>
   );

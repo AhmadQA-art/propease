@@ -4,11 +4,43 @@ import PeopleList from '../components/people/PeopleList';
 import TeamView from '../components/people/TeamView';
 import VendorView from '../components/people/VendorView';
 import TenantView from '../components/people/TenantView';
-import { Person, TeamMember, Vendor, Task, Activity, Tenant } from '../types/people';
+import OwnersView from '../components/people/OwnersView';
+import { Person, TeamMember, Vendor, Task, Activity, Tenant, Owner } from '../types/people';
 import { mockTeamMembers, mockTasks, mockActivities } from '../data/mockTeamData';
+
+const mockOwners: Owner[] = [
+  {
+    id: '201',
+    type: 'owner',
+    name: 'Sarah Johnson',
+    email: 'sarah.j@email.com',
+    phone: '(555) 123-4567',
+    status: 'active',
+    createdAt: '2024-01-15',
+    company_name: 'Johnson Properties LLC',
+    properties: [
+      { id: '1', name: 'Sunset Apartments' },
+      { id: '2', name: 'Ocean View Complex' }
+    ]
+  },
+  {
+    id: '202',
+    type: 'owner',
+    name: 'David Chen',
+    email: 'david.c@email.com',
+    phone: '(555) 987-6543',
+    status: 'active',
+    createdAt: '2024-02-01',
+    company_name: 'Chen Real Estate Group',
+    properties: [
+      { id: '3', name: 'Mountain View Residences' }
+    ]
+  }
+];
 
 const mockPeople: Person[] = [
   ...mockTeamMembers,
+  ...mockOwners,
   {
     id: '101',
     type: 'tenant',
@@ -40,7 +72,7 @@ const mockPeople: Person[] = [
   }
 ] as Person[];
 
-const tabs = ['All People', 'Team', 'Tenants', 'Vendors'];
+const tabs = ['All People', 'Team', 'Owners', 'Tenants', 'Vendors'];
 
 export default function People() {
   const [activeTab, setActiveTab] = useState('All People');
@@ -48,6 +80,7 @@ export default function People() {
   const teamMembers = mockTeamMembers;
   const vendors = mockPeople.filter((person): person is Vendor => person.type === 'vendor');
   const tenants = mockPeople.filter((person): person is Tenant => person.type === 'tenant');
+  const owners = mockPeople.filter((person): person is Owner => person.type === 'owner');
 
   const renderContent = () => {
     switch (activeTab) {
@@ -55,6 +88,8 @@ export default function People() {
         return <PeopleList people={mockPeople} />;
       case 'Team':
         return <TeamView teamMembers={teamMembers} tasks={mockTasks} activities={mockActivities} />;
+      case 'Owners':
+        return <OwnersView owners={owners} />;
       case 'Tenants':
         return <TenantView tenants={tenants} />;
       case 'Vendors':
@@ -68,7 +103,7 @@ export default function People() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-[#2C3539]">People</h1>
-        <p className="text-[#6B7280] mt-1">Manage team members, tenants, and vendors</p>
+        <p className="text-[#6B7280] mt-1">Manage team members, owners, tenants, and vendors</p>
       </div>
 
       <TabHeader

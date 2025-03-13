@@ -3,7 +3,7 @@ import { Activity, Plus, Search, Filter, Users2, Wrench, User } from 'lucide-rea
 import { TeamMember, Task, Activity as ActivityType } from '../../types/people';
 import { format } from 'date-fns';
 import TeamMemberCard from './TeamMemberCard';
-import InviteMemberDialog from './InviteMemberDialog';
+import AddPersonDialog from './AddPersonDialog';
 import TaskDrawer from './TaskDrawer';
 import TaskDetailsDrawer from './TaskDetailsDrawer';
 import { mockTeamMembers } from '../../data/mockTeamData';
@@ -28,21 +28,11 @@ const getStatusColor = (status: string) => {
 };
 
 export default function TeamView({ teamMembers, tasks, activities }: TeamViewProps) {
-  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [isAddTaskDrawerOpen, setIsAddTaskDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isTaskDetailsOpen, setIsTaskDetailsOpen] = useState(false);
-
-  const handleInviteMember = (data: {
-    name: string;
-    email: string;
-    role: string;
-    jobTitle: string;
-  }) => {
-    // TODO: Implement member invitation logic
-    console.log('Invite member:', data);
-  };
 
   const handleAddTask = (taskData: any) => {
     // TODO: Implement task creation logic
@@ -68,7 +58,7 @@ export default function TeamView({ teamMembers, tasks, activities }: TeamViewPro
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-lg font-semibold text-[#2C3539]">Team Members</h2>
             <button
-              onClick={() => setIsInviteDialogOpen(true)}
+              onClick={() => setIsAddMemberDialogOpen(true)}
               className="flex items-center px-4 py-2 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -183,11 +173,11 @@ export default function TeamView({ teamMembers, tasks, activities }: TeamViewPro
         </div>
       </div>
 
-      {/* Drawers and Dialogs */}
-      <InviteMemberDialog
-        isOpen={isInviteDialogOpen}
-        onClose={() => setIsInviteDialogOpen(false)}
-        onSubmit={handleInviteMember}
+      {/* Dialogs and Drawers */}
+      <AddPersonDialog
+        isOpen={isAddMemberDialogOpen}
+        onClose={() => setIsAddMemberDialogOpen(false)}
+        personType="team"
       />
 
       <TaskDrawer

@@ -5,7 +5,7 @@ import PersonSelect from './PersonSelect';
 import { NewRentalDetails, RentalDetails, Person, Unit, Property } from '../types/rental';
 
 interface AddRentalFormProps {
-  onSubmit: (rental: Omit<Property, 'id'>) => void;
+  onSubmit: (data: { property: Omit<Property, 'id'>, units: Omit<Unit, 'id' | 'property_id'>[]} ) => void;
   onCancel: () => void;
   initialData?: Property;
   mode?: 'add' | 'edit';
@@ -14,17 +14,18 @@ interface AddRentalFormProps {
 }
 
 interface FormUnit {
-  name: string;
-  rentAmount: number;
-  occupancyStatus: 'vacant' | 'occupied';
-  resident?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  unit_number: string;
+  rent_amount: number;
+  bedrooms: number;
+  bathrooms: number;
+  square_feet: number;
+  status: 'Available' | 'Occupied' | 'Maintenance' | 'Reserved';
+  floor_plan: string;
+  smart_lock_enabled: boolean;
 }
 
 interface FormData {
+  // Property fields
   name: string;
   address: string;
   city: string;
@@ -32,7 +33,11 @@ interface FormData {
   zip_code: string;
   total_units: number;
   owner_id: string;
+  property_manager_id: string;
+  property_status: 'active' | 'inactive' | 'maintenance';
   organization_id: string;
+  
+  // Units array
   units: FormUnit[];
 }
 
@@ -53,6 +58,8 @@ export default function AddRentalForm({
     zip_code: '',
     total_units: 0,
     owner_id: '',
+    property_manager_id: '',
+    property_status: 'active',
     organization_id: '',
     units: []
   });
@@ -67,6 +74,8 @@ export default function AddRentalForm({
         zip_code: initialData.zip_code,
         total_units: initialData.total_units,
         owner_id: initialData.owner_id,
+        property_manager_id: initialData.property_manager_id || '',
+        property_status: initialData.property_status || 'active',
         organization_id: initialData.organization_id,
         units: initialData.units || []
       });
@@ -75,7 +84,23 @@ export default function AddRentalForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const propertyData = {
+      name: formData.name,
+      address: formData.address,
+      city: formData.city,
+      state: formData.state,
+      zip_code: formData.zip_code,
+      total_units: formData.total_units,
+      owner_id: formData.owner_id,
+      property_manager_id: formData.property_manager_id,
+      property_status: formData.property_status,
+      organization_id: formData.organization_id,
+    };
+    
+    onSubmit({
+      property: propertyData,
+      units: formData.units
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -90,11 +115,16 @@ export default function AddRentalForm({
     setFormData(prev => ({
       ...prev,
       units: [
-        ...(prev.units || []),
+        ...prev.units,
         {
-          name: '',
-          rentAmount: 0,
-          occupancyStatus: 'vacant' as const,
+          unit_number: '',
+          rent_amount: 0,
+          bedrooms: 1,
+          bathrooms: 1,
+          square_feet: 0,
+          status: 'Available',
+          floor_plan: '',
+          smart_lock_enabled: false
         },
       ],
     }));
@@ -103,16 +133,16 @@ export default function AddRentalForm({
   const updateUnit = (index: number, updatedUnit: Partial<FormUnit>) => {
     setFormData(prev => ({
       ...prev,
-      units: prev.units?.map((unit, i) => 
+      units: prev.units.map((unit, i) => 
         i === index ? { ...unit, ...updatedUnit } : unit
-      ) || [],
+      ),
     }));
   };
 
   const removeUnit = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      units: prev.units?.filter((_, i) => i !== index) || [],
+      units: prev.units.filter((_, i) => i !== index),
     }));
   };
 
@@ -143,9 +173,9 @@ export default function AddRentalForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* General Info */}
+        {/* Property Info */}
         <div className="bg-white rounded-lg p-6 w-full">
-          <h2 className="text-xl font-semibold text-[#2C3539] mb-6">General Information</h2>
+          <h2 className="text-xl font-semibold text-[#2C3539] mb-6">Property Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-[#2C3539] mb-2">
@@ -224,21 +254,21 @@ export default function AddRentalForm({
 
             <div>
               <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Total Units
+                Property Status
               </label>
-              <input
-                type="number"
-                name="total_units"
-                value={formData.total_units}
+              <select
+                name="property_status"
+                value={formData.property_status}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
-                placeholder="Enter number of units"
                 required
-                min="1"
-              />
+              >
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
             </div>
 
-            <div className="md:col-span-2">
+            <div>
               <label className="block text-sm font-medium text-[#2C3539] mb-2">
                 Property Owner
               </label>
@@ -249,11 +279,26 @@ export default function AddRentalForm({
                 className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
                 required
               >
-                <option value="" className="text-gray-500">Select a property owner</option>
+                <option value="">Select Owner</option>
                 {propertyOwners.map(owner => (
-                  <option key={owner.id} value={owner.id}>
-                    {owner.name}
-                  </option>
+                  <option key={owner.id} value={owner.id}>{owner.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                Property Manager
+              </label>
+              <select
+                name="property_manager_id"
+                value={formData.property_manager_id}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
+              >
+                <option value="">Select Manager</option>
+                {propertyManagers.map(manager => (
+                  <option key={manager.id} value={manager.id}>{manager.name}</option>
                 ))}
               </select>
             </div>
@@ -267,128 +312,161 @@ export default function AddRentalForm({
             <button
               type="button"
               onClick={addUnit}
-              className="flex items-center px-4 py-2 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+              className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3A4449] transition-colors"
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Unit
             </button>
           </div>
 
-          <div className="space-y-4">
-            {formData.units?.map((unit, index) => (
-              <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Unit Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                      Unit Name/Number
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                      value={unit.name}
-                      onChange={(e) => updateUnit(index, { name: e.target.value })}
-                      placeholder="e.g., Unit A1"
-                      required
-                    />
-                  </div>
+          {formData.units.map((unit, index) => (
+            <div key={index} className="border border-gray-200 rounded-lg p-4 mb-4">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-medium text-[#2C3539]">Unit {index + 1}</h3>
+                <button
+                  type="button"
+                  onClick={() => removeUnit(index)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
 
-                  {/* Rent Amount */}
-                  <div>
-                    <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                      Rent Amount
-                    </label>
-                    <input
-                      type="number"
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                      value={unit.rentAmount}
-                      onChange={(e) => updateUnit(index, { rentAmount: parseFloat(e.target.value) })}
-                      placeholder="Enter rent amount"
-                      min="0"
-                      step="0.01"
-                      required
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                    Unit Number
+                  </label>
+                  <input
+                    type="text"
+                    value={unit.unit_number}
+                    onChange={(e) => updateUnit(index, { unit_number: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
+                    placeholder="Enter unit number"
+                    required
+                  />
+                </div>
 
-                  {/* Occupancy Status */}
-                  <div>
-                    <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                      Occupancy Status
-                    </label>
-                    <select
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                      value={unit.occupancyStatus}
-                      onChange={(e) => updateUnit(index, { 
-                        occupancyStatus: e.target.value as 'occupied' | 'vacant',
-                        resident: e.target.value === 'vacant' ? undefined : unit.resident
-                      })}
-                      required
-                    >
-                      <option value="vacant">Vacant</option>
-                      <option value="occupied">Occupied</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                    Rent Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={unit.rent_amount}
+                    onChange={(e) => updateUnit(index, { rent_amount: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
+                    placeholder="Enter rent amount"
+                    required
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
 
-                  {/* Resident Information (if occupied) */}
-                  {unit.occupancyStatus === 'occupied' && (
-                    <div>
-                      <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                        Resident Name
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                        value={unit.resident?.name || ''}
-                        onChange={(e) => updateUnit(index, { 
-                          resident: { 
-                            id: unit.resident?.id || '', 
-                            name: e.target.value,
-                            email: unit.resident?.email || ''
-                          } 
-                        })}
-                        placeholder="Enter resident name"
-                        required={unit.occupancyStatus === 'occupied'}
-                      />
-                    </div>
-                  )}
+                <div>
+                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                    Bedrooms
+                  </label>
+                  <input
+                    type="number"
+                    value={unit.bedrooms}
+                    onChange={(e) => updateUnit(index, { bedrooms: parseInt(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
+                    placeholder="Number of bedrooms"
+                    required
+                    min="0"
+                  />
+                </div>
 
-                  {/* Remove Unit Button */}
-                  <div className="flex items-center justify-end md:col-span-2 lg:col-span-4">
-                    <button
-                      type="button"
-                      onClick={() => removeUnit(index)}
-                      className="flex items-center px-3 py-1 text-sm text-red-600 hover:text-red-700 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      Remove Unit
-                    </button>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                    Bathrooms
+                  </label>
+                  <input
+                    type="number"
+                    value={unit.bathrooms}
+                    onChange={(e) => updateUnit(index, { bathrooms: parseFloat(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
+                    placeholder="Number of bathrooms"
+                    required
+                    min="0"
+                    step="0.5"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                    Square Feet
+                  </label>
+                  <input
+                    type="number"
+                    value={unit.square_feet}
+                    onChange={(e) => updateUnit(index, { square_feet: parseInt(e.target.value) })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
+                    placeholder="Square footage"
+                    required
+                    min="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={unit.status}
+                    onChange={(e) => updateUnit(index, { status: e.target.value as FormUnit['status'] })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
+                    required
+                  >
+                    <option value="Available">Available</option>
+                    <option value="Occupied">Occupied</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                    Floor Plan
+                  </label>
+                  <input
+                    type="text"
+                    value={unit.floor_plan}
+                    onChange={(e) => updateUnit(index, { floor_plan: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
+                    placeholder="Floor plan name/type"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={unit.smart_lock_enabled}
+                    onChange={(e) => updateUnit(index, { smart_lock_enabled: e.target.checked })}
+                    className="h-4 w-4 text-[#2C3539] focus:ring-[#2C3539] border-gray-300 rounded"
+                  />
+                  <label className="ml-2 block text-sm text-[#2C3539]">
+                    Smart Lock Enabled
+                  </label>
                 </div>
               </div>
-            ))}
-
-            {formData.units?.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No units added yet. Click "Add Unit" to add your first unit.
-              </div>
-            )}
-          </div>
+            </div>
+          ))}
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-end space-x-4 py-4">
+        <div className="flex justify-end space-x-4">
           <button
             type="button"
             onClick={handleBack}
-            className="px-6 py-2 border border-gray-200 rounded-lg text-[#2C3539] hover:bg-gray-50 transition-colors"
+            className="px-6 py-2 border border-gray-300 rounded-lg text-[#2C3539] hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-6 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+            className="px-6 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3A4449] transition-colors"
           >
-            {mode === 'add' ? 'Add Property' : 'Save Changes'}
+            {mode === 'add' ? 'Create Property' : 'Update Property'}
           </button>
         </div>
       </form>

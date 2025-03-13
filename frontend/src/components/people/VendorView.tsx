@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Vendor } from '../../types/people';
 import { Star, Activity, Plus, Search, Filter } from 'lucide-react';
-import AddVendorDialog from './AddVendorDialog';
+import AddPersonDialog from './AddPersonDialog';
 import VendorDetailsDrawer from './VendorDetailsDrawer';
 
 interface VendorViewProps {
@@ -146,9 +146,10 @@ export default function VendorView({ vendors }: VendorViewProps) {
         </div>
       ))}
       {/* Add Vendor Dialog */}
-      <AddVendorDialog
+      <AddPersonDialog
         isOpen={isAddVendorDialogOpen}
         onClose={() => setIsAddVendorDialogOpen(false)}
+        personType="vendor"
       />
 
       <VendorDetailsDrawer
