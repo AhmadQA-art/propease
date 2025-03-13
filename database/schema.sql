@@ -1,5 +1,5 @@
 -- Updated Supabase Database Schema
--- Last updated: Thu Mar 13 05:04:17 AM +03 2025
+-- Last updated: Thu Mar 13 02:43:57 PM +03 2025
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

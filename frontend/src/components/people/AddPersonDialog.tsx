@@ -23,7 +23,6 @@ interface BaseFormData {
 
 interface TeamMemberFormData extends BaseFormData {
   department: string;
-  contact_method: string;
   role: string;
   job_title: string;
 }
@@ -31,16 +30,24 @@ interface TeamMemberFormData extends BaseFormData {
 interface TenantFormData extends BaseFormData {
   contact_preferences: string;
   documents: File[];
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  emergency_contact_relationship: string;
 }
 
 interface VendorFormData extends BaseFormData {
   service_type: string;
-  notes: string;
-  contact_phone: string;
   business_type: string;
+  notes: string;
+  hourly_rate: string;
 }
 
-type FormData = TeamMemberFormData | TenantFormData | VendorFormData;
+interface OwnerFormData extends BaseFormData {
+  company_name: string;
+  notes: string;
+}
+
+type FormData = TeamMemberFormData | TenantFormData | VendorFormData | OwnerFormData;
 
 export default function AddPersonDialog({ isOpen, onClose, personType }: AddPersonDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,11 +56,10 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
     const baseData: TeamMemberFormData = {
       first_name: '',
       last_name: '',
-      email: '',
+    email: '',
       phone: '',
       department: '',
-      contact_method: '',
-      role: '',
+    role: '',
       job_title: '',
       invitation_methods: {
         email: true,
@@ -72,6 +78,9 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
           phone: '',
           contact_preferences: '',
           documents: [],
+          emergency_contact_name: '',
+          emergency_contact_phone: '',
+          emergency_contact_relationship: '',
           invitation_methods: {
             email: true,
             sms: false
@@ -84,14 +93,27 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
           email: '',
           phone: '',
           service_type: '',
-          notes: '',
-          contact_phone: '',
           business_type: '',
+          notes: '',
+          hourly_rate: '',
           invitation_methods: {
             email: true,
             sms: false
           }
         } as VendorFormData;
+      case 'owner':
+        return {
+          first_name: '',
+          last_name: '',
+          email: '',
+          phone: '',
+          company_name: '',
+          notes: '',
+          invitation_methods: {
+            email: true,
+            sms: false
+          }
+        } as OwnerFormData;
       default:
         return baseData;
     }
@@ -110,7 +132,6 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
       // Create the person
       const personData = {
         ...formData,
-        organization_id: 'current_org_id', // TODO: Get from context
         type: personType!,
       };
 
@@ -132,7 +153,7 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
         const documentsToast = toast.loading('Uploading documents...');
         try {
           const uploadResult = await peopleService.uploadDocuments(
-            createdPerson.id,
+            createdPerson.person.id,
             (formData as TenantFormData).documents
           );
           console.log('Documents uploaded:', uploadResult);
@@ -153,7 +174,7 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
         const inviteToast = toast.loading('Sending invitations...');
         try {
           const inviteResult = await peopleService.sendInvitations(
-            createdPerson.id,
+            createdPerson.profile.id,
             formData.invitation_methods
           );
           console.log('Invitations sent:', inviteResult);
@@ -173,7 +194,7 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
         }
       }
 
-      onClose();
+    onClose();
     } catch (error) {
       console.error('Error submitting form:', error);
       toast.error(
@@ -306,21 +327,21 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
       />
       <div className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-md bg-white rounded-xl shadow-lg max-h-[90vh] flex flex-col z-[10000]">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-[#2C3539] bg-opacity-10 flex items-center justify-center mr-3">
-              <DialogIcon className="w-5 h-5 text-[#2C3539]" />
-            </div>
+            <div className="flex items-center">
+              <div className="w-10 h-10 rounded-full bg-[#2C3539] bg-opacity-10 flex items-center justify-center mr-3">
+                <DialogIcon className="w-5 h-5 text-[#2C3539]" />
+              </div>
             <h2 className="text-xl font-semibold text-[#2C3539]">
-              {getDialogTitle()}
+                {getDialogTitle()}
             </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
 
         <div className="overflow-y-auto flex-1 p-6">
           <form id="personForm" onSubmit={handleSubmit} className="space-y-4">
@@ -339,18 +360,18 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-[#6B7280] mb-1">
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">
                   Last Name
-                </label>
-                <input
-                  type="text"
-                  required
+              </label>
+              <input
+                type="text"
+                required
                   value={formData.last_name}
                   onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                   placeholder="Enter last name"
-                />
+              />
               </div>
             </div>
 
@@ -400,50 +421,33 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
 
                 <div>
                   <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                    Contact Method
-                  </label>
-                  <select
-                    required
-                    value={(formData as TeamMemberFormData).contact_method}
-                    onChange={(e) => setFormData(prev => ({ ...prev, contact_method: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                  >
-                    <option value="">Select contact method</option>
-                    <option value="email">Email</option>
-                    <option value="phone">Phone</option>
-                    <option value="both">Both</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#6B7280] mb-1">
                     Role
                   </label>
                   <select
                     required
                     value={(formData as TeamMemberFormData).role}
                     onChange={(e) => setFormData(prev => ({ ...prev, role: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                  >
-                    <option value="">Select role</option>
-                    <option value="admin">Administrator</option>
-                    <option value="manager">Property Manager</option>
-                    <option value="maintenance">Maintenance Staff</option>
-                    <option value="leasing">Leasing Agent</option>
-                  </select>
-                </div>
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+              >
+                <option value="">Select role</option>
+                <option value="admin">Administrator</option>
+                <option value="manager">Property Manager</option>
+                <option value="maintenance">Maintenance Staff</option>
+                <option value="leasing">Leasing Agent</option>
+              </select>
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                    Job Title
-                  </label>
-                  <input
-                    type="text"
-                    required
+            <div>
+              <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                Job Title
+              </label>
+              <input
+                type="text"
+                required
                     value={(formData as TeamMemberFormData).job_title}
                     onChange={(e) => setFormData(prev => ({ ...prev, job_title: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    placeholder="Enter job title"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                placeholder="Enter job title"
                   />
                 </div>
               </>
@@ -469,6 +473,58 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
                     <option value="phone">Phone</option>
                     <option value="both">Both</option>
                   </select>
+                </div>
+
+                <div className="space-y-4 border-t border-gray-200 pt-4">
+                  <h3 className="text-sm font-medium text-[#6B7280]">Emergency Contact</h3>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={(formData as TenantFormData).emergency_contact_name}
+                      onChange={(e) => setFormData(prev => ({
+                        ...(prev as TenantFormData),
+                        emergency_contact_name: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                      placeholder="Emergency contact name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                      Phone
+                    </label>
+                    <input
+                      type="tel"
+                      value={(formData as TenantFormData).emergency_contact_phone}
+                      onChange={(e) => setFormData(prev => ({
+                        ...(prev as TenantFormData),
+                        emergency_contact_phone: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                      placeholder="Emergency contact phone"
+              />
+            </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                      Relationship
+                    </label>
+                    <input
+                      type="text"
+                      value={(formData as TenantFormData).emergency_contact_relationship}
+                      onChange={(e) => setFormData(prev => ({
+                        ...(prev as TenantFormData),
+                        emergency_contact_relationship: e.target.value
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                      placeholder="Relationship to tenant"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -544,15 +600,14 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
 
                 <div>
                   <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                    Contact Phone
+                    Hourly Rate
                   </label>
                   <input
-                    type="tel"
-                    required
-                    value={(formData as VendorFormData).contact_phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
+                    type="number"
+                    value={(formData as VendorFormData).hourly_rate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, hourly_rate: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    placeholder="Enter contact phone"
+                    placeholder="Enter hourly rate (optional)"
                   />
                 </div>
 
@@ -573,6 +628,31 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
 
             {personType === 'owner' && (
               <>
+                <div>
+                  <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    value={(formData as OwnerFormData).company_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                    placeholder="Enter company name (optional)"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    value={(formData as OwnerFormData).notes}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                    placeholder="Enter additional notes"
+                    rows={4}
+                  />
+                </div>
                 {renderInvitationSection()}
               </>
             )}
@@ -581,21 +661,21 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
 
         <div className="border-t border-gray-200 p-6">
           <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#2C3539]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#2C3539]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
               form="personForm"
-              className="px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors text-sm font-medium"
-            >
-              {personType === 'team' ? 'Send Invitation' : 'Add Person'}
-            </button>
-          </div>
+                className="px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors text-sm font-medium"
+              >
+                {personType === 'team' ? 'Send Invitation' : 'Add Person'}
+              </button>
+            </div>
         </div>
       </div>
     </>

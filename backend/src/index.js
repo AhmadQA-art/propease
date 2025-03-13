@@ -12,6 +12,7 @@ const maintenanceRoutes = require(path.join(__dirname, 'routes', 'maintenance.ro
 const paymentRoutes = require(path.join(__dirname, 'routes', 'payment.routes'));
 const userRoutes = require(path.join(__dirname, 'routes', 'user.routes'));
 const rentalRoutes = require('./routes/rental.routes');
+const peopleRoutes = require('./routes/people.routes');
 const { errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
@@ -36,6 +37,7 @@ app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rentals', rentalRoutes);
+app.use('/api/people', peopleRoutes);
 
 // Error handling
 app.use(errorHandler);

@@ -10,6 +10,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +87,8 @@ export default function Login() {
                 <input
                   type="checkbox"
                   id="remember-me"
-                  checked={true}
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="h-4 w-4 text-[#2C3539] rounded border-gray-300 focus:ring-[#2C3539]"
                 />
                 <label htmlFor="remember-me" className="ml-2 text-sm text-[#6B7280]">
