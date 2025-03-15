@@ -34,7 +34,7 @@ export default function InviteUserForm({ userType, onSuccess }: InviteUserFormPr
       const token = localStorage.getItem('supabase.auth.token');
       
       // Send invitation via API
-      const response = await fetch(`/api/invites/${userType}/invite`, {
+      const response = await fetch(`/api/${userType}/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

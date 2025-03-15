@@ -39,7 +39,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rentals', rentalRoutes);
 app.use('/api/people', peopleRoutes);
-app.use('/api/invites', inviteRoutes);
+app.use('/api/invite', inviteRoutes);
 
 // Error handling
 app.use(errorHandler);

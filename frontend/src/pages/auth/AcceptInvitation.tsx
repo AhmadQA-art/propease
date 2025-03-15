@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { Lock, User, Mail } from 'lucide-react';
+import { Lock, User, Mail, Phone } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/services/supabase/client';
 import { toast } from 'react-hot-toast';
@@ -8,26 +8,28 @@ import { toast } from 'react-hot-toast';
 export default function AcceptInvitation() {
   const [searchParams] = useSearchParams();
   const emailFromUrl = searchParams.get('email'); // Optional, for pre-filling
+  const token = searchParams.get('token'); // Get token from URL
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
   const [invitationValid, setInvitationValid] = useState(false);
   const [organizationName, setOrganizationName] = useState('');
   const [role, setRole] = useState('');
+  const [invitationData, setInvitationData] = useState(null); // Store invitation details
   
   const { user } = useAuth(); // Get authenticated user from context
   const navigate = useNavigate();
 
-  // Check session and fetch invitation details on mount
   useEffect(() => {
     const checkSessionAndInvitation = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session || !session.user) {
         setError('Invalid or expired invitation link. Please contact your administrator.');
         setIsVerifying(false);
@@ -36,43 +38,37 @@ export default function AcceptInvitation() {
 
       const userEmail = session.user.email;
 
-      try {
-        // Fetch invitation details based on email
-        const { data: invitation, error: invitationError } = await supabase
-          .from('organization_invitations')
-          .select('id, organization_id, role_id')
-          .eq('email', userEmail)
-          .eq('status', 'pending')
-          .single();
+      if (!token) {
+        setError('Missing invitation token. Please check your invitation link.');
+        setIsVerifying(false);
+        return;
+      }
 
-        if (invitationError || !invitation) {
-          setError('No valid invitation found. Please contact your administrator.');
+      try {
+        // Verify invitation via backend endpoint
+        const response = await fetch(`/api/invite/verify/${token}?email=${encodeURIComponent(userEmail)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            setError(errorData.error || 'No valid invitation found.');
+          } else {
+            setError('Unexpected server response. Please try again or contact support.');
+          }
           setIsVerifying(false);
           return;
         }
 
-        // Get organization name
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .select('name')
-          .eq('id', invitation.organization_id)
-          .single();
-          
-        if (!orgError && orgData) {
-          setOrganizationName(orgData.name);
-        }
-        
-        // Get role name
-        const { data: roleData, error: roleError } = await supabase
-          .from('roles')
-          .select('name')
-          .eq('id', invitation.role_id)
-          .single();
-          
-        if (!roleError && roleData) {
-          setRole(roleData.name);
-        }
-        
+        const { invitation } = await response.json();
+        setInvitationData(invitation); // Store invitation data
+        setOrganizationName(invitation.organization_name);
+        setRole(invitation.role);
         setInvitationValid(true);
       } catch (error) {
         console.error('Error verifying invitation:', error);
@@ -83,10 +79,12 @@ export default function AcceptInvitation() {
     };
 
     checkSessionAndInvitation();
-  }, []);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    console.log("Starting form submission process");
     
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
@@ -107,60 +105,139 @@ export default function AcceptInvitation() {
     setError('');
 
     try {
-      // Set the user's password
+      // Update user password
+      console.log("Updating user password");
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
 
-      // Update user profile with name
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { error: profileError } = await supabase
-          .from('user_profiles')
-          .upsert({
-            id: user.id,
-            email: user.email,
-            first_name: firstName,
-            last_name: lastName
-          }, { onConflict: 'id' });
+      // Get authenticated user
+      console.log("Getting authenticated user");
+      const { data: { user }, error: getUserError } = await supabase.auth.getUser();
+      if (getUserError || !user) throw new Error('No authenticated user found');
 
-        if (profileError) throw profileError;
+      console.log("User found:", user);
+      console.log("User metadata:", user.user_metadata || {});
 
-        // Assign role and update invitation status
-        const { data: invitation } = await supabase
-          .from('organization_invitations')
-          .select('id, organization_id, role_id')
-          .eq('email', user.email)
-          .eq('status', 'pending')
-          .single();
+      // Get metadata from the user object
+      const metadata = user.user_metadata || {};
+      console.log("Job title from metadata:", metadata.job_title);
+      console.log("Department from metadata:", metadata.department);
 
-        if (invitation) {
-          const { data: roleData } = await supabase
-            .from('roles')
-            .select('name')
-            .eq('id', invitation.role_id)
-            .single();
+      // Use verified invitation data
+      console.log("Using verified invitation data:", invitationData);
 
-          await fetch('/api/users/assign-role', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user.id,
-              role: roleData.name,
-              organizationId: invitation.organization_id
-            }),
-          });
+      // Update user profile
+      console.log("Updating user profile with:", {
+        id: user.id,
+        email: user.email,
+        first_name: firstName,
+        last_name: lastName,
+        organization_id: invitationData.organization_id,
+        phone: phone
+      });
 
-          await supabase
-            .from('organization_invitations')
-            .update({ status: 'accepted' })
-            .eq('id', invitation.id);
-        }
+      const { error: profileError } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          first_name: firstName,
+          last_name: lastName,
+          organization_id: invitationData.organization_id,
+          phone: phone
+        }, { onConflict: 'id' });
+
+      if (profileError) throw profileError;
+
+      console.log("Profile updated successfully");
+
+      // Get role information
+      console.log("Fetching role information for role_id:", invitationData.role_id);
+      const roleData = { name: invitationData.role };
+      console.log("Role from verified invitation:", roleData);
+
+      // Get the session for the auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No active session found');
+
+      // Assign role via API
+      console.log("Assigning role via API:", {
+        userId: user.id,
+        role: roleData.name,
+        organizationId: invitationData.organization_id
+      });
+      
+      const roleResponse = await fetch('/api/users/assign-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          role: roleData.name,
+          organizationId: invitationData.organization_id
+        }),
+      });
+
+      if (!roleResponse.ok) {
+        const roleResponseData = await roleResponse.json();
+        console.error("Role assignment API error:", roleResponseData);
+        throw new Error(`Role assignment failed: ${roleResponseData.error || 'Unknown error'}`);
       }
 
+      console.log("Role assigned successfully");
+
+      // CRITICAL FIX: For team members, add to team_members table WITHOUT job_title/department columns
+      // These columns ONLY exist in team_members table, not organization_invitations
+      if (roleData.name === 'team_member') {
+        // Get metadata from the user object
+        const metadata = user.user_metadata || {};
+        console.log("User is a team member. Adding to team_members table with metadata:");
+        console.log("  - job_title:", metadata.job_title);
+        console.log("  - department:", metadata.department);
+        
+        const teamMemberData = {
+          user_id: user.id,
+          role_id: invitationData.role_id,
+          job_title: metadata.job_title || null,
+          department: metadata.department || null
+        };
+        
+        console.log("Team member data to insert:", teamMemberData);
+        
+        const { error: teamMemberError } = await supabase
+          .from('team_members')
+          .insert(teamMemberData);
+          
+        if (teamMemberError) {
+          console.error('Team member insertion error:', teamMemberError);
+          console.error('Team member error details:', JSON.stringify(teamMemberError, null, 2));
+          throw teamMemberError;
+        }
+        
+        console.log("Team member record created successfully");
+      }
+
+      // Update invitation status
+      console.log("Updating invitation status to accepted");
+      const { error: invitationUpdateError } = await supabase
+        .from('organization_invitations')
+        .update({ status: 'accepted' })
+        .eq('id', invitationData.id);
+        
+      if (invitationUpdateError) {
+        console.error("Error updating invitation status:", invitationUpdateError);
+        // We'll continue anyway since the critical parts worked
+      }
+
+      console.log("Account setup completed successfully");
       toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (error) {
       console.error('Error accepting invitation:', error);
+      console.error('Error stack:', error.stack);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       setError(error.message || 'An error occurred while creating your account.');
       toast.error(error.message || 'An error occurred while creating your account.');
     } finally {
@@ -265,6 +342,22 @@ export default function AcceptInvitation() {
 
                   <div>
                     <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                      Phone Number
+                    </label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                        placeholder="+1 (123) 456-7890"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#2C3539] mb-2">
                       Password
                     </label>
                     <div className="relative">
@@ -325,4 +418,4 @@ export default function AcceptInvitation() {
       </div>
     </div>
   );
-} 
+}

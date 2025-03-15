@@ -248,86 +248,6 @@ curl -X POST http://localhost:5001/api/auth/update-password \
 
 ## People
 
-### Team Members
-
-#### Create Team Member (DEPRECATED)
-
-**Note: This endpoint is deprecated and will be removed in future versions. Please use the invitation system instead (`/api/invites/team/invite`).**
-
-```
-POST /people/team
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Body:**
-
-```json
-{
-  "first_name": "Michael",
-  "last_name": "Johnson",
-  "email": "michael.j@example.com",
-  "phone": "555-123-4567",
-  "department": "Maintenance",
-  "role": "manager",
-  "job_title": "Maintenance Manager",
-  "invitation_methods": {
-    "email": true,
-    "sms": false
-  }
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/people/team \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "first_name": "Michael",
-    "last_name": "Johnson",
-    "email": "michael.j@example.com",
-    "phone": "555-123-4567",
-    "department": "Maintenance",
-    "role": "manager",
-    "job_title": "Maintenance Manager",
-    "invitation_methods": {
-      "email": true,
-      "sms": false
-    }
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "profile": {
-    "id": "profile-id",
-    "first_name": "Michael",
-    "last_name": "Johnson",
-    "email": "michael.j@example.com",
-    "phone": "555-123-4567",
-    "organization_id": "org-id",
-    "status": "pending"
-  },
-  "teamMember": {
-    "id": "team-member-id",
-    "user_id": "profile-id",
-    "organization_id": "org-id",
-    "department": "Maintenance",
-    "role_id": "manager",
-    "job_title": "Maintenance Manager",
-    "status": "pending"
-  }
-}
-```
-
 ### Tenants
 
 #### Create Tenant
@@ -625,7 +545,7 @@ curl -X POST http://localhost:5001/api/people/profile-id/documents \
 
 #### Send Invitations (DEPRECATED)
 
-**Note: This endpoint is deprecated and will be removed in future versions. Please use the dedicated invitation endpoints instead (`/api/invites/{role}/invite`).**
+**Note: This endpoint is deprecated and will be removed in future versions. Please use the dedicated invitation endpoints instead (`/api/invite/{role}/invite`).**
 
 ```
 POST /people/:id/invitations
@@ -1153,7 +1073,7 @@ The following endpoints are used to invite users to the application with differe
 ### Send Team Member Invitation
 
 ```
-POST /api/invites/team/invite
+POST /api/invite/team/invite
 ```
 
 Invites a new team member to the organization.
@@ -1164,17 +1084,22 @@ Invites a new team member to the organization.
 **Request Body:**
 ```json
 {
-  "email": "newteam@example.com"
+  "email": "newteam@example.com",
+  "jobTitle": "Project Manager",
+  "department": "Operations"
 }
 ```
 
 **cURL Example:**
-
 ```bash
-curl -X POST http://localhost:5001/api/invites/team/invite \
+curl -X POST http://localhost:5001/api/invite/team/invite \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"email":"newteam@example.com"}'
+  -d '{
+    "email":"newteam@example.com",
+    "jobTitle":"Project Manager",
+    "department":"Operations"
+  }'
 ```
 
 **Response (200 OK):**
@@ -1193,7 +1118,7 @@ curl -X POST http://localhost:5001/api/invites/team/invite \
 ### Send Tenant Invitation
 
 ```
-POST /api/invites/tenant/invite
+POST /api/invite/tenant/invite
 ```
 
 Invites a new tenant to the organization.
@@ -1209,9 +1134,8 @@ Invites a new tenant to the organization.
 ```
 
 **cURL Example:**
-
 ```bash
-curl -X POST http://localhost:5001/api/invites/tenant/invite \
+curl -X POST http://localhost:5001/api/invite/tenant/invite \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"email":"newtenant@example.com"}'
@@ -1233,7 +1157,7 @@ curl -X POST http://localhost:5001/api/invites/tenant/invite \
 ### Send Vendor Invitation
 
 ```
-POST /api/invites/vendor/invite
+POST /api/invite/vendor/invite
 ```
 
 Invites a new vendor to the organization.
@@ -1249,9 +1173,8 @@ Invites a new vendor to the organization.
 ```
 
 **cURL Example:**
-
 ```bash
-curl -X POST http://localhost:5001/api/invites/vendor/invite \
+curl -X POST http://localhost:5001/api/invite/vendor/invite \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"email":"newvendor@example.com"}'
@@ -1273,7 +1196,7 @@ curl -X POST http://localhost:5001/api/invites/vendor/invite \
 ### Send Owner Invitation
 
 ```
-POST /api/invites/owner/invite
+POST /api/invite/owner/invite
 ```
 
 Invites a new property owner to the organization.
@@ -1289,9 +1212,8 @@ Invites a new property owner to the organization.
 ```
 
 **cURL Example:**
-
 ```bash
-curl -X POST http://localhost:5001/api/invites/owner/invite \
+curl -X POST http://localhost:5001/api/invite/owner/invite \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{"email":"newowner@example.com"}'
@@ -1310,21 +1232,64 @@ curl -X POST http://localhost:5001/api/invites/owner/invite \
 }
 ```
 
-### Verify Invitation Token
+### Accept Invitation
 
 ```
-GET /api/invites/verify/:token
+POST /api/invite/accept/:token
 ```
 
-Verifies if an invitation token is valid.
+Accepts an invitation and creates a new user account.
 
-**Path Parameters:**
-- `token`: The invitation token to verify
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword",
+  "firstName": "John",
+  "lastName": "Doe",
+  "phone": "+1 (123) 456-7890"
+}
+```
 
 **cURL Example:**
-
 ```bash
-curl -X GET http://localhost:5001/api/invites/verify/abc123def456 \
+curl -X POST http://localhost:5001/api/invite/accept/abc123def456 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securepassword",
+    "firstName": "John",
+    "lastName": "Doe",
+    "phone": "+1 (123) 456-7890"
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Account created successfully",
+  "user": {
+    "id": "user-uuid",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "organization_id": "organization-uuid",
+    "role": "team_member"
+  }
+}
+```
+
+### Verify Invitation
+
+```
+GET /api/invite/verify/:token
+```
+
+Verifies an invitation token.
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:5001/api/invite/verify/abc123def456 \
   -H "Content-Type: application/json"
 ```
 
@@ -1362,7 +1327,6 @@ Assigns a role to a user within an organization.
 ```
 
 **cURL Example:**
-
 ```bash
 curl -X POST http://localhost:5001/api/users/assign-role \
   -H "Content-Type: application/json" \
