@@ -3,6 +3,11 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
+/**
+ * @deprecated - This service is deprecated and will be removed in future versions.
+ * Please use the invitation system instead through the /api/invites endpoints.
+ */
+
 export interface CreatePersonData {
   first_name: string;
   last_name: string;
@@ -17,7 +22,13 @@ export interface CreatePersonData {
 }
 
 export const peopleService = {
+  /**
+   * @deprecated - This method is deprecated. 
+   * Please use the /api/invites/{type}/invite endpoint instead.
+   */
   async createPerson(data: CreatePersonData) {
+    console.warn('WARNING: peopleService.createPerson is deprecated. Please use the invitation system instead.');
+    
     try {
       const token = localStorage.getItem('token');
       if (!token) {

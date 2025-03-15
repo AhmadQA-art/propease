@@ -13,6 +13,7 @@ const paymentRoutes = require(path.join(__dirname, 'routes', 'payment.routes'));
 const userRoutes = require(path.join(__dirname, 'routes', 'user.routes'));
 const rentalRoutes = require('./routes/rental.routes');
 const peopleRoutes = require('./routes/people.routes');
+const inviteRoutes = require('./routes/invite.routes');
 const { errorHandler } = require('./middleware/error.middleware');
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rentals', rentalRoutes);
 app.use('/api/people', peopleRoutes);
+app.use('/api/invites', inviteRoutes);
 
 // Error handling
 app.use(errorHandler);

@@ -4,6 +4,9 @@ import Layout from './components/Layout';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import RequestAccess from './pages/auth/RequestAccess';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import UpdatePassword from './pages/auth/UpdatePassword';
+import AcceptInvitation from './pages/auth/AcceptInvitation';
 import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import Rentals from './pages/Rentals';
@@ -17,7 +20,8 @@ import Communications from './pages/Communications';
 import Team from './pages/Team';
 import People from './pages/People';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { Toaster } from 'react-hot-toast';
+// Import the entire module to avoid type issues
+import * as ReactHotToast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
 
 function MainRoutes() {
@@ -37,6 +41,13 @@ function MainRoutes() {
         !isAuthenticated ? <Signup /> : <Navigate to="/" replace />
       } />
       <Route path="/request-access" element={<RequestAccess />} />
+      <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+      <Route path="/auth/update-password" element={<UpdatePassword />} />
+      <Route path="/account/update-password" element={<Navigate to="/auth/update-password" replace />} />
+      <Route path="/auth/accept-invitation" element={<AcceptInvitation />} />
+      
+      {/* Handle both auth/confirm and direct token links */}
+      <Route path="/auth/confirm" element={<UpdatePassword />} />
 
       {/* Protected Routes - Wrap all dashboard routes */}
       <Route
@@ -73,7 +84,8 @@ function MainRoutes() {
 function App() {
   return (
     <ErrorBoundary>
-      <Toaster position="top-right" />
+      {/* Use ReactHotToast.Toaster to fix the type issue */}
+      <ReactHotToast.Toaster position="top-right" />
       <AuthProvider>
         <Router>
           <MainRoutes />

@@ -1,16 +1,27 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Mail, Lock } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'react-hot-toast';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+
+  // Check for message in location state (for redirects from password reset)
+  useEffect(() => {
+    if (location.state?.message) {
+      toast.success(location.state.message);
+      
+      // Clear the message to prevent it from showing again on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +29,6 @@ export default function Login() {
 
     try {
       await login(email, password);
-      toast.success('Logged in successfully');
       navigate('/');
     } catch (error) {
       console.error('Login error:', error);
@@ -95,16 +105,16 @@ export default function Login() {
                   Remember me
                 </label>
               </div>
-              <button type="button" className="text-sm text-[#2C3539] hover:underline">
+              <Link to="/auth/forgot-password" className="text-sm text-[#2C3539] hover:underline">
                 Forgot password?
-              </button>
+              </Link>
             </div>
 
             <div>
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
+                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#2C3539] hover:bg-[#3d474c] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2C3539] ${
                   isLoading ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
               >

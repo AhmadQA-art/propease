@@ -356,6 +356,54 @@ class PeopleService {
       throw error;
     }
   }
+
+  /**
+   * Assign a role to a user
+   * @param {string} userId - User ID
+   * @param {string} role - Role name
+   * @param {string} organizationId - Organization ID
+   * @returns {Promise<Object>} Result
+   */
+  async assignRole(userId, role, organizationId) {
+    try {
+      // Get role ID by name
+      const { data: roleData, error: roleError } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', role)
+        .single();
+
+      if (roleError) {
+        console.error('Error getting role:', roleError);
+        throw roleError;
+      }
+
+      if (!roleData) {
+        throw new Error(`Role ${role} not found`);
+      }
+
+      // Assign role to user
+      const { data: userRole, error: userRoleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: userId,
+          role_id: roleData.id,
+          organization_id: organizationId
+        })
+        .select()
+        .single();
+
+      if (userRoleError) {
+        console.error('Error assigning role:', userRoleError);
+        throw userRoleError;
+      }
+
+      return { success: true, userRole };
+    } catch (error) {
+      console.error('Service error:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new PeopleService(); 

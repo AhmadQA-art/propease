@@ -123,6 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        }
       });
 
       if (error) throw error;
@@ -141,6 +144,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (profileError) {
           throw profileError;
+        }
+
+        // Check if we have an invitation role in the URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const invitationToken = searchParams.get('invitation');
+        const role = searchParams.get('role');
+        const organizationId = searchParams.get('organization_id');
+
+        if (invitationToken && role && organizationId) {
+          try {
+            // Verify the invitation token
+            const inviteResponse = await fetch(`/api/invites/verify/${invitationToken}`);
+            
+            if (!inviteResponse.ok) {
+              console.error('Invalid invitation token');
+              return;
+            }
+            
+            // Assign the role to the user
+            const assignRoleResponse = await fetch('/api/users/assign-role', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: data.user.id,
+                role: role,
+                organizationId: organizationId
+              }),
+            });
+
+            if (!assignRoleResponse.ok) {
+              throw new Error(`HTTP error! status: ${assignRoleResponse.status}`);
+            }
+
+            console.log('Role assigned successfully');
+          } catch (assignRoleError: any) {
+            console.error('Error assigning role:', assignRoleError);
+            toast.error(assignRoleError.message || 'Error assigning role');
+          }
         }
       }
 

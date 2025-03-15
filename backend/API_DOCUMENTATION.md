@@ -5,6 +5,11 @@ This document provides comprehensive documentation for the PropEase API, includi
 ## Table of Contents
 
 - [Authentication](#authentication)
+  - [Login](#login)
+  - [Register](#register)
+  - [Reset Password](#reset-password)
+  - [Verify Reset Token](#verify-reset-token)
+  - [Update Password](#update-password)
 - [People](#people)
   - [Team Members](#team-members)
   - [Tenants](#tenants)
@@ -93,11 +98,161 @@ curl -X POST http://localhost:5001/api/auth/register \
   -d '{"email":"newuser@example.com","password":"newpassword","first_name":"Jane","last_name":"Smith"}'
 ```
 
+### Reset Password
+
+Initiates the password reset process by sending a reset link to the user's email.
+
+```
+POST /auth/reset-password
+```
+
+**Request Body:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:5001/api/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com"}'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Password reset instructions sent to your email"
+}
+```
+
+### Verify Reset Token
+
+Verifies a password reset token from an email link and redirects to the password update page.
+
+```
+GET /auth/confirm
+```
+
+**Query Parameters:**
+
+- `token_hash`: The token hash from the email link
+- `type`: The type of token (e.g., "recovery")
+- `next`: (Optional) The path to redirect to after verification (default: "/auth/update-password")
+
+**Example URL:**
+
+```
+http://localhost:5001/api/auth/confirm?token_hash=abc123def456&type=recovery&next=/auth/update-password
+```
+
+**Response:**
+
+- Redirects to the update password page if successful
+- Returns error JSON if verification fails:
+
+```json
+{
+  "error": "Invalid token",
+  "message": "Token has expired or is invalid"
+}
+```
+
+### Verify Token Directly
+
+Direct API endpoint for token verification from the frontend. Useful when working with the password reset flow.
+
+```
+POST /auth/verify-token
+```
+
+**Request Body:**
+
+```json
+{
+  "token_hash": "abc123def456",
+  "type": "recovery"
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:5001/api/auth/verify-token \
+  -H "Content-Type: application/json" \
+  -d '{"token_hash":"abc123def456","type":"recovery"}'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Token verified successfully",
+  "session": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "aBcDeFgHiJkLmNoPqRsTuVwXyZ...",
+    "expires_at": 1678901234,
+    "user": {
+      "id": "user-id",
+      "email": "user@example.com"
+    }
+  }
+}
+```
+
+### Update Password
+
+Updates the user's password after a successful password reset.
+
+```
+POST /auth/update-password
+```
+
+**Request Headers:**
+
+```
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+**Request Body:**
+
+```json
+{
+  "password": "newSecurePassword"
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:5001/api/auth/update-password \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"password":"newSecurePassword"}'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Password updated successfully"
+}
+```
+
 ## People
 
 ### Team Members
 
-#### Create Team Member
+#### Create Team Member (DEPRECATED)
+
+**Note: This endpoint is deprecated and will be removed in future versions. Please use the invitation system instead (`/api/invites/team/invite`).**
 
 ```
 POST /people/team
@@ -468,7 +623,9 @@ curl -X POST http://localhost:5001/api/people/profile-id/documents \
 
 ### Invitations
 
-#### Send Invitations
+#### Send Invitations (DEPRECATED)
+
+**Note: This endpoint is deprecated and will be removed in future versions. Please use the dedicated invitation endpoints instead (`/api/invites/{role}/invite`).**
 
 ```
 POST /people/:id/invitations
@@ -986,5 +1143,248 @@ Error responses include a JSON object with an error message:
 ```json
 {
   "error": "Error message details"
+}
+```
+
+## User Invitations
+
+The following endpoints are used to invite users to the application with different roles.
+
+### Send Team Member Invitation
+
+```
+POST /api/invites/team/invite
+```
+
+Invites a new team member to the organization.
+
+**Request Headers:**
+- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+
+**Request Body:**
+```json
+{
+  "email": "newteam@example.com"
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:5001/api/invites/team/invite \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"email":"newteam@example.com"}'
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Invitation sent successfully",
+  "invitation": {
+    "id": "invitation-uuid",
+    "email": "newteam@example.com",
+    "expires_at": "2023-06-08T12:00:00.000Z",
+    "status": "pending"
+  }
+}
+```
+
+### Send Tenant Invitation
+
+```
+POST /api/invites/tenant/invite
+```
+
+Invites a new tenant to the organization.
+
+**Request Headers:**
+- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+
+**Request Body:**
+```json
+{
+  "email": "newtenant@example.com"
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:5001/api/invites/tenant/invite \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"email":"newtenant@example.com"}'
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Invitation sent successfully",
+  "invitation": {
+    "id": "invitation-uuid",
+    "email": "newtenant@example.com",
+    "expires_at": "2023-06-08T12:00:00.000Z",
+    "status": "pending"
+  }
+}
+```
+
+### Send Vendor Invitation
+
+```
+POST /api/invites/vendor/invite
+```
+
+Invites a new vendor to the organization.
+
+**Request Headers:**
+- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+
+**Request Body:**
+```json
+{
+  "email": "newvendor@example.com"
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:5001/api/invites/vendor/invite \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"email":"newvendor@example.com"}'
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Invitation sent successfully",
+  "invitation": {
+    "id": "invitation-uuid",
+    "email": "newvendor@example.com",
+    "expires_at": "2023-06-08T12:00:00.000Z",
+    "status": "pending"
+  }
+}
+```
+
+### Send Owner Invitation
+
+```
+POST /api/invites/owner/invite
+```
+
+Invites a new property owner to the organization.
+
+**Request Headers:**
+- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+
+**Request Body:**
+```json
+{
+  "email": "newowner@example.com"
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:5001/api/invites/owner/invite \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{"email":"newowner@example.com"}'
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Invitation sent successfully",
+  "invitation": {
+    "id": "invitation-uuid",
+    "email": "newowner@example.com",
+    "expires_at": "2023-06-08T12:00:00.000Z",
+    "status": "pending"
+  }
+}
+```
+
+### Verify Invitation Token
+
+```
+GET /api/invites/verify/:token
+```
+
+Verifies if an invitation token is valid.
+
+**Path Parameters:**
+- `token`: The invitation token to verify
+
+**cURL Example:**
+
+```bash
+curl -X GET http://localhost:5001/api/invites/verify/abc123def456 \
+  -H "Content-Type: application/json"
+```
+
+**Response (200 OK):**
+```json
+{
+  "message": "Invitation is valid",
+  "invitation": {
+    "id": "invitation-uuid",
+    "email": "user@example.com",
+    "organization_id": "organization-uuid",
+    "role_id": "role-uuid"
+  }
+}
+```
+
+### Assign Role to User
+
+```
+POST /api/users/assign-role
+```
+
+Assigns a role to a user within an organization.
+
+**Request Headers:**
+- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+
+**Request Body:**
+```json
+{
+  "userId": "user-uuid",
+  "role": "team_member",
+  "organizationId": "organization-uuid"
+}
+```
+
+**cURL Example:**
+
+```bash
+curl -X POST http://localhost:5001/api/users/assign-role \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "userId": "user-uuid",
+    "role": "team_member",
+    "organizationId": "organization-uuid"
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "userRole": {
+    "id": "user-role-uuid",
+    "user_id": "user-uuid",
+    "role_id": "role-uuid",
+    "organization_id": "organization-uuid",
+    "created_at": "2023-06-07T12:00:00.000Z",
+    "updated_at": "2023-06-07T12:00:00.000Z"
+  }
 }
 ``` 

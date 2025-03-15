@@ -12,4 +12,10 @@ router.get('/debug', authenticateToken, (req, res) => {
 // Get user profile
 router.get('/profile', authenticateToken, userController.getUserProfile);
 
+// Get current user
+router.get('/me', authenticateToken, userController.getCurrentUser);
+
+// Assign role
+router.post('/assign-role', authenticateToken, userController.assignRole);
+
 module.exports = router;

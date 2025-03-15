@@ -3,12 +3,20 @@ const router = express.Router();
 const peopleController = require('../controllers/people.controller');
 const { authenticateToken } = require('../middleware/auth.middleware');
 
+// Deprecation middleware
+const deprecatedEndpoint = (req, res, next) => {
+  console.warn('WARNING: This endpoint is deprecated and will be removed in future versions');
+  res.setHeader('X-Deprecated', 'true');
+  res.setHeader('X-Deprecated-Warning', 'This endpoint is deprecated. Please use the invitation system instead.');
+  next();
+};
+
 /**
  * @route POST /api/people/team
- * @desc Create a new team member
+ * @desc Create a new team member (DEPRECATED)
  * @access Private
  */
-router.post('/team', authenticateToken, peopleController.createTeamMember);
+router.post('/team', authenticateToken, deprecatedEndpoint, peopleController.createTeamMember);
 
 /**
  * @route POST /api/people/tenant

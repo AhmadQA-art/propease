@@ -1,8 +1,12 @@
 import { supabase } from '../supabase/client';
+import axios from 'axios';
+import { EmailOtpType } from '@supabase/supabase-js';
 import type { User } from '../supabase/types';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+
 export const authApi = {
-  async signUp(email: string, password: string) {
+  async signUp(email: string, password: string, userData: any) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -25,10 +29,50 @@ export const authApi = {
     if (error) throw error;
   },
 
-  async getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
+  async resetPassword(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/update-password`,
+    });
     if (error) throw error;
-    return user;
+  },
+  
+  async updatePassword(password: string) {
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+    if (error) throw error;
+  },
+  
+  async verifyToken(tokenHash: string, type: EmailOtpType) {
+    try {
+      // First try direct Supabase verification
+      const { data: supabaseData, error: supabaseError } = await supabase.auth.verifyOtp({
+        type,
+        token_hash: tokenHash,
+      });
+      
+      if (!supabaseError) {
+        return { success: true };
+      }
+      
+      // If Supabase direct verification fails, try our backend API
+      console.log('Supabase direct verification failed, trying backend API');
+      const response = await axios.post(`${API_URL}/auth/verify-token`, {
+        token_hash: tokenHash,
+        type,
+      });
+      
+      return response.data;
+    } catch (error) {
+      console.error('Token verification failed', error);
+      throw error;
+    }
+  },
+
+  async getCurrentUser() {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) throw error;
+    return data.user;
   },
 
   async getUserProfile(userId: string) {

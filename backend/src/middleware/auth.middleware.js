@@ -23,7 +23,20 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token' });
     }
 
-    req.user = user;
+    // Fetch the user's profile from the database
+    const { data: profile, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      return res.status(401).json({ error: 'Failed to fetch user profile' });
+    }
+
+    // Merge the auth user and profile data
+    req.user = { ...user, ...profile };
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
