@@ -1,4 +1,4 @@
-export type PersonType = 'team' | 'tenant' | 'vendor' | 'owner';
+export type PersonType = 'team' | 'tenant' | 'owner' | 'vendor';
 
 export interface BasePerson {
   id: string;

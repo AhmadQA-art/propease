@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { PersonType } from '../../types/people';
 import { toast } from 'react-hot-toast';
+import { supabase } from '@/services/supabase/client';
 
 interface AddPersonDialogProps {
   isOpen: boolean;
@@ -44,8 +45,11 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
       setIsSubmitting(true);
       setError('');
 
-      // Get auth token from localStorage
-      const token = localStorage.getItem('supabase.auth.token');
+      // Get the session for the auth token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session found');
+      }
       
       // Prepare request body based on person type
       const requestBody: any = { email };
@@ -57,11 +61,11 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
       }
       
       // Send invitation via API
-      const response = await fetch(`/api/invites/${personType}/invite`, {
+      const response = await fetch(`/api/invite/${personType}/invite`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${session.access_token}`
         },
         body: JSON.stringify(requestBody)
       });
