@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Lock, User, Mail, Phone } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/services/supabase/client';
+import { invitationApi } from '@/services/api/invitation';
 import { toast } from 'react-hot-toast';
 
 export default function AcceptInvitation() {
@@ -21,70 +22,62 @@ export default function AcceptInvitation() {
   const [invitationValid, setInvitationValid] = useState(false);
   const [organizationName, setOrganizationName] = useState('');
   const [role, setRole] = useState('');
-  const [invitationData, setInvitationData] = useState(null); // Store invitation details
+  const [invitationData, setInvitationData] = useState(null);
   
-  const { user } = useAuth(); // Get authenticated user from context
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     const checkSessionAndInvitation = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session || !session.user) {
-        setError('Invalid or expired invitation link. Please contact your administrator.');
-        setIsVerifying(false);
-        return;
-      }
-
-      const userEmail = session.user.email;
-
-      if (!token) {
-        setError('Missing invitation token. Please check your invitation link.');
-        setIsVerifying(false);
-        return;
-      }
-
       try {
-        // Verify invitation via backend endpoint
-        const response = await fetch(`/api/invite/verify/${token}?email=${encodeURIComponent(userEmail)}`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        const { data: { session } } = await supabase.auth.getSession();
 
-        if (!response.ok) {
-          const contentType = response.headers.get('content-type');
-          if (contentType && contentType.includes('application/json')) {
-            const errorData = await response.json();
-            setError(errorData.error || 'No valid invitation found.');
-          } else {
-            setError('Unexpected server response. Please try again or contact support.');
-          }
+        if (!session || !session.user) {
+          setError('Please sign in to accept the invitation.');
           setIsVerifying(false);
           return;
         }
 
-        const { invitation } = await response.json();
-        setInvitationData(invitation); // Store invitation data
-        setOrganizationName(invitation.organization_name);
-        setRole(invitation.role);
-        setInvitationValid(true);
-      } catch (error) {
-        console.error('Error verifying invitation:', error);
-        setError('Error verifying invitation. Please try again or contact support.');
+        const userEmail = session.user.email;
+
+        if (!token) {
+          setError('Missing invitation token. Please check your invitation link.');
+          setIsVerifying(false);
+          return;
+        }
+
+        try {
+          const { invitation } = await invitationApi.verifyInvitation(token, userEmail);
+          
+          if (!invitation) {
+            setError('Invalid invitation. Please check your invitation link.');
+            setIsVerifying(false);
+            return;
+          }
+
+          setInvitationData(invitation);
+          setOrganizationName(invitation.organization_name);
+          setRole(invitation.role);
+          setInvitationValid(true);
+        } catch (error: any) {
+          console.error('Error verifying invitation:', error);
+          setError(error.message || 'Error verifying invitation. Please try again or contact support.');
+          setInvitationValid(false);
+        }
+      } catch (error: any) {
+        console.error('Session error:', error);
+        setError('Error checking session. Please try signing in again.');
+        setInvitationValid(false);
       } finally {
         setIsVerifying(false);
       }
     };
 
     checkSessionAndInvitation();
-  }, [searchParams]);
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    console.log("Starting form submission process");
     
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
@@ -106,140 +99,24 @@ export default function AcceptInvitation() {
 
     try {
       // Update user password
-      console.log("Updating user password");
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
 
-      // Get authenticated user
-      console.log("Getting authenticated user");
-      const { data: { user }, error: getUserError } = await supabase.auth.getUser();
-      if (getUserError || !user) throw new Error('No authenticated user found');
-
-      console.log("User found:", user);
-      console.log("User metadata:", user.user_metadata || {});
-
-      // Get metadata from the user object
-      const metadata = user.user_metadata || {};
-      console.log("Job title from metadata:", metadata.job_title);
-      console.log("Department from metadata:", metadata.department);
-
-      // Use verified invitation data
-      console.log("Using verified invitation data:", invitationData);
-
-      // Update user profile
-      console.log("Updating user profile with:", {
-        id: user.id,
-        email: user.email,
-        first_name: firstName,
-        last_name: lastName,
-        organization_id: invitationData.organization_id,
-        phone: phone
+      // Accept invitation
+      const response = await invitationApi.acceptInvitation(token, {
+        password,
+        firstName,
+        lastName,
+        phone
       });
 
-      const { error: profileError } = await supabase
-        .from('user_profiles')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          first_name: firstName,
-          last_name: lastName,
-          organization_id: invitationData.organization_id,
-          phone: phone
-        }, { onConflict: 'id' });
-
-      if (profileError) throw profileError;
-
-      console.log("Profile updated successfully");
-
-      // Get role information
-      console.log("Fetching role information for role_id:", invitationData.role_id);
-      const roleData = { name: invitationData.role };
-      console.log("Role from verified invitation:", roleData);
-
-      // Get the session for the auth token
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('No active session found');
-
-      // Assign role via API
-      console.log("Assigning role via API:", {
-        userId: user.id,
-        role: roleData.name,
-        organizationId: invitationData.organization_id
-      });
-      
-      const roleResponse = await fetch('/api/users/assign-role', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          role: roleData.name,
-          organizationId: invitationData.organization_id
-        }),
-      });
-
-      if (!roleResponse.ok) {
-        const roleResponseData = await roleResponse.json();
-        console.error("Role assignment API error:", roleResponseData);
-        throw new Error(`Role assignment failed: ${roleResponseData.error || 'Unknown error'}`);
-      }
-
-      console.log("Role assigned successfully");
-
-      // CRITICAL FIX: For team members, add to team_members table WITHOUT job_title/department columns
-      // These columns ONLY exist in team_members table, not organization_invitations
-      if (roleData.name === 'team_member') {
-        // Get metadata from the user object
-        const metadata = user.user_metadata || {};
-        console.log("User is a team member. Adding to team_members table with metadata:");
-        console.log("  - job_title:", metadata.job_title);
-        console.log("  - department:", metadata.department);
-        
-        const teamMemberData = {
-          user_id: user.id,
-          role_id: invitationData.role_id,
-          job_title: metadata.job_title || null,
-          department: metadata.department || null
-        };
-        
-        console.log("Team member data to insert:", teamMemberData);
-        
-        const { error: teamMemberError } = await supabase
-          .from('team_members')
-          .insert(teamMemberData);
-          
-        if (teamMemberError) {
-          console.error('Team member insertion error:', teamMemberError);
-          console.error('Team member error details:', JSON.stringify(teamMemberError, null, 2));
-          throw teamMemberError;
-        }
-        
-        console.log("Team member record created successfully");
-      }
-
-      // Update invitation status
-      console.log("Updating invitation status to accepted");
-      const { error: invitationUpdateError } = await supabase
-        .from('organization_invitations')
-        .update({ status: 'accepted' })
-        .eq('id', invitationData.id);
-        
-      if (invitationUpdateError) {
-        console.error("Error updating invitation status:", invitationUpdateError);
-        // We'll continue anyway since the critical parts worked
-      }
-
-      console.log("Account setup completed successfully");
       toast.success('Account created successfully!');
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accepting invitation:', error);
-      console.error('Error stack:', error.stack);
-      console.error('Error details:', JSON.stringify(error, null, 2));
-      setError(error.message || 'An error occurred while creating your account.');
-      toast.error(error.message || 'An error occurred while creating your account.');
+      const errorMessage = error.message || 'An error occurred while creating your account.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

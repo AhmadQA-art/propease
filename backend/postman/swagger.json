@@ -1,0 +1,1412 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "PropEase API Documentation",
+    "version": "1.0.0",
+    "description": "API documentation for PropEase property management system",
+    "contact": {
+      "name": "PropEase Support",
+      "email": "support@propease.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5001",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/signup": {
+      "post": {
+        "summary": "Register a new user",
+        "description": "Creates a new user account with the provided information",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password",
+                  "first_name",
+                  "last_name"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "User's email address"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "description": "User's password (min 8 characters)"
+                  },
+                  "first_name": {
+                    "type": "string",
+                    "description": "User's first name"
+                  },
+                  "last_name": {
+                    "type": "string",
+                    "description": "User's last name"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "User created successfully"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "first_name": {
+                          "type": "string"
+                        },
+                        "last_name": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or email already exists"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/auth/signin": {
+      "post": {
+        "summary": "Authenticate user",
+        "description": "Sign in with email and password to get access token",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "User's email address"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "description": "User's password"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "JWT access token"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "first_name": {
+                          "type": "string"
+                        },
+                        "last_name": {
+                          "type": "string"
+                        },
+                        "organization_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid credentials"
+          },
+          "401": {
+            "description": "Authentication failed"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/auth/signout": {
+      "post": {
+        "summary": "Sign out user",
+        "description": "Invalidates the user's session",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed out successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Signed out successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or expired token"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/auth/user": {
+      "get": {
+        "summary": "Get current user",
+        "description": "Returns the currently authenticated user's information",
+        "tags": [
+          "Authentication"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "user_metadata": {
+                      "type": "object",
+                      "properties": {
+                        "first_name": {
+                          "type": "string"
+                        },
+                        "last_name": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or expired token"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/auth/request-access": {
+      "post": {
+        "summary": "Request access to the system",
+        "description": "Submits a request for access to the system with organization information",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "organization_name"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "User's email address"
+                  },
+                  "organization_name": {
+                    "type": "string",
+                    "description": "Name of the organization"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Access request submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Access request submitted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/auth/confirm": {
+      "get": {
+        "summary": "Confirm email or password reset",
+        "description": "Verifies a token for email confirmation or password reset",
+        "tags": [
+          "Authentication"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token_hash",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The verification token hash"
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "signup",
+                "recovery"
+              ]
+            },
+            "description": "The type of verification"
+          },
+          {
+            "in": "query",
+            "name": "next",
+            "schema": {
+              "type": "string"
+            },
+            "description": "The URL to redirect to after verification"
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Redirects to the frontend update password page"
+          },
+          "400": {
+            "description": "Missing parameters"
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/auth/verify-token": {
+      "post": {
+        "summary": "Verify token",
+        "description": "Directly verifies a token without redirection",
+        "tags": [
+          "Authentication"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "token_hash",
+                  "type"
+                ],
+                "properties": {
+                  "token_hash": {
+                    "type": "string",
+                    "description": "The verification token hash"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "signup",
+                      "recovery"
+                    ],
+                    "description": "The type of verification"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token verified successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Token verified successfully"
+                    },
+                    "session": {
+                      "type": "object",
+                      "description": "User session information"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing parameters"
+          },
+          "401": {
+            "description": "Invalid token"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/invite/verify/{token}": {
+      "get": {
+        "summary": "Verify an invitation token",
+        "description": "Verifies if an invitation token is valid and returns the invitation details",
+        "tags": [
+          "Invitations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The invitation token from the email link"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invitation is valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invitation is valid"
+                    },
+                    "invitation": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "invitation-uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "example": "user@example.com"
+                        },
+                        "organization_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "org-uuid"
+                        },
+                        "organization_name": {
+                          "type": "string",
+                          "example": "Example Organization"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "team_member"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid token format"
+          },
+          "404": {
+            "description": "Invitation not found"
+          },
+          "410": {
+            "description": "Invitation expired"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/invite/accept/{token}": {
+      "post": {
+        "summary": "Accept an invitation",
+        "description": "Accepts an invitation and creates a user account",
+        "tags": [
+          "Invitations"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The invitation token from the email link"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "password",
+                  "firstName",
+                  "lastName"
+                ],
+                "properties": {
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "description": "User's password"
+                  },
+                  "firstName": {
+                    "type": "string",
+                    "description": "User's first name"
+                  },
+                  "lastName": {
+                    "type": "string",
+                    "description": "User's last name"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "User's phone number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation accepted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invitation accepted successfully"
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "user-uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "example": "user@example.com"
+                        },
+                        "first_name": {
+                          "type": "string",
+                          "example": "John"
+                        },
+                        "last_name": {
+                          "type": "string",
+                          "example": "Doe"
+                        },
+                        "organization_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "org-uuid"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "team_member"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or token format"
+          },
+          "404": {
+            "description": "Invitation not found"
+          },
+          "410": {
+            "description": "Invitation expired"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/invite/team/invite": {
+      "post": {
+        "summary": "Invite a team member",
+        "description": "Sends an invitation to a new team member",
+        "tags": [
+          "Invitations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the team member"
+                  },
+                  "jobTitle": {
+                    "type": "string",
+                    "description": "Job title of the team member"
+                  },
+                  "department": {
+                    "type": "string",
+                    "description": "Department of the team member"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation sent successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Invitation sent successfully"
+                    },
+                    "invitation": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "invitation-uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "example": "newteam@example.com"
+                        },
+                        "expires_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-03-21T12:00:00.000Z"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "pending"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or user already exists"
+          },
+          "401": {
+            "description": "Unauthorized - invalid token"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/invite/tenant/invite": {
+      "post": {
+        "summary": "Invite a tenant",
+        "description": "Sends an invitation to a new tenant",
+        "tags": [
+          "Invitations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the tenant"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Full name of the tenant"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "Phone number of the tenant"
+                  },
+                  "language_preference": {
+                    "type": "string",
+                    "description": "Preferred language"
+                  },
+                  "vehicles": {
+                    "type": "object",
+                    "description": "Tenant's vehicles information"
+                  },
+                  "pets": {
+                    "type": "object",
+                    "description": "Tenant's pets information"
+                  },
+                  "emergency_contact": {
+                    "type": "object",
+                    "description": "Tenant's emergency contact information"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation sent successfully"
+          },
+          "400": {
+            "description": "Invalid input or user already exists"
+          },
+          "401": {
+            "description": "Unauthorized - invalid token"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/invite/vendor/invite": {
+      "post": {
+        "summary": "Invite a vendor",
+        "description": "Sends an invitation to a new vendor",
+        "tags": [
+          "Invitations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the vendor"
+                  },
+                  "contact_name": {
+                    "type": "string",
+                    "description": "Contact name"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "Phone number"
+                  },
+                  "service_type": {
+                    "type": "string",
+                    "description": "Type of service provided"
+                  },
+                  "business_type": {
+                    "type": "string",
+                    "description": "Type of business"
+                  },
+                  "service_areas": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Areas where service is provided"
+                  },
+                  "service_availability": {
+                    "type": "object",
+                    "description": "Service availability details"
+                  },
+                  "emergency_service": {
+                    "type": "boolean",
+                    "description": "Whether emergency service is available"
+                  },
+                  "payment_terms": {
+                    "type": "string",
+                    "description": "Payment terms"
+                  },
+                  "hourly_rate": {
+                    "type": "number",
+                    "description": "Hourly rate"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation sent successfully"
+          },
+          "400": {
+            "description": "Invalid input or user already exists"
+          },
+          "401": {
+            "description": "Unauthorized - invalid token"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/invite/owner/invite": {
+      "post": {
+        "summary": "Invite an owner",
+        "description": "Sends an invitation to a new property owner",
+        "tags": [
+          "Invitations"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the owner"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Full name of the owner"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "Phone number"
+                  },
+                  "company_name": {
+                    "type": "string",
+                    "description": "Company name"
+                  },
+                  "address": {
+                    "type": "string",
+                    "description": "Business address"
+                  },
+                  "business_type": {
+                    "type": "string",
+                    "description": "Type of business"
+                  },
+                  "tax_id": {
+                    "type": "string",
+                    "description": "Tax ID number"
+                  },
+                  "payment_schedule": {
+                    "type": "string",
+                    "description": "Payment schedule preference"
+                  },
+                  "payment_method": {
+                    "type": "string",
+                    "description": "Preferred payment method"
+                  },
+                  "notes": {
+                    "type": "string",
+                    "description": "Additional notes"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invitation sent successfully"
+          },
+          "400": {
+            "description": "Invalid input or user already exists"
+          },
+          "401": {
+            "description": "Unauthorized - invalid token"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/people/tenant-record": {
+      "post": {
+        "summary": "Create a new tenant record without authentication",
+        "description": "Creates a new tenant record in the database without creating a user profile or authentication.",
+        "tags": [
+          "Tenants"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "name",
+                  "phone",
+                  "email"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Full name of the tenant"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "Phone number of the tenant"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "Email address of the tenant"
+                  },
+                  "emergency_contact_phone": {
+                    "type": "string",
+                    "description": "Emergency contact phone number"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant record created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Tenant record created successfully"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "tenant-uuid"
+                        },
+                        "name": {
+                          "type": "string",
+                          "example": "John Doe"
+                        },
+                        "phone": {
+                          "type": "string",
+                          "example": 1234567890
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email",
+                          "example": "john.doe@example.com"
+                        },
+                        "emergency_contact_phone": {
+                          "type": "string",
+                          "example": 1987654321
+                        },
+                        "organization_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "example": "org-uuid"
+                        },
+                        "status": {
+                          "type": "string",
+                          "example": "active"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-06-01T12:00:00.000Z"
+                        },
+                        "updated_at": {
+                          "type": "string",
+                          "format": "date-time",
+                          "example": "2024-06-01T12:00:00.000Z"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - missing required fields or organization ID not found"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing authentication token"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/people/{id}/documents": {
+      "post": {
+        "summary": "Upload documents for a person",
+        "description": "Upload one or more documents for a specific person (tenant, owner, vendor, etc.)",
+        "tags": [
+          "Documents"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The person ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "documents": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "Documents to upload (max 10)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Documents uploaded successfully"
+          },
+          "400": {
+            "description": "Bad request - missing person ID or no files uploaded"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing authentication token"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/user/profile": {
+      "get": {
+        "summary": "Get user profile",
+        "description": "Retrieves the complete profile information for the authenticated user",
+        "tags": [
+          "User Management"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User profile retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "first_name": {
+                      "type": "string"
+                    },
+                    "last_name": {
+                      "type": "string"
+                    },
+                    "phone": {
+                      "type": "string"
+                    },
+                    "profile_image_url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "organization_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "created_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or expired token"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/user/me": {
+      "get": {
+        "summary": "Get current user basic info",
+        "description": "Retrieves basic information about the currently authenticated user",
+        "tags": [
+          "User Management"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User information retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "first_name": {
+                      "type": "string"
+                    },
+                    "last_name": {
+                      "type": "string"
+                    },
+                    "organization_id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "role": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or expired token"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/user/assign-role": {
+      "post": {
+        "summary": "Assign role to user",
+        "description": "Assigns a role to a user within an organization",
+        "tags": [
+          "User Management"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId",
+                  "role",
+                  "organizationId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the user to assign the role to"
+                  },
+                  "role": {
+                    "type": "string",
+                    "description": "Role to assign (e.g., admin, team_member, tenant, owner, vendor)"
+                  },
+                  "organizationId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "ID of the organization"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role assigned successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Role assigned successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or missing required fields"
+          },
+          "401": {
+            "description": "Unauthorized - invalid or expired token"
+          },
+          "403": {
+            "description": "Forbidden - insufficient permissions"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}

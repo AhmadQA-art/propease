@@ -1,0 +1,299 @@
+{
+    "info": {
+      "name": "PropEase API Collection",
+      "description": "A Postman collection for the PropEase API, including all endpoints with environment variables and automation scripts.",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Authentication",
+        "item": [
+          {
+            "name": "Sign Up",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"email\":\"newuser@example.com\",\"password\":\"newpassword\",\"first_name\":\"Jane\",\"last_name\":\"Smith\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/signup",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "signup"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Sign In",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"email\":\"user@example.com\",\"password\":\"yourpassword\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/signin",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "signin"]
+              }
+            },
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "type": "text/javascript",
+                  "exec": [
+                    "pm.test(\"Sign In successful\", function () {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"token\", jsonData.token);",
+                    "});"
+                  ]
+                }
+              }
+            ],
+            "response": []
+          },
+          {
+            "name": "Sign Out",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{token}}" }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/auth/signout",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "signout"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Request Access",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"email\":\"user@example.com\",\"organization_name\":\"My Company\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/request-access",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "request-access"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Verify Token",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"token\":\"verification-token\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/verify-token",
+                "host": ["{{baseUrl}}"],
+                "path": ["auth", "verify-token"]
+              }
+            },
+            "response": []
+          }
+        ]
+      },
+      {
+        "name": "User Management",
+        "item": [
+          {
+            "name": "Get Current User",
+            "request": {
+              "method": "GET",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{token}}" }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/user/me",
+                "host": ["{{baseUrl}}"],
+                "path": ["user", "me"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get User Profile",
+            "request": {
+              "method": "GET",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{token}}" }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/user/profile",
+                "host": ["{{baseUrl}}"],
+                "path": ["user", "profile"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Assign Role",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{token}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"userId\":\"user-uuid\",\"role\":\"team_member\",\"organizationId\":\"org-uuid\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/user/assign-role",
+                "host": ["{{baseUrl}}"],
+                "path": ["user", "assign-role"]
+              }
+            },
+            "response": []
+          }
+        ]
+      },
+      {
+        "name": "Invitations",
+        "item": [
+          {
+            "name": "Team Member Invitation",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{token}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"email\":\"newteam@example.com\",\"jobTitle\":\"Project Manager\",\"department\":\"Operations\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/invite/team/invite",
+                "host": ["{{baseUrl}}"],
+                "path": ["invite", "team", "invite"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Tenant Invitation",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{token}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"email\":\"newtenant@example.com\",\"name\":\"John Doe\",\"phone\":\"555-234-5678\",\"language_preference\":\"English\",\"vehicles\":{\"vehicle1\":{\"make\":\"Toyota\",\"model\":\"Camry\",\"year\":\"2020\",\"plate\":\"ABC123\"}},\"pets\":{\"pet1\":{\"type\":\"Dog\",\"breed\":\"Labrador\",\"name\":\"Max\",\"weight\":\"65\"}},\"emergency_contact\":{\"name\":\"Jane Smith\",\"phone\":\"555-876-5432\",\"relationship\":\"Sister\"}}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/invite/tenant/invite",
+                "host": ["{{baseUrl}}"],
+                "path": ["invite", "tenant", "invite"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Owner Invitation",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{token}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"email\":\"newowner@example.com\",\"name\":\"Jennifer Davis\",\"phone\":\"555-456-7890\",\"company_name\":\"Davis Properties LLC\",\"address\":\"123 Business Ave, Suite 100\",\"business_type\":\"LLC\",\"tax_id\":\"12-3456789\",\"payment_schedule\":\"monthly\",\"payment_method\":\"direct_deposit\",\"notes\":\"Owns multiple properties\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/invite/owner/invite",
+                "host": ["{{baseUrl}}"],
+                "path": ["invite", "owner", "invite"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Vendor Invitation",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Authorization", "value": "Bearer {{token}}" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"email\":\"newvendor@example.com\",\"contact_name\":\"Robert Brown\",\"phone\":\"555-345-6789\",\"service_type\":\"Plumbing\",\"business_type\":\"LLC\",\"service_areas\":[\"Downtown\",\"Suburbs\"],\"service_availability\":{\"weekdays\":\"9:00 AM - 5:00 PM\",\"weekends\":\"On Call\"},\"emergency_service\":true,\"payment_terms\":\"Net 30\",\"hourly_rate\":75.00,\"notes\":\"Available for emergency calls\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/invite/vendor/invite",
+                "host": ["{{baseUrl}}"],
+                "path": ["invite", "vendor", "invite"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Verify Invitation",
+            "request": {
+              "method": "GET",
+              "header": [],
+              "url": {
+                "raw": "{{baseUrl}}/invite/verify/:token",
+                "host": ["{{baseUrl}}"],
+                "path": ["invite", "verify", ":token"],
+                "variable": [
+                  { "key": "token", "value": "abc123def456", "description": "The invitation token from the email link" }
+                ]
+              },
+              "description": "Set the `:token` path variable before sending the request."
+            },
+            "response": []
+          },
+          {
+            "name": "Accept Invitation",
+            "request": {
+              "method": "POST",
+              "header": [
+                { "key": "Content-Type", "value": "application/json" }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\"password\":\"securepassword\",\"firstName\":\"John\",\"lastName\":\"Doe\",\"phone\":\"+1 (123) 456-7890\"}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/invite/accept/:token",
+                "host": ["{{baseUrl}}"],
+                "path": ["invite", "accept", ":token"],
+                "variable": [
+                  { "key": "token", "value": "abc123def456", "description": "The invitation token from the email link" }
+                ]
+              },
+              "description": "Set the `:token` path variable before sending the request."
+            },
+            "response": []
+          }
+        ]
+      }
+    ]
+  }

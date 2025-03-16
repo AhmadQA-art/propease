@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { PersonType } from '../../types/people';
 import { toast } from 'react-hot-toast';
+import { invitationApi } from '@/services/api/invitation';
 import { supabase } from '@/services/supabase/client';
 
 interface AddPersonDialogProps {
@@ -45,35 +46,38 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
       setIsSubmitting(true);
       setError('');
 
-      // Get the session for the auth token
+      // Check for active session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error('No active session found');
+        throw new Error('Please sign in to send invitations');
       }
       
-      // Prepare request body based on person type
-      const requestBody: any = { email };
-      
-      // Add job title and department for team members
-      if (personType === 'team') {
-        requestBody.jobTitle = jobTitle;
-        requestBody.department = department;
-      }
-      
-      // Send invitation via API
-      const response = await fetch(`/api/invite/${personType}/invite`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to send invitation');
+      // Use the appropriate invitation API method based on person type
+      switch (personType) {
+        case 'team':
+          await invitationApi.inviteTeamMember({
+            email,
+            jobTitle,
+            department
+          });
+          break;
+        case 'tenant':
+          await invitationApi.inviteTenant({
+            email
+          });
+          break;
+        case 'vendor':
+          await invitationApi.inviteVendor({
+            email
+          });
+          break;
+        case 'owner':
+          await invitationApi.inviteOwner({
+            email
+          });
+          break;
+        default:
+          throw new Error('Invalid person type');
       }
 
       // Clear form
@@ -88,8 +92,18 @@ export default function AddPersonDialog({ isOpen, onClose, personType }: AddPers
       onClose();
     } catch (error: any) {
       console.error('Error sending invitation:', error);
-      setError(error.message || 'An error occurred while sending the invitation');
-      toast.error(error.message || 'Failed to send invitation');
+      let errorMessage = error.message || 'An error occurred while sending the invitation';
+      
+      // Handle specific error cases
+      if (error.message === 'No token provided' || error.message.includes('sign in')) {
+        errorMessage = 'Please sign in to send invitations';
+        // You might want to redirect to login here
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

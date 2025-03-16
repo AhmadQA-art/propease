@@ -1,0 +1,15 @@
+{
+    "name": "PropEase API Environment",
+    "values": [
+      {
+        "key": "baseUrl",
+        "value": "http://localhost:5001",
+        "enabled": true
+      },
+      {
+        "key": "token",
+        "value": "",
+        "enabled": true
+      }
+    ]
+  }

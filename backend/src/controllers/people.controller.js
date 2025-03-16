@@ -1,6 +1,7 @@
 const peopleService = require('../services/people.service');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
+const { supabase } = require('../config/supabase');
 
 class PeopleController {
   /**
@@ -212,9 +213,75 @@ class PeopleController {
     }
   }
 
+  /**
+   * Create a tenant record without authentication
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   * @returns {Promise<void>}
+   */
+  async createTenantRecord(req, res) {
+    try {
+      const { name, phone, email, emergency_contact_phone } = req.body;
+      
+      // Validate required fields
+      if (!name || !phone || !email) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Name, phone, and email are required fields' 
+        });
+      }
+      
+      // Get organization ID from the authenticated user
+      const organizationId = req.user.organization_id;
+      
+      if (!organizationId) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Organization ID not found for the authenticated user' 
+        });
+      }
+      
+      // Create tenant record in Supabase
+      const { data: tenant, error } = await supabase
+        .from('tenants')
+        .insert({
+          name,
+          phone,
+          email,
+          emergency_contact_phone,
+          organization_id: organizationId,
+          status: 'active',
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error creating tenant record:', error);
+        return res.status(500).json({ 
+          success: false, 
+          error: 'Failed to create tenant record' 
+        });
+      }
+      
+      return res.status(201).json({
+        success: true,
+        message: 'Tenant record created successfully',
+        data: tenant
+      });
+    } catch (error) {
+      console.error('Error in createTenantRecord:', error);
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Internal server error' 
+      });
+    }
+  }
+
   // Middleware for handling file uploads
   uploadMiddleware() {
-    return upload.array('documents', 10); // Allow up to 10 files
+    return upload.array('documents', 10);
   }
 }
 

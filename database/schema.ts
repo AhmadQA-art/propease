@@ -1,6 +1,6 @@
 /**
 * PropEase Database Schema TypeScript Definitions
-* Auto-generated on: Thu Mar 13 02:44:26 PM +03 2025
+* Auto-generated on: Sun Mar 16 02:06:24 PM +03 2025
 */
 
 // Type definitions for common PostgreSQL data types
@@ -367,7 +367,7 @@ organization_id: UUID;
 email: string;
 role_id: UUID;
 invited_by: UUID;
-token: string;
+token?: string;
 status?: string;
 expires_at: Timestamp;
 created_at?: Timestamp;
@@ -412,6 +412,8 @@ taxpayer_id?: string;
 payment_schedule?: string;
 notes?: string;
 status?: string;
+name?: string;
+organization_id: UUID;
 
 }
 
@@ -662,10 +664,14 @@ pets?: JSONB;
 vehicles?: JSONB;
 eviction_history?: boolean;
 special_accommodations?: string;
-lease_start_date: Date;
+lease_start_date?: Date;
 emergency_contact?: JSONB;
 background_check_status?: string;
 background_check_date?: Date;
+name?: string;
+email?: string;
+phone?: string;
+organization_id: UUID;
 
 }
 
@@ -742,6 +748,10 @@ emergency_service?: boolean;
 payment_terms?: string;
 preferred_bank_account_id?: UUID;
 performance_rating?: number;
+contact_name?: string;
+email?: string;
+phone?: string;
+organization_id: UUID;
 
 }
 

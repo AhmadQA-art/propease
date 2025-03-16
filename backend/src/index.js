@@ -15,31 +15,41 @@ const rentalRoutes = require('./routes/rental.routes');
 const peopleRoutes = require('./routes/people.routes');
 const inviteRoutes = require('./routes/invite.routes');
 const { errorHandler } = require('./middleware/error.middleware');
+const { setupSwagger } = require('./config/swagger');
 
 const app = express();
 
-// Middleware
-app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+// CORS Configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173', // Default to Vite's default port
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Authorization']
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Authorization'],
+  optionsSuccessStatus: 200
+};
+
+// Apply CORS before other middleware
+app.use(cors(corsOptions));
+
+// Other middleware
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
 
+// Setup Swagger documentation
+setupSwagger(app);
+
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/properties', propertyRoutes);
-app.use('/api/leases', leaseRoutes);
-app.use('/api/maintenance', maintenanceRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/rentals', rentalRoutes);
-app.use('/api/people', peopleRoutes);
-app.use('/api/invite', inviteRoutes);
+app.use('/auth', authRoutes);
+app.use('/property', propertyRoutes);
+app.use('/lease', leaseRoutes);
+app.use('/maintenance', maintenanceRoutes);
+app.use('/payment', paymentRoutes);
+app.use('/user', userRoutes);
+app.use('/rental', rentalRoutes);
+app.use('/people', peopleRoutes);
+app.use('/invite', inviteRoutes);
 
 // Error handling
 app.use(errorHandler);
@@ -48,4 +58,6 @@ const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
+  console.log(`CORS enabled for origin: ${corsOptions.origin}`);
 });

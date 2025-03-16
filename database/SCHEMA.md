@@ -1,654 +1,664 @@
 # Supabase Database Schema Documentation
 
 This document provides an overview of the database schema for the PropEase property management system.
-Last updated: Thu Mar 13 02:44:15 PM +03 2025
+Last updated: Sun Mar 16 02:06:14 PM +03 2025
 
 ## Tables
 ### activity_logs                                                                       +
-- **organization_id**: uuid, required                                                   +
-- **activity_type**: character varying(100), required                                   +
-- **created_at**: timestamp with time zone, default now()                               +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **user_id**: uuid                                                                     +
-- **metadata**: jsonb                                                                   +
-- **unit_id**: uuid                                                                     +
-- **property_id**: uuid                                                                 +
 - **description**: text, required                                                       +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **activity_type**: character varying(100), required                                   +
+- **metadata**: jsonb                                                                   +
+- **property_id**: uuid                                                                 +
+- **organization_id**: uuid, required                                                   +
+- **user_id**: uuid                                                                     +
+- **unit_id**: uuid                                                                     +
+- **created_at**: timestamp with time zone, default now()                               +
 
 ### announcement_schedules                                                              +
+- **next_run**: timestamp with time zone, required                                      +
+- **time_of_day**: time without time zone, required                                     +
+- **start_date**: timestamp with time zone, required                                    +
+- **updated_at**: timestamp with time zone, required, default now()                     +
+- **repeat_on**: jsonb                                                                  +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **announcement_id**: uuid, required                                                   +
 - **created_at**: timestamp with time zone, required, default now()                     +
 - **end_date**: timestamp with time zone                                                +
-- **announcement_id**: uuid, required                                                   +
-- **time_of_day**: time without time zone, required                                     +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **start_date**: timestamp with time zone, required                                    +
-- **next_run**: timestamp with time zone, required                                      +
-- **repeat_on**: jsonb                                                                  +
-- **updated_at**: timestamp with time zone, required, default now()                     +
 - **repeat_frequency**: text                                                            +
 
 ### announcement_targets                                                                +
-- **created_at**: timestamp with time zone, required, default now()                     +
-- **target_type**: text, required                                                       +
 - **target_name**: text                                                                 +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **created_at**: timestamp with time zone, required, default now()                     +
 - **target_id**: uuid                                                                   +
 - **updated_at**: timestamp with time zone, required, default now()                     +
+- **target_type**: text, required                                                       +
 - **announcement_id**: uuid, required                                                   +
-- **id**: uuid, required, default gen_random_uuid()                                     +
 
 ### announcement_types                                                                  +
-- **description**: text                                                                 +
 - **created_at**: timestamp with time zone, required, default now()                     +
+- **name**: text, required                                                              +
+- **id**: uuid, required, default gen_random_uuid()                                     +
 - **organization_id**: uuid, required                                                   +
 - **updated_at**: timestamp with time zone, required, default now()                     +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **name**: text, required                                                              +
+- **description**: text                                                                 +
 
 ### announcements                                                                       +
-- **property_id**: uuid                                                                 +
-- **content**: text, required                                                           +
-- **is_scheduled**: boolean, required, default false                                    +
-- **issue_date**: timestamp with time zone                                              +
 - **updated_at**: timestamp with time zone, required, default now()                     +
-- **communication_method**: ARRAY, required                                             +
-- **status**: text, required, default 'draft'text                                       +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **announcement_type_id**: uuid                                                        +
-- **created_at**: timestamp with time zone, required, default now()                     +
 - **organization_id**: uuid, required                                                   +
-- **author_id**: uuid, required                                                         +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **communication_method**: ARRAY, required                                             +
+- **content**: text, required                                                           +
 - **title**: text, required                                                             +
+- **announcement_type_id**: uuid                                                        +
+- **author_id**: uuid, required                                                         +
+- **status**: text, required, default 'draft'text                                       +
+- **created_at**: timestamp with time zone, required, default now()                     +
+- **issue_date**: timestamp with time zone                                              +
+- **property_id**: uuid                                                                 +
+- **is_scheduled**: boolean, required, default false                                    +
 
 ### bank_account_types                                                                  +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **is_predefined**: boolean, default false                                             +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **organization_id**: uuid, required                                                   +
 - **description**: text                                                                 +
 - **name**: character varying(100), required                                            +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **is_predefined**: boolean, default false                                             +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **organization_id**: uuid, required                                                   +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 
 ### bank_accounts                                                                       +
+- **status**: character varying(50), default 'active'character varying                  +
 - **created_by**: uuid, required                                                        +
-- **account_name**: character varying(255), required                                    +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **routing_number**: character varying(50)                                             +
 - **currency**: character varying(10), default 'USD'character varying                   +
 - **balance_available**: numeric(12,2), default 0                                       +
-- **external_id**: character varying(255)                                               +
-- **institution_id**: character varying(255)                                            +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **bank_name**: character varying(255), required                                       +
-- **balance_current**: numeric(12,2), default 0                                         +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **last_synced**: timestamp with time zone                                             +
-- **id**: uuid, required, default gen_random_uuid()                                     +
 - **account_number**: character varying(255), required                                  +
-- **is_default**: boolean, default false                                                +
+- **account_name**: character varying(255), required                                    +
 - **account_type_id**: uuid, required                                                   +
-- **status**: character varying(50), default 'active'character varying                  +
 - **organization_id**: uuid, required                                                   +
+- **institution_id**: character varying(255)                                            +
+- **id**: uuid, required, default gen_random_uuid()                                     +
 - **metadata**: jsonb                                                                   +
+- **is_default**: boolean, default false                                                +
+- **balance_current**: numeric(12,2), default 0                                         +
+- **bank_name**: character varying(255), required                                       +
+- **routing_number**: character varying(50)                                             +
+- **external_id**: character varying(255)                                               +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 
 ### communication_logs                                                                  +
-- **message_type**: text, required                                                      +
-- **method**: text, required                                                            +
-- **subject**: text                                                                     +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **read_at**: timestamp with time zone                                                 +
-- **organization_id**: uuid, required                                                   +
-- **content**: text, required                                                           +
-- **delivered_at**: timestamp with time zone                                            +
-- **recipient_id**: uuid, required                                                      +
-- **recipient_type**: text, required                                                    +
 - **announcement_id**: uuid                                                             +
 - **sent_at**: timestamp with time zone                                                 +
-- **created_at**: timestamp with time zone, required, default now()                     +
 - **status**: text, required, default 'queued'text                                      +
+- **method**: text, required                                                            +
+- **created_at**: timestamp with time zone, required, default now()                     +
+- **recipient_id**: uuid, required                                                      +
+- **subject**: text                                                                     +
 - **updated_at**: timestamp with time zone, required, default now()                     +
-- **sender_id**: uuid                                                                   +
 - **error_message**: text                                                               +
+- **content**: text, required                                                           +
+- **sender_id**: uuid                                                                   +
+- **read_at**: timestamp with time zone                                                 +
+- **delivered_at**: timestamp with time zone                                            +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **recipient_type**: text, required                                                    +
+- **organization_id**: uuid, required                                                   +
+- **message_type**: text, required                                                      +
 
 ### demo_requests                                                                       +
-- **email**: character varying(255), required                                           +
-- **phone**: character varying(50)                                                      +
-- **industry**: character varying(100)                                                  +
-- **full_name**: character varying(255), required                                       +
-- **country**: character varying(100)                                                   +
-- **demo_preferences**: text                                                            +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
-- **job_title**: character varying(100)                                                 +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **additional_comments**: text                                                         +
-- **company_name**: character varying(255), required                                    +
 - **company_size**: character varying(50)                                               +
+- **country**: character varying(100)                                                   +
+- **company_name**: character varying(255), required                                    +
+- **additional_comments**: text                                                         +
+- **email**: character varying(255), required                                           +
+- **full_name**: character varying(255), required                                       +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **demo_preferences**: text                                                            +
+- **industry**: character varying(100)                                                  +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **phone**: character varying(50)                                                      +
 - **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **job_title**: character varying(100)                                                 +
 
 ### documents                                                                           +
-- **organization_id**: uuid                                                             +
-- **related_to_id**: uuid, required                                                     +
-- **document_type**: character varying(100), required                                   +
-- **uploaded_by**: uuid                                                                 +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
-- **created_at**: timestamp without time zone, default now()                            +
 - **document_url**: text, required                                                      +
+- **related_to_type**: character varying(50), required                                  +
 - **document_name**: character varying(255), required                                   +
 - **updated_at**: timestamp without time zone, default now()                            +
-- **related_to_type**: character varying(50), required                                  +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **organization_id**: uuid                                                             +
+- **document_type**: character varying(100), required                                   +
+- **created_at**: timestamp without time zone, default now()                            +
+- **related_to_id**: uuid, required                                                     +
+- **uploaded_by**: uuid                                                                 +
 
 ### expenses                                                                            +
-- **created_by**: uuid, required                                                        +
-- **payment_method_id**: uuid                                                           +
-- **expense_date**: date, required                                                      +
-- **unit_id**: uuid                                                                     +
-- **amount**: numeric(12,2), required                                                   +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **payee**: character varying(255), required                                           +
-- **property_id**: uuid                                                                 +
-- **category_id**: uuid, required                                                       +
-- **organization_id**: uuid, required                                                   +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **description**: text                                                                 +
-- **receipt_url**: text                                                                 +
+- **payee**: character varying(255), required                                           +
+- **amount**: numeric(12,2), required                                                   +
+- **expense_date**: date, required                                                      +
+- **property_id**: uuid                                                                 +
 - **status**: character varying(50), default 'recorded'character varying                +
+- **payment_method_id**: uuid                                                           +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **category_id**: uuid, required                                                       +
+- **unit_id**: uuid                                                                     +
+- **organization_id**: uuid, required                                                   +
+- **created_by**: uuid, required                                                        +
+- **receipt_url**: text                                                                 +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 
 ### financial_summaries                                                                 +
-- **period_start**: date, required                                                      +
-- **property_id**: uuid                                                                 +
-- **net_revenue**: numeric(12,2)                                                        +
-- **outstanding_invoices**: numeric(12,2), default 0                                    +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **total_income**: numeric(12,2), default 0                                            +
 - **upcoming_payables**: numeric(12,2), default 0                                       +
 - **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **total_expenses**: numeric(12,2), default 0                                          +
+- **period_start**: date, required                                                      +
+- **total_income**: numeric(12,2), default 0                                            +
 - **organization_id**: uuid, required                                                   +
+- **property_id**: uuid                                                                 +
 - **period_end**: date, required                                                        +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **total_expenses**: numeric(12,2), default 0                                          +
+- **net_revenue**: numeric(12,2)                                                        +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **outstanding_invoices**: numeric(12,2), default 0                                    +
 
 ### invoice_items                                                                       +
-- **amount**: numeric(12,2), required                                                   +
-- **tax_amount**: numeric(12,2), default 0                                              +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **unit_price**: numeric(12,2), required                                               +
 - **description**: text, required                                                       +
-- **tax_rate**: numeric(5,2), default 0                                                 +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **id**: uuid, required, default gen_random_uuid()                                     +
-- **invoice_id**: uuid, required                                                        +
 - **quantity**: numeric(10,2), required, default 1                                      +
+- **invoice_id**: uuid, required                                                        +
+- **amount**: numeric(12,2), required                                                   +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **tax_amount**: numeric(12,2), default 0                                              +
+- **tax_rate**: numeric(5,2), default 0                                                 +
 
 ### invoice_payments                                                                    +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **amount_applied**: numeric(12,2), required                                           +
-- **invoice_id**: uuid, required                                                        +
 - **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **payment_id**: uuid, required                                                        +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **invoice_id**: uuid, required                                                        +
+- **amount_applied**: numeric(12,2), required                                           +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 
 ### invoices                                                                            +
-- **created_by**: uuid, required                                                        +
-- **amount_due**: numeric(12,2)                                                         +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **client_id**: uuid                                                                   +
-- **client_type**: character varying(50), required                                      +
 - **unit_id**: uuid                                                                     +
-- **pdf_url**: text                                                                     +
-- **client_name**: character varying(255), required                                     +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **due_date**: date, required                                                          +
-- **property_id**: uuid                                                                 +
-- **organization_id**: uuid, required                                                   +
-- **invoice_number**: character varying(50), required                                   +
-- **notes**: text                                                                       +
-- **amount_total**: numeric(12,2), required                                             +
-- **issue_date**: date, required                                                        +
 - **amount_paid**: numeric(12,2), default 0                                             +
 - **status**: character varying(50), required, default 'draft'character varying         +
 - **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **issue_date**: date, required                                                        +
+- **invoice_number**: character varying(50), required                                   +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **amount_due**: numeric(12,2)                                                         +
+- **pdf_url**: text                                                                     +
+- **amount_total**: numeric(12,2), required                                             +
+- **client_name**: character varying(255), required                                     +
+- **created_by**: uuid, required                                                        +
+- **notes**: text                                                                       +
+- **client_id**: uuid                                                                   +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **property_id**: uuid                                                                 +
+- **organization_id**: uuid, required                                                   +
+- **due_date**: date, required                                                          +
+- **client_type**: character varying(50), required                                      +
 
 ### lease_addendums                                                                     +
 - **created_at**: timestamp without time zone, default now()                            +
-- **document_url**: text                                                                +
-- **title**: character varying(255), required                                           +
-- **updated_at**: timestamp without time zone, default now()                            +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
+- **title**: character varying(255), required                                           +
 - **description**: text                                                                 +
-- **effective_date**: date, required                                                    +
+- **updated_at**: timestamp without time zone, default now()                            +
 - **lease_id**: uuid, required                                                          +
+- **effective_date**: date, required                                                    +
+- **document_url**: text                                                                +
 - **created_by**: uuid                                                                  +
 
 ### lease_renewals                                                                      +
-- **new_lease_id**: uuid                                                                +
+- **renewal_date**: date, required                                                      +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
+- **created_at**: timestamp without time zone, default now()                            +
+- **new_lease_id**: uuid                                                                +
 - **original_lease_id**: uuid, required                                                 +
-- **updated_at**: timestamp without time zone, default now()                            +
+- **renewal_term**: integer(32,0)                                                       +
 - **notes**: text                                                                       +
 - **rent_change**: numeric                                                              +
+- **updated_at**: timestamp without time zone, default now()                            +
 - **status**: character varying(50), default 'pending'character varying                 +
-- **renewal_term**: integer(32,0)                                                       +
-- **renewal_date**: date, required                                                      +
-- **created_at**: timestamp without time zone, default now()                            +
 
 ### leases                                                                              +
-- **status**: character varying(50), default 'Pending'character varying                 +
-- **tenant_id**: uuid                                                                   +
-- **lease_terms**: text                                                                 +
-- **next_payment_date**: date                                                           +
-- **document_status**: character varying(50), default 'draft'character varying          +
-- **lease_document_url**: text                                                          +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
-- **security_deposit**: numeric(10,2)                                                   +
-- **last_payment_date**: date                                                           +
-- **is_auto_renew**: boolean, default false                                             +
-- **payment_day**: integer(32,0)                                                        +
-- **end_date**: date, required                                                          +
-- **current_balance**: numeric, default 0                                               +
-- **updated_at**: timestamp without time zone, default now()                            +
-- **late_fee_days**: integer(32,0), default 5                                           +
-- **late_fee_amount**: numeric, default 0                                               +
-- **created_at**: timestamp without time zone, default now()                            +
 - **start_date**: date, required, default now()                                         +
-- **unit_id**: uuid                                                                     +
 - **rent_amount**: numeric(12,2), required                                              +
+- **late_fee_days**: integer(32,0), default 5                                           +
+- **current_balance**: numeric, default 0                                               +
+- **next_payment_date**: date                                                           +
+- **end_date**: date, required                                                          +
+- **lease_document_url**: text                                                          +
+- **is_auto_renew**: boolean, default false                                             +
+- **lease_terms**: text                                                                 +
+- **created_at**: timestamp without time zone, default now()                            +
+- **unit_id**: uuid                                                                     +
+- **document_status**: character varying(50), default 'draft'character varying          +
 - **notice_period_days**: integer(32,0), default 30                                     +
+- **updated_at**: timestamp without time zone, default now()                            +
+- **last_payment_date**: date                                                           +
+- **payment_day**: integer(32,0)                                                        +
+- **tenant_id**: uuid                                                                   +
+- **status**: character varying(50), default 'Pending'character varying                 +
+- **security_deposit**: numeric(10,2)                                                   +
+- **late_fee_amount**: numeric, default 0                                               +
 
 ### maintenance_comments                                                                +
-- **ticket_id**: uuid, required                                                         +
-- **updated_at**: timestamp without time zone, default now()                            +
-- **commented_by**: uuid                                                                +
 - **created_at**: timestamp without time zone, default now()                            +
-- **comment**: text, required                                                           +
+- **ticket_id**: uuid, required                                                         +
+- **commented_by**: uuid                                                                +
+- **updated_at**: timestamp without time zone, default now()                            +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
+- **comment**: text, required                                                           +
 
 ### maintenance_requests                                                                +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
-- **related_to_id**: uuid                                                               +
-- **property_id**: uuid                                                                 +
-- **status**: character varying(50), default 'pending'character varying                 +
-- **owner_id**: uuid                                                                    +
-- **tenant_id**: uuid                                                                   +
-- **title**: character varying(255), required                                           +
-- **description**: text, required                                                       +
-- **due_date**: timestamp without time zone                                             +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **assigned_to**: uuid                                                                 +
-- **unit_id**: uuid                                                                     +
 - **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **owner_id**: uuid                                                                    +
+- **description**: text, required                                                       +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **tenant_id**: uuid                                                                   +
 - **priority**: character varying(50), required                                         +
-- **completed_at**: timestamp with time zone                                            +
 - **maintenance_type_id**: uuid                                                         +
-- **related_to_type**: character varying(50)                                            +
+- **status**: character varying(50), default 'pending'character varying                 +
+- **title**: character varying(255), required                                           +
+- **related_to_id**: uuid                                                               +
+- **completed_at**: timestamp with time zone                                            +
+- **unit_id**: uuid                                                                     +
 - **scheduled_date**: timestamp without time zone                                       +
+- **assigned_to**: uuid                                                                 +
+- **due_date**: timestamp without time zone                                             +
 - **maintenance_type**: character varying(100)                                          +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **property_id**: uuid                                                                 +
+- **related_to_type**: character varying(50)                                            +
 
 ### maintenance_ticket_history                                                          +
-- **previous_status**: character varying(50)                                            +
 - **new_status**: character varying(50)                                                 +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
-- **created_at**: timestamp without time zone, default now()                            +
-- **changed_by**: uuid                                                                  +
-- **change_description**: text, required                                                +
 - **ticket_id**: uuid, required                                                         +
+- **created_at**: timestamp without time zone, default now()                            +
+- **change_description**: text, required                                                +
+- **changed_by**: uuid                                                                  +
+- **previous_status**: character varying(50)                                            +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
 
 ### maintenance_types                                                                   +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
-- **description**: text                                                                 +
-- **organization_id**: uuid, required                                                   +
-- **estimated_resolution_time**: integer(32,0)                                          +
 - **is_emergency**: boolean, default false                                              +
-- **name**: character varying(100), required                                            +
-- **updated_at**: timestamp without time zone, default now()                            +
+- **description**: text                                                                 +
 - **created_at**: timestamp without time zone, default now()                            +
+- **updated_at**: timestamp without time zone, default now()                            +
+- **name**: character varying(100), required                                            +
+- **estimated_resolution_time**: integer(32,0)                                          +
+- **organization_id**: uuid, required                                                   +
 
 ### notifications                                                                       +
-- **read**: boolean, default false                                                      +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **message**: text, required                                                           +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
-- **title**: character varying(255), required                                           +
+- **read**: boolean, default false                                                      +
 - **type**: character varying(50), required                                             +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **user_id**: uuid                                                                     +
+- **title**: character varying(255), required                                           +
 
 ### organization_invitations                                                            +
-- **updated_at**: timestamp with time zone, default now()                               +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **expires_at**: timestamp with time zone, required                                    +
-- **invited_by**: uuid, required                                                        +
-- **status**: character varying(20), default 'pending'character varying                 +
-- **role_id**: uuid, required                                                           +
-- **created_at**: timestamp with time zone, default now()                               +
 - **organization_id**: uuid, required                                                   +
-- **token**: character varying(255), required                                           +
+- **role_id**: uuid, required                                                           +
+- **id**: uuid, required, default gen_random_uuid()                                     +
 - **email**: character varying(255), required                                           +
+- **created_at**: timestamp with time zone, default now()                               +
+- **status**: character varying(20), default 'pending'character varying                 +
+- **expires_at**: timestamp with time zone, required                                    +
+- **token**: character varying(255)                                                     +
+- **invited_by**: uuid, required                                                        +
+- **updated_at**: timestamp with time zone, default now()                               +
 
 ### organizations                                                                       +
-- **active**: boolean, default true                                                     +
-- **subscription_status**: character varying(50), default 'inactive'character varying   +
-- **email**: character varying(255)                                                     +
-- **billing_address**: text                                                             +
-- **subscription_plan**: character varying(50)                                          +
 - **website**: character varying(255)                                                   +
-- **phone**: character varying(50)                                                      +
-- **timezone**: character varying(50), default 'UTC'character varying                   +
-- **currency**: character varying(10), default 'USD'character varying                   +
+- **tax_id**: character varying(50)                                                     +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **subscription_status**: character varying(50), default 'inactive'character varying   +
+- **active**: boolean, default true                                                     +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
 - **billing_cycle**: character varying(20)                                              +
 - **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **tax_id**: character varying(50)                                                     +
-- **name**: character varying(255), required                                            +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **date_format**: character varying(20), default 'YYYY-MM-DD'character varying         +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **email**: character varying(255)                                                     +
+- **subscription_plan**: character varying(50)                                          +
 - **logo_url**: text                                                                    +
+- **billing_address**: text                                                             +
+- **name**: character varying(255), required                                            +
+- **phone**: character varying(50)                                                      +
+- **currency**: character varying(10), default 'USD'character varying                   +
+- **timezone**: character varying(50), default 'UTC'character varying                   +
 
 ### owners                                                                              +
-- **updated_at**: timestamp without time zone, default now()                            +
-- **payment_schedule**: character varying(50), default 'monthly'character varying       +
-- **business_type**: character varying(50)                                              +
 - **tax_id**: character varying(50)                                                     +
-- **taxpayer_id**: character varying(50)                                                +
-- **bank_account_id**: uuid                                                             +
-- **user_id**: uuid                                                                     +
-- **notes**: text                                                                       +
-- **payment_method**: character varying(50)                                             +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
 - **company_name**: character varying(255)                                              +
+- **payment_method**: character varying(50)                                             +
+- **business_type**: character varying(50)                                              +
 - **status**: character varying(50), default 'active'character varying                  +
-- **created_at**: timestamp without time zone, default now()                            +
+- **notes**: text                                                                       +
+- **name**: character varying(100)                                                      +
+- **organization_id**: uuid, required                                                   +
 - **email**: character varying(255)                                                     +
+- **payment_schedule**: character varying(50), default 'monthly'character varying       +
+- **bank_account_id**: uuid                                                             +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **user_id**: uuid                                                                     +
+- **taxpayer_id**: character varying(50)                                                +
+- **created_at**: timestamp without time zone, default now()                            +
 - **address**: text                                                                     +
+- **updated_at**: timestamp without time zone, default now()                            +
 
 ### payment_categories                                                                  +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **description**: text                                                                 +
-- **name**: character varying(100), required                                            +
-- **is_predefined**: boolean, default false                                             +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **organization_id**: uuid, required                                                   +
+- **name**: character varying(100), required                                            +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **is_predefined**: boolean, default false                                             +
 
 ### payment_methods                                                                     +
-- **name**: character varying(100), required                                            +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **organization_id**: uuid, required                                                   +
 - **description**: text                                                                 +
 - **id**: uuid, required, default gen_random_uuid()                                     +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **name**: character varying(100), required                                            +
+- **organization_id**: uuid, required                                                   +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 
 ### payment_schedules                                                                   +
-- **amount**: numeric(10,2), required                                                   +
 - **id**: uuid, required, default gen_random_uuid()                                     +
 - **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **category_id**: uuid                                                                 +
+- **end_date**: date                                                                    +
+- **start_date**: date, required                                                        +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **bank_account_id**: uuid, required                                                   +
+- **lease_id**: uuid                                                                    +
+- **description**: text                                                                 +
+- **organization_id**: uuid, required                                                   +
 - **last_run_date**: date                                                               +
 - **active**: boolean, default true                                                     +
-- **category_id**: uuid                                                                 +
-- **start_date**: date, required                                                        +
-- **description**: text                                                                 +
-- **next_schedule_date**: date, required                                                +
-- **created_by**: uuid, required                                                        +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **frequency**: character varying(50), required                                        +
 - **day_of_month**: integer(32,0)                                                       +
-- **lease_id**: uuid                                                                    +
-- **organization_id**: uuid, required                                                   +
-- **end_date**: date                                                                    +
-
-### payment_transactions                                                                +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **status**: character varying(50), default 'pending'character varying                 +
-- **gateway_response**: jsonb                                                           +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **external_id**: character varying(255)                                               +
-- **payment_id**: uuid, required                                                        +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **transaction_date**: timestamp with time zone, default CURRENT_TIMESTAMP             +
-- **organization_id**: uuid, required                                                   +
+- **next_schedule_date**: date, required                                                +
+- **frequency**: character varying(50), required                                        +
+- **created_by**: uuid, required                                                        +
 - **amount**: numeric(10,2), required                                                   +
 
-### payments                                                                            +
+### payment_transactions                                                                +
+- **organization_id**: uuid, required                                                   +
+- **transaction_date**: timestamp with time zone, default CURRENT_TIMESTAMP             +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **payment_id**: uuid, required                                                        +
+- **external_id**: character varying(255)                                               +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **gateway_response**: jsonb                                                           +
+- **amount**: numeric(10,2), required                                                   +
 - **status**: character varying(50), default 'pending'character varying                 +
+
+### payments                                                                            +
 - **payment_date**: date, required                                                      +
+- **transaction_id**: character varying(255)                                            +
+- **invoice_id**: uuid                                                                  +
+- **lease_id**: uuid                                                                    +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **organization_id**: uuid, required                                                   +
+- **payment_method_id**: uuid                                                           +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **bank_account_id**: uuid                                                             +
+- **recipient_type**: character varying(50)                                             +
+- **category_id**: uuid                                                                 +
+- **recipient_id**: uuid                                                                +
 - **amount**: numeric(12,2), required                                                   +
 - **created_by**: uuid                                                                  +
-- **category_id**: uuid                                                                 +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
-- **invoice_id**: uuid                                                                  +
-- **organization_id**: uuid, required                                                   +
-- **lease_id**: uuid                                                                    +
-- **bank_account_id**: uuid                                                             +
-- **transaction_id**: character varying(255)                                            +
-- **payment_method_id**: uuid                                                           +
-- **recipient_type**: character varying(50)                                             +
 - **payment_type**: character varying(50), default 'one-time'character varying          +
-- **recipient_id**: uuid                                                                +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 - **next_scheduled_date**: date                                                         +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **status**: character varying(50), default 'pending'character varying                 +
 
 ### properties                                                                          +
-- **owner_id**: uuid                                                                    +
-- **organization_id**: uuid                                                             +
-- **last_activity_date**: timestamp with time zone                                      +
 - **occupancy_rate**: numeric, default 0                                                +
-- **state**: character varying(100), required                                           +
-- **total_units**: integer(32,0), required                                              +
-- **property_manager_id**: uuid                                                         +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
-- **zip_code**: character varying(20), required                                         +
-- **address**: text, required                                                           +
-- **property_status**: character varying(50), default 'active'character varying         +
+- **state**: character varying(100), required                                           +
 - **active_leases**: integer(32,0), default 0                                           +
 - **updated_at**: timestamp without time zone, default now()                            +
-- **city**: character varying(100), required                                            +
-- **name**: character varying(255), required                                            +
-- **monthly_revenue**: numeric, default 0                                               +
+- **zip_code**: character varying(20), required                                         +
+- **last_activity_date**: timestamp with time zone                                      +
 - **created_at**: timestamp without time zone, default now()                            +
+- **monthly_revenue**: numeric, default 0                                               +
+- **name**: character varying(255), required                                            +
+- **city**: character varying(100), required                                            +
+- **owner_id**: uuid                                                                    +
+- **address**: text, required                                                           +
+- **property_manager_id**: uuid                                                         +
+- **property_status**: character varying(50), default 'active'character varying         +
+- **total_units**: integer(32,0), required                                              +
+- **organization_id**: uuid                                                             +
 
 ### property_inspections                                                                +
-- **notes**: text                                                                       +
-- **inspector_id**: uuid                                                                +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **property_id**: uuid                                                                 +
-- **status**: text, required, default 'scheduled'text                                   +
-- **unit_id**: uuid                                                                     +
-- **organization_id**: uuid, required                                                   +
 - **id**: uuid, required, default gen_random_uuid()                                     +
 - **report_url**: text                                                                  +
-- **inspection_date**: timestamp with time zone, required                               +
+- **property_id**: uuid                                                                 +
 - **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **unit_id**: uuid                                                                     +
+- **organization_id**: uuid, required                                                   +
+- **status**: text, required, default 'scheduled'text                                   +
+- **notes**: text                                                                       +
+- **inspection_date**: timestamp with time zone, required                               +
+- **inspector_id**: uuid                                                                +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
 
 ### property_managers                                                                   +
-- **created_at**: timestamp without time zone, default now()                            +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
 - **user_id**: uuid                                                                     +
-- **updated_at**: timestamp without time zone, default now()                            +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
 - **assigned_properties**: ARRAY, default '{}'uuid[]                                    +
 - **organization_id**: uuid                                                             +
+- **updated_at**: timestamp without time zone, default now()                            +
+- **created_at**: timestamp without time zone, default now()                            +
 
 ### property_metrics                                                                    +
-- **outstanding_invoices**: numeric(12,2), default 0                                    +
-- **maintenance_costs**: numeric, default 0                                             +
-- **net_revenue**: numeric(12,2)                                                        +
-- **occupancy_rate**: numeric, default 0                                                +
-- **monthly_revenue**: numeric, default 0                                               +
-- **collected_rent**: numeric, default 0                                                +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **total_expenses**: numeric(12,2), default 0                                          +
 - **created_at**: timestamp with time zone, default now()                               +
-- **metric_date**: date, required                                                       +
-- **operational_costs**: numeric, default 0                                             +
-- **property_id**: uuid, required                                                       +
+- **id**: uuid, required, default gen_random_uuid()                                     +
 - **active_leases**: integer(32,0), default 0                                           +
-- **outstanding_rent**: numeric, default 0                                              +
+- **operational_costs**: numeric, default 0                                             +
+- **collected_rent**: numeric, default 0                                                +
+- **occupancy_rate**: numeric, default 0                                                +
+- **net_revenue**: numeric(12,2)                                                        +
+- **monthly_revenue**: numeric, default 0                                               +
+- **property_id**: uuid, required                                                       +
+- **maintenance_costs**: numeric, default 0                                             +
+- **metric_date**: date, required                                                       +
 - **total_income**: numeric(12,2), default 0                                            +
+- **outstanding_rent**: numeric, default 0                                              +
+- **total_expenses**: numeric(12,2), default 0                                          +
+- **outstanding_invoices**: numeric(12,2), default 0                                    +
 
 ### property_stakeholders                                                               +
-- **created_at**: timestamp with time zone, default now()                               +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **end_date**: date                                                                    +
-- **notes**: text                                                                       +
 - **is_primary**: boolean, default false                                                +
+- **stakeholder_type**: character varying(50), required                                 +
+- **created_at**: timestamp with time zone, default now()                               +
 - **start_date**: date, required                                                        +
 - **user_id**: uuid, required                                                           +
-- **stakeholder_type**: character varying(50), required                                 +
-- **property_id**: uuid, required                                                       +
 - **updated_at**: timestamp with time zone, default now()                               +
+- **end_date**: date                                                                    +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **notes**: text                                                                       +
 - **ownership_percentage**: numeric, default 100                                        +
+- **property_id**: uuid, required                                                       +
 
 ### rental_applications                                                                 +
-- **desired_move_in_date**: date                                                        +
-- **application_date**: timestamp with time zone, default now()                         +
-- **reviewed_by**: uuid                                                                 +
-- **has_vehicles**: boolean, default false                                              +
-- **monthly_income**: numeric                                                           +
-- **created_at**: timestamp with time zone, default now()                               +
-- **emergency_contact**: jsonb                                                          +
-- **updated_at**: timestamp with time zone, default now()                               +
-- **notes**: text                                                                       +
-- **unit_id**: uuid                                                                     +
-- **has_pets**: boolean, default false                                                  +
-- **background_check_status**: character varying(50)                                    +
-- **rejection_reason**: text                                                            +
-- **application_fee_paid**: boolean, default false                                      +
-- **employment_info**: jsonb                                                            +
-- **review_date**: timestamp with time zone                                             +
-- **pet_details**: jsonb                                                                +
 - **applicant_id**: uuid                                                                +
-- **credit_check_status**: character varying(50)                                        +
-- **previous_address**: text                                                            +
+- **employment_info**: jsonb                                                            +
+- **reviewed_by**: uuid                                                                 +
 - **id**: uuid, required, default gen_random_uuid()                                     +
+- **updated_at**: timestamp with time zone, default now()                               +
+- **status**: character varying(50), default 'pending'character varying                 +
+- **rejection_reason**: text                                                            +
+- **pet_details**: jsonb                                                                +
+- **created_at**: timestamp with time zone, default now()                               +
+- **has_vehicles**: boolean, default false                                              +
+- **has_pets**: boolean, default false                                                  +
+- **unit_id**: uuid                                                                     +
+- **emergency_contact**: jsonb                                                          +
+- **credit_check_status**: character varying(50)                                        +
+- **background_check_status**: character varying(50)                                    +
+- **lease_term**: integer(32,0)                                                         +
+- **desired_move_in_date**: date                                                        +
+- **monthly_income**: numeric                                                           +
 - **property_id**: uuid                                                                 +
 - **vehicle_details**: jsonb                                                            +
-- **status**: character varying(50), default 'pending'character varying                 +
-- **lease_term**: integer(32,0)                                                         +
+- **previous_address**: text                                                            +
+- **review_date**: timestamp with time zone                                             +
+- **application_date**: timestamp with time zone, default now()                         +
+- **application_fee_paid**: boolean, default false                                      +
+- **notes**: text                                                                       +
 
 ### roles                                                                               +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
-- **permissions**: jsonb                                                                +
-- **name**: character varying(50), required                                             +
 - **updated_at**: timestamp with time zone, default now()                               +
 - **description**: text                                                                 +
+- **permissions**: jsonb                                                                +
 - **is_system_role**: boolean, default false                                            +
+- **name**: character varying(50), required                                             +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
 
 ### tasks                                                                               +
-- **title**: character varying(255), required                                           +
-- **status**: character varying(50), required, default 'pending'character varying       +
-- **owner_id**: uuid                                                                    +
-- **priority**: character varying(50), required                                         +
-- **updated_at**: timestamp without time zone, default now()                            +
-- **assigned_to**: uuid                                                                 +
 - **due_date**: timestamp without time zone                                             +
-- **organization_id**: uuid                                                             +
-- **description**: text                                                                 +
-- **related_to_type**: character varying(50)                                            +
-- **created_at**: timestamp without time zone, default now()                            +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
 - **related_to_id**: uuid                                                               +
+- **created_at**: timestamp without time zone, default now()                            +
+- **related_to_type**: character varying(50)                                            +
+- **organization_id**: uuid                                                             +
+- **status**: character varying(50), required, default 'pending'character varying       +
+- **updated_at**: timestamp without time zone, default now()                            +
+- **assigned_to**: uuid                                                                 +
+- **description**: text                                                                 +
+- **owner_id**: uuid                                                                    +
+- **title**: character varying(255), required                                           +
+- **priority**: character varying(50), required                                         +
 
 ### team_members                                                                        +
-- **updated_at**: timestamp with time zone, default now()                               +
 - **job_title**: character varying(100)                                                 +
-- **user_id**: uuid, required                                                           +
-- **department**: character varying(100)                                                +
-- **id**: uuid, required, default gen_random_uuid()                                     +
-- **created_at**: timestamp with time zone, default now()                               +
 - **role_id**: uuid                                                                     +
+- **id**: uuid, required, default gen_random_uuid()                                     +
+- **user_id**: uuid, required                                                           +
+- **updated_at**: timestamp with time zone, default now()                               +
+- **created_at**: timestamp with time zone, default now()                               +
+- **department**: character varying(100)                                                +
 
 ### tenants                                                                             +
-- **current_property_id**: uuid                                                         +
-- **rent_amount**: numeric                                                              +
-- **emergency_contact_relationship**: character varying(100)                            +
-- **special_accommodations**: text                                                      +
-- **vehicles**: jsonb                                                                   +
-- **pets**: jsonb                                                                       +
-- **background_check_passed**: boolean                                                  +
-- **lease_start_date**: date, required                                                  +
-- **move_in_date**: date                                                                +
-- **backgroundcheckdate**: date                                                         +
-- **status**: character varying(50), default 'active'character varying                  +
-- **emergency_contact**: jsonb                                                          +
-- **emergency_contact_phone**: character varying(50)                                    +
 - **created_at**: timestamp without time zone, default now()                            +
+- **move_in_date**: date                                                                +
+- **updated_at**: timestamp without time zone, default now()                            +
+- **emergency_contact_relationship**: character varying(100)                            +
 - **background_check_status**: character varying(50), default 'pending'character varying+
-- **id**: uuid, required, default uuid_generate_v4()                                    +
-- **current_unit_id**: uuid                                                             +
+- **phone**: character varying(50)                                                      +
+- **organization_id**: uuid, required                                                   +
+- **emergency_contact**: jsonb                                                          +
+- **email**: character varying(255)                                                     +
+- **rent_amount**: numeric                                                              +
+- **pets**: jsonb                                                                       +
+- **user_id**: uuid                                                                     +
 - **background_check_date**: date                                                       +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **name**: character varying(100)                                                      +
+- **status**: character varying(50), default 'active'character varying                  +
+- **vehicles**: jsonb                                                                   +
+- **preferred_contact_methods**: ARRAY, default ARRAY['email'text]                      +
+- **special_accommodations**: text                                                      +
+- **lease_start_date**: date                                                            +
+- **current_property_id**: uuid                                                         +
+- **eviction_history**: boolean, default false                                          +
 - **payment_history**: jsonb                                                            +
 - **language_preference**: character varying(50), default 'English'character varying    +
-- **preferred_contact_methods**: ARRAY, default ARRAY['email'text]                      +
-- **eviction_history**: boolean, default false                                          +
-- **user_id**: uuid                                                                     +
-- **updated_at**: timestamp without time zone, default now()                            +
+- **background_check_passed**: boolean                                                  +
+- **backgroundcheckdate**: date                                                         +
+- **current_unit_id**: uuid                                                             +
 - **lease_end_date**: date                                                              +
+- **emergency_contact_phone**: character varying(50)                                    +
 
 ### units                                                                               +
-- **square_feet**: integer(32,0)                                                        +
-- **smart_lock_enabled**: boolean, default false                                        +
-- **status**: character varying(50), default 'Available'character varying               +
-- **bedrooms**: integer(32,0)                                                           +
-- **maintenance_history**: jsonb                                                        +
-- **floor_plan**: character varying(100)                                                +
-- **created_at**: timestamp without time zone, default now()                            +
-- **smart_lock_details**: jsonb                                                         +
-- **current_tenant_id**: uuid                                                           +
-- **bathrooms**: numeric(2,1)                                                           +
-- **lease_end_date**: date                                                              +
-- **next_inspection_date**: date                                                        +
-- **lease_start_date**: date                                                            +
 - **rent_amount**: numeric(10,2)                                                        +
-- **unit_number**: character varying(50), required                                      +
-- **utility_meters**: jsonb                                                             +
 - **last_inspection_date**: date                                                        +
-- **updated_at**: timestamp without time zone, default now()                            +
-- **property_id**: uuid                                                                 +
+- **bathrooms**: numeric(2,1)                                                           +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
+- **current_tenant_id**: uuid                                                           +
+- **maintenance_history**: jsonb                                                        +
+- **lease_start_date**: date                                                            +
+- **smart_lock_enabled**: boolean, default false                                        +
+- **next_inspection_date**: date                                                        +
+- **property_id**: uuid                                                                 +
+- **square_feet**: integer(32,0)                                                        +
+- **lease_end_date**: date                                                              +
+- **updated_at**: timestamp without time zone, default now()                            +
+- **status**: character varying(50), default 'Available'character varying               +
+- **created_at**: timestamp without time zone, default now()                            +
+- **bedrooms**: integer(32,0)                                                           +
+- **smart_lock_details**: jsonb                                                         +
+- **floor_plan**: character varying(100)                                                +
+- **utility_meters**: jsonb                                                             +
+- **unit_number**: character varying(50), required                                      +
 
 ### user_profiles                                                                       +
-- **two_factor_enabled**: boolean, default false                                        +
-- **first_name**: character varying(100), required                                      +
-- **profile_image_url**: text                                                           +
-- **phone_verified**: boolean, default false                                            +
-- **last_login_at**: timestamp with time zone                                           +
-- **organization_id**: uuid                                                             +
-- **default_organization_id**: uuid                                                     +
 - **time_zone**: character varying(50), default 'UTC'character varying                  +
-- **email_verified**: boolean, default false                                            +
+- **profile_image_url**: text                                                           +
+- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **default_organization_id**: uuid                                                     +
 - **verification_status**: character varying(20), default 'unverified'character varying +
+- **organization_id**: uuid                                                             +
+- **phone_verified**: boolean, default false                                            +
+- **email_verified**: boolean, default false                                            +
+- **last_login_at**: timestamp with time zone                                           +
+- **first_name**: character varying(100), required                                      +
 - **last_name**: character varying(100), required                                       +
-- **phone**: character varying(50)                                                      +
 - **status**: character varying(20), default 'active'character varying                  +
-- **notification_preferences**: jsonb                                                   +
+- **phone**: character varying(50)                                                      +
 - **preferred_contact_time**: character varying(50)                                     +
 - **id**: uuid, required                                                                +
-- **created_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
-- **preferred_contact_methods**: ARRAY, default ARRAY['email'text]                      +
 - **email**: character varying(255), required                                           +
+- **preferred_contact_methods**: ARRAY, default ARRAY['email'text]                      +
+- **updated_at**: timestamp with time zone, default CURRENT_TIMESTAMP                   +
+- **two_factor_enabled**: boolean, default false                                        +
+- **notification_preferences**: jsonb                                                   +
 
 ### user_roles                                                                          +
-- **updated_at**: timestamp with time zone, default now()                               +
+- **created_at**: timestamp with time zone, default now()                               +
 - **role_id**: uuid                                                                     +
+- **id**: uuid, required, default uuid_generate_v4()                                    +
+- **updated_at**: timestamp with time zone, default now()                               +
 - **user_id**: uuid                                                                     +
 - **organization_id**: uuid                                                             +
-- **created_at**: timestamp with time zone, default now()                               +
-- **id**: uuid, required, default uuid_generate_v4()                                    +
 
 ### vendors                                                                             +
-- **user_id**: uuid                                                                     +
-- **hourly_rate**: numeric                                                              +
+- **service_availability**: jsonb                                                       +
+- **email**: character varying(255)                                                     +
 - **payment_terms**: character varying(100)                                             +
-- **performance_rating**: numeric(3,2)                                                  +
-- **preferred_bank_account_id**: uuid                                                   +
+- **service_areas**: jsonb                                                              +
+- **business_type**: character varying(50)                                              +
 - **emergency_service**: boolean, default false                                         +
 - **notes**: text                                                                       +
-- **service_availability**: jsonb                                                       +
-- **service_areas**: jsonb                                                              +
+- **preferred_bank_account_id**: uuid                                                   +
 - **id**: uuid, required, default uuid_generate_v4()                                    +
-- **service_type**: character varying(100), required                                    +
-- **business_type**: character varying(50)                                              +
-- **updated_at**: timestamp without time zone, default now()                            +
+- **organization_id**: uuid, required                                                   +
+- **performance_rating**: numeric(3,2)                                                  +
 - **created_at**: timestamp without time zone, default now()                            +
+- **user_id**: uuid                                                                     +
+- **contact_name**: character varying(100)                                              +
+- **hourly_rate**: numeric                                                              +
+- **phone**: character varying(50)                                                      +
+- **updated_at**: timestamp without time zone, default now()                            +
+- **service_type**: character varying(100), required                                    +
 
 
 
@@ -756,6 +766,7 @@ Last updated: Thu Mar 13 02:44:15 PM +03 2025
 - **organization_invitations.organization_id** references **organizations.id**
 - **organization_invitations.role_id** references **roles.id**
 - **owners.bank_account_id** references **bank_accounts.id**
+- **owners.organization_id** references **organizations.id**
 - **owners.user_id** references **user_profiles.id**
 - **payment_categories.organization_id** references **organizations.id**
 - **payment_methods.organization_id** references **organizations.id**
@@ -796,6 +807,7 @@ Last updated: Thu Mar 13 02:44:15 PM +03 2025
 - **team_members.user_id** references **user_profiles.id**
 - **tenants.current_property_id** references **properties.id**
 - **tenants.current_unit_id** references **units.id**
+- **tenants.organization_id** references **organizations.id**
 - **tenants.user_id** references **user_profiles.id**
 - **units.current_tenant_id** references **user_profiles.id**
 - **units.property_id** references **properties.id**
@@ -804,6 +816,7 @@ Last updated: Thu Mar 13 02:44:15 PM +03 2025
 - **user_roles.organization_id** references **organizations.id**
 - **user_roles.role_id** references **roles.id**
 - **user_roles.user_id** references **user_profiles.id**
+- **vendors.organization_id** references **organizations.id**
 - **vendors.preferred_bank_account_id** references **bank_accounts.id**
 - **vendors.user_id** references **user_profiles.id**
 

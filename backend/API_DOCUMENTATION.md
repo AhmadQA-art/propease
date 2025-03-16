@@ -4,83 +4,52 @@ This document provides comprehensive documentation for the PropEase API, includi
 
 ## Table of Contents
 
+- [Base URL](#base-url)
 - [Authentication](#authentication)
-  - [Login](#login)
-  - [Register](#register)
-  - [Reset Password](#reset-password)
-  - [Verify Reset Token](#verify-reset-token)
-  - [Update Password](#update-password)
-- [People](#people)
-  - [Team Members](#team-members)
-  - [Tenants](#tenants)
-  - [Vendors](#vendors)
-  - [Owners](#owners)
-  - [Documents](#documents)
-  - [Invitations](#invitations)
-- [Properties](#properties)
-- [Rentals](#rentals)
-- [Leases](#leases)
-- [Maintenance](#maintenance)
-- [Payments](#payments)
-- [Users](#users)
+  - [Sign Up](#sign-up)
+  - [Sign In](#sign-in)
+  - [Sign Out](#sign-out)
+  - [Request Access](#request-access)
+  - [Verify Token](#verify-token)
+- [User Management](#user-management)
+  - [Get Current User](#get-current-user)
+  - [Get User Profile](#get-user-profile)
+  - [Assign Role](#assign-role)
+- [Invitations](#invitations)
+  - [Team Member Invitation](#team-member-invitation)
+  - [Tenant Invitation](#tenant-invitation)
+  - [Owner Invitation](#owner-invitation)
+  - [Vendor Invitation](#vendor-invitation)
+  - [Verify Invitation](#verify-invitation)
+  - [Accept Invitation](#accept-invitation)
+- [Tenant Management](#tenant-management)
+  - [Create Tenant Record](#create-tenant-record)
+- [Error Handling](#error-handling)
 
 ## Base URL
 
 All API endpoints are relative to the base URL:
 
 ```
-http://localhost:5001/api
+http://localhost:5001
 ```
 
 ## Authentication
 
 Authentication is required for most endpoints. The API uses JWT tokens for authentication.
 
-### Login
+### Sign Up
 
 ```
-POST /auth/login
+POST /auth/signup
 ```
 
-**Request Body:**
-
-```json
-{
-  "email": "user@example.com",
-  "password": "yourpassword"
-}
+**Request Headers:**
 ```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"yourpassword"}'
-```
-
-**Response:**
-
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "user-id",
-    "email": "user@example.com",
-    "first_name": "John",
-    "last_name": "Doe"
-  }
-}
-```
-
-### Register
-
-```
-POST /auth/register
+Content-Type: application/json
 ```
 
 **Request Body:**
-
 ```json
 {
   "email": "newuser@example.com",
@@ -91,995 +60,274 @@ POST /auth/register
 ```
 
 **cURL Example:**
-
 ```bash
-curl -X POST http://localhost:5001/api/auth/register \
+curl -X POST http://localhost:5001/auth/signup \
   -H "Content-Type: application/json" \
-  -d '{"email":"newuser@example.com","password":"newpassword","first_name":"Jane","last_name":"Smith"}'
+  -d '{
+    "email": "newuser@example.com",
+    "password": "newpassword",
+    "first_name": "Jane",
+    "last_name": "Smith"
+  }'
 ```
 
-### Reset Password
+**Success Response (201 Created):**
+```json
+{
+  "message": "User created successfully",
+  "user": {
+    "id": "user-uuid",
+    "email": "newuser@example.com",
+    "first_name": "Jane",
+    "last_name": "Smith"
+  }
+}
+```
 
-Initiates the password reset process by sending a reset link to the user's email.
+**Error Responses:**
+- `400 Bad Request`: Invalid input or email already exists
+- `500 Internal Server Error`: Server error
+
+### Sign In
 
 ```
-POST /auth/reset-password
+POST /auth/signin
+```
+
+**Request Headers:**
+```
+Content-Type: application/json
 ```
 
 **Request Body:**
-
 ```json
 {
-  "email": "user@example.com"
+  "email": "user@example.com",
+  "password": "yourpassword"
 }
 ```
 
 **cURL Example:**
-
 ```bash
-curl -X POST http://localhost:5001/api/auth/reset-password \
+curl -X POST http://localhost:5001/auth/signin \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com"}'
+  -d '{
+    "email": "user@example.com",
+    "password": "yourpassword"
+  }'
 ```
 
-**Response:**
-
+**Success Response (200 OK):**
 ```json
 {
-  "success": true,
-  "message": "Password reset instructions sent to your email"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "user-uuid",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe"
+  }
 }
 ```
 
-### Verify Reset Token
+**Error Responses:**
+- `400 Bad Request`: Invalid credentials
+- `401 Unauthorized`: Authentication failed
+- `500 Internal Server Error`: Server error
 
-Verifies a password reset token from an email link and redirects to the password update page.
-
-```
-GET /auth/confirm
-```
-
-**Query Parameters:**
-
-- `token_hash`: The token hash from the email link
-- `type`: The type of token (e.g., "recovery")
-- `next`: (Optional) The path to redirect to after verification (default: "/auth/update-password")
-
-**Example URL:**
+### Sign Out
 
 ```
-http://localhost:5001/api/auth/confirm?token_hash=abc123def456&type=recovery&next=/auth/update-password
+POST /auth/signout
 ```
 
-**Response:**
+**Request Headers:**
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+```
 
-- Redirects to the update password page if successful
-- Returns error JSON if verification fails:
+**cURL Example:**
+```bash
+curl -X POST http://localhost:5001/auth/signout \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
 
+**Success Response (200 OK):**
 ```json
 {
-  "error": "Invalid token",
-  "message": "Token has expired or is invalid"
+  "message": "Successfully signed out"
 }
 ```
 
-### Verify Token Directly
+**Error Responses:**
+- `401 Unauthorized`: Invalid or expired token
+- `500 Internal Server Error`: Server error
 
-Direct API endpoint for token verification from the frontend. Useful when working with the password reset flow.
+### Request Access
+
+```
+POST /auth/request-access
+```
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "organization_name": "My Company"
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:5001/auth/request-access \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "organization_name": "My Company"
+  }'
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "message": "Access request submitted successfully"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid input
+- `500 Internal Server Error`: Server error
+
+### Verify Token
 
 ```
 POST /auth/verify-token
 ```
 
-**Request Body:**
-
-```json
-{
-  "token_hash": "abc123def456",
-  "type": "recovery"
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/auth/verify-token \
-  -H "Content-Type: application/json" \
-  -d '{"token_hash":"abc123def456","type":"recovery"}'
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Token verified successfully",
-  "session": {
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refresh_token": "aBcDeFgHiJkLmNoPqRsTuVwXyZ...",
-    "expires_at": 1678901234,
-    "user": {
-      "id": "user-id",
-      "email": "user@example.com"
-    }
-  }
-}
-```
-
-### Update Password
-
-Updates the user's password after a successful password reset.
-
-```
-POST /auth/update-password
-```
-
 **Request Headers:**
-
 ```
-Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: application/json
 ```
 
 **Request Body:**
-
 ```json
 {
-  "password": "newSecurePassword"
+  "token": "verification-token"
 }
 ```
 
 **cURL Example:**
-
 ```bash
-curl -X POST http://localhost:5001/api/auth/update-password \
+curl -X POST http://localhost:5001/auth/verify-token \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"password":"newSecurePassword"}'
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "message": "Password updated successfully"
-}
-```
-
-## People
-
-### Tenants
-
-#### Create Tenant
-
-```
-POST /people/tenant
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Body:**
-
-```json
-{
-  "first_name": "Sarah",
-  "last_name": "Williams",
-  "email": "sarah.w@example.com",
-  "phone": "555-234-5678",
-  "contact_preferences": "email",
-  "emergency_contact_name": "John Williams",
-  "emergency_contact_phone": "555-876-5432",
-  "emergency_contact_relationship": "Spouse",
-  "invitation_methods": {
-    "email": true,
-    "sms": true
-  }
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/people/tenant \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
-    "first_name": "Sarah",
-    "last_name": "Williams",
-    "email": "sarah.w@example.com",
-    "phone": "555-234-5678",
-    "contact_preferences": "email",
-    "emergency_contact_name": "John Williams",
-    "emergency_contact_phone": "555-876-5432",
-    "emergency_contact_relationship": "Spouse",
-    "invitation_methods": {
-      "email": true,
-      "sms": true
-    }
+    "token": "verification-token"
   }'
 ```
 
-**Response:**
-
+**Success Response (200 OK):**
 ```json
 {
-  "profile": {
-    "id": "profile-id",
-    "first_name": "Sarah",
-    "last_name": "Williams",
-    "email": "sarah.w@example.com",
-    "phone": "555-234-5678",
-    "organization_id": "org-id",
-    "status": "pending"
-  },
-  "tenant": {
-    "id": "tenant-id",
-    "user_id": "profile-id",
-    "organization_id": "org-id",
-    "status": "pending",
-    "preferred_contact_methods": ["email"],
-    "emergency_contact": {
-      "name": "John Williams",
-      "phone": "555-876-5432",
-      "relationship": "Spouse"
-    }
+  "valid": true,
+  "user": {
+    "id": "user-uuid",
+    "email": "user@example.com"
   }
 }
 ```
 
-### Vendors
+**Error Responses:**
+- `400 Bad Request`: Invalid token
+- `401 Unauthorized`: Token expired
+- `500 Internal Server Error`: Server error
 
-#### Create Vendor
+## User Management
+
+### Get Current User
 
 ```
-POST /people/vendor
+GET /user/me
 ```
 
 **Request Headers:**
-
 ```
-Authorization: Bearer YOUR_JWT_TOKEN
+Authorization: Bearer YOUR_ACCESS_TOKEN
 ```
 
-**Request Body:**
+**cURL Example:**
+```bash
+curl -X GET http://localhost:5001/user/me \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
 
+**Success Response (200 OK):**
 ```json
 {
-  "first_name": "Robert",
-  "last_name": "Brown",
-  "email": "robert.b@example.com",
-  "phone": "555-345-6789",
-  "service_type": "Plumbing",
-  "business_type": "LLC",
-  "notes": "Available on weekends",
-  "hourly_rate": "75.00",
-  "invitation_methods": {
-    "email": true,
-    "sms": false
-  }
+  "id": "user-uuid",
+  "email": "user@example.com",
+  "first_name": "John",
+  "last_name": "Doe",
+  "organization_id": "org-uuid",
+  "role": "team_member"
 }
 ```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/people/vendor \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "first_name": "Robert",
-    "last_name": "Brown",
-    "email": "robert.b@example.com",
-    "phone": "555-345-6789",
-    "service_type": "Plumbing",
-    "business_type": "LLC",
-    "notes": "Available on weekends",
-    "hourly_rate": "75.00",
-    "invitation_methods": {
-      "email": true,
-      "sms": false
-    }
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "profile": {
-    "id": "profile-id",
-    "first_name": "Robert",
-    "last_name": "Brown",
-    "email": "robert.b@example.com",
-    "phone": "555-345-6789",
-    "organization_id": "org-id",
-    "status": "pending"
-  },
-  "vendor": {
-    "id": "vendor-id",
-    "user_id": "profile-id",
-    "organization_id": "org-id",
-    "service_type": "Plumbing",
-    "business_type": "LLC",
-    "notes": "Available on weekends",
-    "hourly_rate": "75.00"
-  }
-}
-```
-
-### Owners
-
-#### Create Owner
-
-```
-POST /people/owner
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Body:**
-
-```json
-{
-  "first_name": "Jennifer",
-  "last_name": "Davis",
-  "email": "jennifer.d@example.com",
-  "phone": "555-456-7890",
-  "company_name": "Davis Properties LLC",
-  "notes": "Owns multiple properties",
-  "invitation_methods": {
-    "email": true,
-    "sms": true
-  }
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/people/owner \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "first_name": "Jennifer",
-    "last_name": "Davis",
-    "email": "jennifer.d@example.com",
-    "phone": "555-456-7890",
-    "company_name": "Davis Properties LLC",
-    "notes": "Owns multiple properties",
-    "invitation_methods": {
-      "email": true,
-      "sms": true
-    }
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "profile": {
-    "id": "profile-id",
-    "first_name": "Jennifer",
-    "last_name": "Davis",
-    "email": "jennifer.d@example.com",
-    "phone": "555-456-7890",
-    "organization_id": "org-id",
-    "status": "pending"
-  },
-  "owner": {
-    "id": "owner-id",
-    "user_id": "profile-id",
-    "organization_id": "org-id",
-    "company_name": "Davis Properties LLC",
-    "status": "pending",
-    "notes": "Owns multiple properties"
-  }
-}
-```
-
-### Documents
-
-#### Upload Documents
-
-```
-POST /people/:id/documents
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-Content-Type: multipart/form-data
-```
-
-**Request Parameters:**
-
-- `id`: The ID of the person to upload documents for
-
-**Request Body:**
-
-Form data with files in the "documents" field (up to 10 files)
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/people/profile-id/documents \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -F "documents=@/path/to/document1.pdf" \
-  -F "documents=@/path/to/document2.pdf"
-```
-
-**Response:**
-
-```json
-[
-  {
-    "id": "doc-id-1",
-    "related_to_id": "profile-id",
-    "related_to_type": "tenant",
-    "document_type": "pdf",
-    "document_name": "document1.pdf",
-    "document_url": "profile-id/1620000000000.pdf"
-  },
-  {
-    "id": "doc-id-2",
-    "related_to_id": "profile-id",
-    "related_to_type": "tenant",
-    "document_type": "pdf",
-    "document_name": "document2.pdf",
-    "document_url": "profile-id/1620000000001.pdf"
-  }
-]
-```
-
-### Invitations
-
-#### Send Invitations (DEPRECATED)
-
-**Note: This endpoint is deprecated and will be removed in future versions. Please use the dedicated invitation endpoints instead (`/api/invite/{role}/invite`).**
-
-```
-POST /people/:id/invitations
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Parameters:**
-
-- `id`: The ID of the person to send invitations to
-
-**Request Body:**
-
-```json
-{
-  "methods": {
-    "email": true,
-    "sms": true
-  }
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/people/profile-id/invitations \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "methods": {
-      "email": true,
-      "sms": true
-    }
-  }'
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "methods": {
-    "email": true,
-    "sms": true
-  }
-}
-```
-
-## Properties
-
-### Get All Properties
-
-```
-GET /properties
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**cURL Example:**
-
-```bash
-curl -X GET http://localhost:5001/api/properties \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### Create Property
-
-```
-POST /properties
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Body:**
-
-```json
-{
-  "name": "Sunset Apartments",
-  "address": "123 Main St",
-  "city": "Anytown",
-  "state": "CA",
-  "zip_code": "12345",
-  "total_units": 10,
-  "owner_id": "owner-id",
-  "property_manager_id": "manager-id",
-  "property_status": "active"
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/properties \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "name": "Sunset Apartments",
-    "address": "123 Main St",
-    "city": "Anytown",
-    "state": "CA",
-    "zip_code": "12345",
-    "total_units": 10,
-    "owner_id": "owner-id",
-    "property_manager_id": "manager-id",
-    "property_status": "active"
-  }'
-```
-
-## Rentals
-
-### Get All Rentals
-
-```
-GET /rentals
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**cURL Example:**
-
-```bash
-curl -X GET http://localhost:5001/api/rentals \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### Create Rental
-
-```
-POST /rentals
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Body:**
-
-```json
-{
-  "property": {
-    "name": "Ocean View Complex",
-    "address": "456 Beach Rd",
-    "city": "Seaside",
-    "state": "FL",
-    "zip_code": "67890",
-    "total_units": 5,
-    "owner_id": "owner-id",
-    "property_manager_id": "manager-id",
-    "property_status": "active"
-  },
-  "units": [
-    {
-      "unit_number": "101",
-      "rent_amount": 1500,
-      "bedrooms": 2,
-      "bathrooms": 1,
-      "square_feet": 950,
-      "status": "Available",
-      "floor_plan": "2BR Standard",
-      "smart_lock_enabled": true
-    },
-    {
-      "unit_number": "102",
-      "rent_amount": 1700,
-      "bedrooms": 2,
-      "bathrooms": 2,
-      "square_feet": 1050,
-      "status": "Available",
-      "floor_plan": "2BR Deluxe",
-      "smart_lock_enabled": true
-    }
-  ]
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/rentals \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "property": {
-      "name": "Ocean View Complex",
-      "address": "456 Beach Rd",
-      "city": "Seaside",
-      "state": "FL",
-      "zip_code": "67890",
-      "total_units": 5,
-      "owner_id": "owner-id",
-      "property_manager_id": "manager-id",
-      "property_status": "active"
-    },
-    "units": [
-      {
-        "unit_number": "101",
-        "rent_amount": 1500,
-        "bedrooms": 2,
-        "bathrooms": 1,
-        "square_feet": 950,
-        "status": "Available",
-        "floor_plan": "2BR Standard",
-        "smart_lock_enabled": true
-      },
-      {
-        "unit_number": "102",
-        "rent_amount": 1700,
-        "bedrooms": 2,
-        "bathrooms": 2,
-        "square_feet": 1050,
-        "status": "Available",
-        "floor_plan": "2BR Deluxe",
-        "smart_lock_enabled": true
-      }
-    ]
-  }'
-```
-
-## Leases
-
-### Get All Leases
-
-```
-GET /leases
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**cURL Example:**
-
-```bash
-curl -X GET http://localhost:5001/api/leases \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### Create Lease
-
-```
-POST /leases
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Body:**
-
-```json
-{
-  "tenant_id": "tenant-id",
-  "property_id": "property-id",
-  "unit_id": "unit-id",
-  "start_date": "2023-01-01",
-  "end_date": "2023-12-31",
-  "rent_amount": 1500,
-  "security_deposit": 1500,
-  "lease_type": "standard",
-  "status": "active"
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/leases \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "tenant_id": "tenant-id",
-    "property_id": "property-id",
-    "unit_id": "unit-id",
-    "start_date": "2023-01-01",
-    "end_date": "2023-12-31",
-    "rent_amount": 1500,
-    "security_deposit": 1500,
-    "lease_type": "standard",
-    "status": "active"
-  }'
-```
-
-## Maintenance
-
-### Get All Maintenance Requests
-
-```
-GET /maintenance
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**cURL Example:**
-
-```bash
-curl -X GET http://localhost:5001/api/maintenance \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### Create Maintenance Request
-
-```
-POST /maintenance
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Body:**
-
-```json
-{
-  "property_id": "property-id",
-  "unit_id": "unit-id",
-  "tenant_id": "tenant-id",
-  "title": "Leaking Faucet",
-  "description": "The kitchen faucet is leaking and needs repair",
-  "priority": "medium",
-  "status": "pending",
-  "category": "plumbing"
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/maintenance \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "property_id": "property-id",
-    "unit_id": "unit-id",
-    "tenant_id": "tenant-id",
-    "title": "Leaking Faucet",
-    "description": "The kitchen faucet is leaking and needs repair",
-    "priority": "medium",
-    "status": "pending",
-    "category": "plumbing"
-  }'
-```
-
-## Payments
-
-### Get All Payments
-
-```
-GET /payments
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**cURL Example:**
-
-```bash
-curl -X GET http://localhost:5001/api/payments \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-### Create Payment
-
-```
-POST /payments
-```
-
-**Request Headers:**
-
-```
-Authorization: Bearer YOUR_JWT_TOKEN
-```
-
-**Request Body:**
-
-```json
-{
-  "tenant_id": "tenant-id",
-  "lease_id": "lease-id",
-  "amount": 1500,
-  "payment_date": "2023-05-01",
-  "payment_method": "credit_card",
-  "status": "completed",
-  "payment_type": "rent"
-}
-```
-
-**cURL Example:**
-
-```bash
-curl -X POST http://localhost:5001/api/payments \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "tenant_id": "tenant-id",
-    "lease_id": "lease-id",
-    "amount": 1500,
-    "payment_date": "2023-05-01",
-    "payment_method": "credit_card",
-    "status": "completed",
-    "payment_type": "rent"
-  }'
-```
-
-## Users
 
 ### Get User Profile
 
 ```
-GET /users/profile
+GET /user/profile
 ```
 
 **Request Headers:**
-
 ```
-Authorization: Bearer YOUR_JWT_TOKEN
+Authorization: Bearer YOUR_ACCESS_TOKEN
 ```
 
 **cURL Example:**
-
 ```bash
-curl -X GET http://localhost:5001/api/users/profile \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+curl -X GET http://localhost:5001/user/profile \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 
-**Response:**
-
-```json
-{
-  "id": "user-id",
-  "email": "user@example.com",
-  "first_name": "John",
-  "last_name": "Doe",
-  "phone": "555-123-4567",
-  "organization_id": "org-id",
-  "status": "active"
-}
-```
-
-## Testing with Postman
-
-You can import the following Postman collection to test all the API endpoints:
-
-1. Create a new collection in Postman
-2. Add a new request for each endpoint
-3. Set the appropriate HTTP method, URL, headers, and body
-4. Create an environment variable for your JWT token after login
-5. Use the environment variable in your Authorization headers
-
-Example Postman environment:
-
-```json
-{
-  "id": "your-environment-id",
-  "name": "PropEase API",
-  "values": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:5001/api",
-      "enabled": true
-    },
-    {
-      "key": "token",
-      "value": "your-jwt-token",
-      "enabled": true
-    }
-  ]
-}
-```
-
-## Error Handling
-
-All API endpoints return appropriate HTTP status codes:
-
-- `200 OK`: Request succeeded
-- `201 Created`: Resource created successfully
-- `400 Bad Request`: Invalid request parameters
-- `401 Unauthorized`: Authentication required or failed
-- `403 Forbidden`: Insufficient permissions
-- `404 Not Found`: Resource not found
-- `500 Internal Server Error`: Server error
-
-Error responses include a JSON object with an error message:
-
-```json
-{
-  "error": "Error message details"
-}
-```
-
-## User Invitations
-
-The following endpoints are used to invite users to the application with different roles.
-
-### Send Team Member Invitation
+### Assign Role
 
 ```
-POST /api/invite/team/invite
+POST /user/assign-role
 ```
-
-Invites a new team member to the organization.
 
 **Request Headers:**
-- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "userId": "user-uuid",
+  "role": "team_member",
+  "organizationId": "org-uuid"
+}
+```
+
+## Invitations
+
+### Team Member Invitation
+
+```
+POST /invite/team/invite
+```
+
+**Request Headers:**
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
@@ -1092,158 +340,322 @@ Invites a new team member to the organization.
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:5001/api/invite/team/invite \
+curl -X POST http://localhost:5001/invite/team/invite \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
-    "email":"newteam@example.com",
-    "jobTitle":"Project Manager",
-    "department":"Operations"
+    "email": "newteam@example.com",
+    "jobTitle": "Project Manager",
+    "department": "Operations"
   }'
 ```
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
   "message": "Invitation sent successfully",
   "invitation": {
     "id": "invitation-uuid",
     "email": "newteam@example.com",
-    "expires_at": "2023-06-08T12:00:00.000Z",
+    "expires_at": "2024-03-21T12:00:00.000Z",
     "status": "pending"
   }
 }
 ```
 
-### Send Tenant Invitation
+**Error Responses:**
+- `400 Bad Request`: Invalid input or user already exists
+- `401 Unauthorized`: Invalid token
+- `403 Forbidden`: Insufficient permissions
+- `500 Internal Server Error`: Server error
+
+### Tenant Invitation
 
 ```
-POST /api/invite/tenant/invite
+POST /invite/tenant/invite
 ```
-
-Invites a new tenant to the organization.
 
 **Request Headers:**
-- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
 {
-  "email": "newtenant@example.com"
+  "email": "newtenant@example.com",
+  "name": "John Doe",
+  "phone": "555-234-5678",
+  "language_preference": "English",
+  "vehicles": {
+    "vehicle1": {
+      "make": "Toyota",
+      "model": "Camry",
+      "year": "2020",
+      "plate": "ABC123"
+    }
+  },
+  "pets": {
+    "pet1": {
+      "type": "Dog",
+      "breed": "Labrador",
+      "name": "Max",
+      "weight": "65"
+    }
+  },
+  "emergency_contact": {
+    "name": "Jane Smith",
+    "phone": "555-876-5432",
+    "relationship": "Sister"
+  }
 }
 ```
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:5001/api/invite/tenant/invite \
+curl -X POST http://localhost:5001/invite/tenant/invite \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"email":"newtenant@example.com"}'
+  -d '{
+    "email": "newtenant@example.com",
+    "name": "John Doe",
+    "phone": "555-234-5678",
+    "language_preference": "English",
+    "vehicles": {
+      "vehicle1": {
+        "make": "Toyota",
+        "model": "Camry",
+        "year": "2020",
+        "plate": "ABC123"
+      }
+    },
+    "pets": {
+      "pet1": {
+        "type": "Dog",
+        "breed": "Labrador",
+        "name": "Max",
+        "weight": "65"
+      }
+    },
+    "emergency_contact": {
+      "name": "Jane Smith",
+      "phone": "555-876-5432",
+      "relationship": "Sister"
+    }
+  }'
 ```
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
   "message": "Invitation sent successfully",
   "invitation": {
     "id": "invitation-uuid",
     "email": "newtenant@example.com",
-    "expires_at": "2023-06-08T12:00:00.000Z",
+    "expires_at": "2024-03-21T12:00:00.000Z",
     "status": "pending"
   }
 }
 ```
 
-### Send Vendor Invitation
+**Error Responses:**
+- `400 Bad Request`: Invalid input or user already exists
+- `401 Unauthorized`: Invalid token
+- `403 Forbidden`: Insufficient permissions
+- `500 Internal Server Error`: Server error
+
+### Owner Invitation
 
 ```
-POST /api/invite/vendor/invite
+POST /invite/owner/invite
 ```
-
-Invites a new vendor to the organization.
 
 **Request Headers:**
-- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
 {
-  "email": "newvendor@example.com"
+  "email": "newowner@example.com",
+  "name": "Jennifer Davis",
+  "phone": "555-456-7890",
+  "company_name": "Davis Properties LLC",
+  "address": "123 Business Ave, Suite 100",
+  "business_type": "LLC",
+  "tax_id": "12-3456789",
+  "payment_schedule": "monthly",
+  "payment_method": "direct_deposit",
+  "notes": "Owns multiple properties"
 }
 ```
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:5001/api/invite/vendor/invite \
+curl -X POST http://localhost:5001/invite/owner/invite \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"email":"newvendor@example.com"}'
+  -d '{
+    "email": "newowner@example.com",
+    "name": "Jennifer Davis",
+    "phone": "555-456-7890",
+    "company_name": "Davis Properties LLC",
+    "address": "123 Business Ave, Suite 100",
+    "business_type": "LLC",
+    "tax_id": "12-3456789",
+    "payment_schedule": "monthly",
+    "payment_method": "direct_deposit",
+    "notes": "Owns multiple properties"
+  }'
 ```
 
-**Response (200 OK):**
-```json
-{
-  "message": "Invitation sent successfully",
-  "invitation": {
-    "id": "invitation-uuid",
-    "email": "newvendor@example.com",
-    "expires_at": "2023-06-08T12:00:00.000Z",
-    "status": "pending"
-  }
-}
-```
-
-### Send Owner Invitation
-
-```
-POST /api/invite/owner/invite
-```
-
-Invites a new property owner to the organization.
-
-**Request Headers:**
-- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
-
-**Request Body:**
-```json
-{
-  "email": "newowner@example.com"
-}
-```
-
-**cURL Example:**
-```bash
-curl -X POST http://localhost:5001/api/invite/owner/invite \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"email":"newowner@example.com"}'
-```
-
-**Response (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
   "message": "Invitation sent successfully",
   "invitation": {
     "id": "invitation-uuid",
     "email": "newowner@example.com",
-    "expires_at": "2023-06-08T12:00:00.000Z",
+    "expires_at": "2024-03-21T12:00:00.000Z",
     "status": "pending"
   }
 }
 ```
 
-### Accept Invitation
+**Error Responses:**
+- `400 Bad Request`: Invalid input or user already exists
+- `401 Unauthorized`: Invalid token
+- `403 Forbidden`: Insufficient permissions
+- `500 Internal Server Error`: Server error
+
+### Vendor Invitation
 
 ```
-POST /api/invite/accept/:token
+POST /invite/vendor/invite
 ```
 
-Accepts an invitation and creates a new user account.
+**Request Headers:**
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
 {
-  "email": "user@example.com",
+  "email": "newvendor@example.com",
+  "contact_name": "Robert Brown",
+  "phone": "555-345-6789",
+  "service_type": "Plumbing",
+  "business_type": "LLC",
+  "service_areas": ["Downtown", "Suburbs"],
+  "service_availability": {
+    "weekdays": "9:00 AM - 5:00 PM",
+    "weekends": "On Call"
+  },
+  "emergency_service": true,
+  "payment_terms": "Net 30",
+  "hourly_rate": 75.00,
+  "notes": "Available for emergency calls"
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:5001/invite/vendor/invite \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "newvendor@example.com",
+    "contact_name": "Robert Brown",
+    "phone": "555-345-6789",
+    "service_type": "Plumbing",
+    "business_type": "LLC",
+    "service_areas": ["Downtown", "Suburbs"],
+    "service_availability": {
+      "weekdays": "9:00 AM - 5:00 PM",
+      "weekends": "On Call"
+    },
+    "emergency_service": true,
+    "payment_terms": "Net 30",
+    "hourly_rate": 75.00,
+    "notes": "Available for emergency calls"
+  }'
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "message": "Invitation sent successfully",
+  "invitation": {
+    "id": "invitation-uuid",
+    "email": "newvendor@example.com",
+    "expires_at": "2024-03-21T12:00:00.000Z",
+    "status": "pending"
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid input or user already exists
+- `401 Unauthorized`: Invalid token
+- `403 Forbidden`: Insufficient permissions
+- `500 Internal Server Error`: Server error
+
+### Verify Invitation
+
+```
+GET /invite/verify/:token
+```
+
+**Request Parameters:**
+- `token`: The invitation token from the email link
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:5001/invite/verify/abc123def456
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "message": "Invitation is valid",
+  "invitation": {
+    "id": "invitation-uuid",
+    "email": "user@example.com",
+    "organization_id": "org-uuid",
+    "organization_name": "Example Organization",
+    "role": "team_member"
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid token format
+- `404 Not Found`: Invitation not found
+- `410 Gone`: Invitation expired
+- `500 Internal Server Error`: Server error
+
+### Accept Invitation
+
+```
+POST /invite/accept/:token
+```
+
+**Request Headers:**
+```
+Content-Type: application/json
+```
+
+**Request Parameters:**
+- `token`: The invitation token from the email link
+
+**Request Body:**
+```json
+{
   "password": "securepassword",
   "firstName": "John",
   "lastName": "Doe",
@@ -1253,10 +665,9 @@ Accepts an invitation and creates a new user account.
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:5001/api/invite/accept/abc123def456 \
+curl -X POST http://localhost:5001/invite/accept/abc123def456 \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "user@example.com",
     "password": "securepassword",
     "firstName": "John",
     "lastName": "Doe",
@@ -1264,91 +675,114 @@ curl -X POST http://localhost:5001/api/invite/accept/abc123def456 \
   }'
 ```
 
-**Response (200 OK):**
+**Success Response (200 OK):**
 ```json
 {
-  "message": "Account created successfully",
+  "message": "Invitation accepted successfully",
   "user": {
     "id": "user-uuid",
     "email": "user@example.com",
     "first_name": "John",
     "last_name": "Doe",
-    "organization_id": "organization-uuid",
+    "organization_id": "org-uuid",
     "role": "team_member"
   }
 }
 ```
 
-### Verify Invitation
+**Error Responses:**
+- `400 Bad Request`: Invalid input or token format
+- `404 Not Found`: Invitation not found
+- `410 Gone`: Invitation expired
+- `500 Internal Server Error`: Server error
+
+## Tenant Management
+
+### Create Tenant Record
+
+Creates a new tenant record in the database without creating a user profile or authentication.
 
 ```
-GET /api/invite/verify/:token
+POST /people/tenant-record
 ```
-
-Verifies an invitation token.
-
-**cURL Example:**
-```bash
-curl -X GET http://localhost:5001/api/invite/verify/abc123def456 \
-  -H "Content-Type: application/json"
-```
-
-**Response (200 OK):**
-```json
-{
-  "message": "Invitation is valid",
-  "invitation": {
-    "id": "invitation-uuid",
-    "email": "user@example.com",
-    "organization_id": "organization-uuid",
-    "role_id": "role-uuid"
-  }
-}
-```
-
-### Assign Role to User
-
-```
-POST /api/users/assign-role
-```
-
-Assigns a role to a user within an organization.
 
 **Request Headers:**
-- `Authorization: Bearer YOUR_JWT_TOKEN` (required)
+```
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Content-Type: application/json
+```
 
 **Request Body:**
 ```json
 {
-  "userId": "user-uuid",
-  "role": "team_member",
-  "organizationId": "organization-uuid"
+  "name": "John Doe",
+  "phone": "+1234567890",
+  "email": "john.doe@example.com",
+  "emergency_contact_phone": "+1987654321"
 }
 ```
 
 **cURL Example:**
 ```bash
-curl -X POST http://localhost:5001/api/users/assign-role \
+curl -X POST http://localhost:5001/people/tenant-record \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
-    "userId": "user-uuid",
-    "role": "team_member",
-    "organizationId": "organization-uuid"
+    "name": "John Doe",
+    "phone": "+1234567890",
+    "email": "john.doe@example.com",
+    "emergency_contact_phone": "+1987654321"
   }'
 ```
 
-**Response (200 OK):**
+**Success Response (201 Created):**
 ```json
 {
   "success": true,
-  "userRole": {
-    "id": "user-role-uuid",
-    "user_id": "user-uuid",
-    "role_id": "role-uuid",
-    "organization_id": "organization-uuid",
-    "created_at": "2023-06-07T12:00:00.000Z",
-    "updated_at": "2023-06-07T12:00:00.000Z"
+  "message": "Tenant record created successfully",
+  "data": {
+    "id": "tenant-uuid",
+    "name": "John Doe",
+    "phone": "+1234567890",
+    "email": "john.doe@example.com",
+    "emergency_contact_phone": "+1987654321",
+    "organization_id": "org-uuid",
+    "status": "active",
+    "created_at": "2024-06-01T12:00:00.000Z",
+    "updated_at": "2024-06-01T12:00:00.000Z"
   }
 }
-``` 
+```
+
+**Error Responses:**
+- `400 Bad Request`: Missing required fields or organization ID not found
+- `401 Unauthorized`: Invalid or missing authentication token
+- `500 Internal Server Error`: Server error
+
+## Error Handling
+
+All API endpoints return appropriate HTTP status codes:
+
+- `200 OK`: Request succeeded
+- `201 Created`: Resource created successfully
+- `400 Bad Request`: Invalid request parameters or validation failed
+- `401 Unauthorized`: Authentication required or failed
+- `403 Forbidden`: Insufficient permissions to perform the action
+- `404 Not Found`: Requested resource not found
+- `410 Gone`: Resource no longer available (e.g., expired invitation)
+- `422 Unprocessable Entity`: Request validation failed
+- `429 Too Many Requests`: Rate limit exceeded
+- `500 Internal Server Error`: Server error
+- `503 Service Unavailable`: Service temporarily unavailable
+
+Error responses include a JSON object with an error message:
+
+```json
+{
+  "error": "Error message details",
+  "code": "ERROR_CODE",
+  "details": {
+    "field": "Additional error context"
+  }
+}
+```
