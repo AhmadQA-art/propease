@@ -1,7 +1,7 @@
 # Supabase Database Schema Documentation
 
 This document provides an overview of the database schema for the PropEase property management system.
-Last updated: Sun Mar 16 02:06:14 PM +03 2025
+Last updated: Mon Mar 17 01:02:32 AM +03 2025
 
 ## Tables
 ### activity_logs                                                                       +

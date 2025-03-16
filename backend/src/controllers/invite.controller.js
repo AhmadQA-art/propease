@@ -239,8 +239,21 @@ const acceptInvitation = async (req, res) => {
       return res.status(400).json({ error: 'Token is required' });
     }
 
-    // Get current user from session
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get auth token from header
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      console.log('[ACCEPT] Error: No authorization header');
+      return res.status(401).json({ error: 'No authorization token provided' });
+    }
+
+    const accessToken = authHeader.replace('Bearer ', '');
+    if (!accessToken) {
+      console.log('[ACCEPT] Error: Invalid authorization header format');
+      return res.status(401).json({ error: 'Invalid authorization token format' });
+    }
+
+    // Get current user from session using the access token
+    const { data: { user }, error: userError } = await supabase.auth.getUser(accessToken);
 
     if (userError) {
       console.error('[ACCEPT] Error getting user:', userError);

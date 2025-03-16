@@ -1,6 +1,6 @@
 /**
 * PropEase Database Schema TypeScript Definitions
-* Auto-generated on: Sun Mar 16 02:06:24 PM +03 2025
+* Auto-generated on: Mon Mar 17 01:02:42 AM +03 2025
 */
 
 // Type definitions for common PostgreSQL data types

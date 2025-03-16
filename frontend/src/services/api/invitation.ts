@@ -44,9 +44,19 @@ export const invitationApi = {
     firstName: string;
     lastName: string;
     phone?: string;
+    accessToken: string;
   }) {
     try {
-      const response = await api.post(`/invite/accept/${token}`, data);
+      const response = await api.post(`/invite/accept/${token}`, {
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phone: data.phone
+      }, {
+        headers: {
+          Authorization: `Bearer ${data.accessToken}`
+        }
+      });
       return response.data;
     } catch (error: any) {
       console.error('Error accepting invitation:', error.response?.data || error.message);

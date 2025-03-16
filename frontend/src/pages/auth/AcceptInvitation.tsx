@@ -30,37 +30,40 @@ export default function AcceptInvitation() {
   useEffect(() => {
     const checkSessionAndInvitation = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
 
-        if (!session || !session.user) {
+      if (!session || !session.user) {
           setError('Please sign in to accept the invitation.');
           setIsVerifying(false);
+          // Redirect to login with return URL
+          const returnUrl = encodeURIComponent(`/accept-invitation?token=${token}${emailFromUrl ? `&email=${emailFromUrl}` : ''}`);
+          navigate(`/login?returnUrl=${returnUrl}`);
           return;
-        }
+      }
 
-        const userEmail = session.user.email;
+      const userEmail = session.user.email;
 
-        if (!token) {
-          setError('Missing invitation token. Please check your invitation link.');
-          setIsVerifying(false);
-          return;
-        }
+      if (!token) {
+        setError('Missing invitation token. Please check your invitation link.');
+        setIsVerifying(false);
+        return;
+      }
 
-        try {
+      try {
           const { invitation } = await invitationApi.verifyInvitation(token, userEmail);
           
           if (!invitation) {
             setError('Invalid invitation. Please check your invitation link.');
-            setIsVerifying(false);
-            return;
-          }
+          setIsVerifying(false);
+          return;
+        }
 
           setInvitationData(invitation);
-          setOrganizationName(invitation.organization_name);
-          setRole(invitation.role);
-          setInvitationValid(true);
+        setOrganizationName(invitation.organization_name);
+        setRole(invitation.role);
+        setInvitationValid(true);
         } catch (error: any) {
-          console.error('Error verifying invitation:', error);
+        console.error('Error verifying invitation:', error);
           setError(error.message || 'Error verifying invitation. Please try again or contact support.');
           setInvitationValid(false);
         }
@@ -74,7 +77,7 @@ export default function AcceptInvitation() {
     };
 
     checkSessionAndInvitation();
-  }, [token]);
+  }, [token, emailFromUrl, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,16 +101,25 @@ export default function AcceptInvitation() {
     setError('');
 
     try {
-      // Update user password
+      // First update the user's password
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
 
-      // Accept invitation
+      // Get a fresh session with the new credentials
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      if (!session) {
+        throw new Error('Failed to get session after password update');
+      }
+
+      // Now accept the invitation with the fresh session token
       const response = await invitationApi.acceptInvitation(token, {
         password,
         firstName,
         lastName,
-        phone
+        phone,
+        accessToken: session.access_token // Pass the access token explicitly
       });
 
       toast.success('Account created successfully!');
