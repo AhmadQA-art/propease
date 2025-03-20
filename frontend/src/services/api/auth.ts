@@ -70,9 +70,21 @@ export const authApi = {
   },
 
   async getCurrentUser() {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    return data.user;
+    try {
+      console.log('[AuthAPI] Checking current user authentication status via Supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session && session.user) {
+        console.log('[AuthAPI] User authenticated via Supabase:', session.user.email);
+        return session.user;
+      } else {
+        console.log('[AuthAPI] No active session found in Supabase');
+        return null;
+      }
+    } catch (error) {
+      console.error('[AuthAPI] Authentication check failed:', error);
+      return null;
+    }
   },
 
   async getUserProfile(userId: string) {

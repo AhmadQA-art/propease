@@ -1,49 +1,37 @@
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
-// Swagger definition
-const swaggerOptions = {
+const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'PropEase API Documentation',
+      title: 'PropEase API',
       version: '1.0.0',
       description: 'API documentation for PropEase property management system',
-      contact: {
-        name: 'PropEase Support',
-        email: 'support@propease.com'
-      }
     },
     servers: [
       {
-        url: 'http://localhost:5001',
-        description: 'Development server'
-      }
+        url: `${process.env.API_URL || 'http://localhost:5001'}/api`,
+        description: 'Development server',
+      },
     ],
     components: {
       securitySchemes: {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
+          bearerFormat: 'JWT',
+        },
+      },
     },
-    security: [{
-      bearerAuth: []
-    }]
   },
-  // Path to the API docs
-  apis: [
-    './src/routes/*.js',
-    './src/models/*.js'
-  ]
+  apis: ['./src/routes/*.js'], // Path to the API routes
 };
 
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
+const swaggerSpec = swaggerJsdoc(options);
 
-function setupSwagger(app) {
-  // Swagger page
+const setupSwagger = (app) => {
+  // Swagger UI
   app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // Docs in JSON format
@@ -51,8 +39,12 @@ function setupSwagger(app) {
     res.setHeader('Content-Type', 'application/json');
     res.send(swaggerSpec);
   });
-  
-  console.log('Swagger documentation available at /api-docs');
-}
 
-module.exports = { setupSwagger, swaggerSpec }; 
+  console.log('Swagger UI available at /api-docs');
+  console.log('Swagger JSON available at /api-docs.json');
+};
+
+module.exports = { 
+  swaggerSpec,
+  setupSwagger
+}; 

@@ -1,6 +1,6 @@
 /**
 * PropEase Database Schema TypeScript Definitions
-* Auto-generated on: Mon Mar 17 01:02:42 AM +03 2025
+* Auto-generated on: Thu Mar 20 04:04:49 PM +03 2025
 */
 
 // Type definitions for common PostgreSQL data types
@@ -271,8 +271,8 @@ updated_at?: Timestamp;
 
 export interface Leases {
 id: UUID;
-unit_id?: UUID;
-tenant_id?: UUID;
+unit_id: UUID;
+tenant_id: UUID;
 start_date: Date;
 end_date: Date;
 rent_amount: number;
@@ -396,6 +396,13 @@ active?: boolean;
 
 }
 
+export interface OwnerProperties {
+owner_id: UUID;
+property_id: UUID;
+created_at?: Timestamp;
+
+}
+
 export interface Owners {
 id: UUID;
 user_id?: UUID;
@@ -412,8 +419,10 @@ taxpayer_id?: string;
 payment_schedule?: string;
 notes?: string;
 status?: string;
-name?: string;
 organization_id: UUID;
+first_name?: string;
+last_name?: string;
+phone?: string;
 
 }
 
@@ -504,15 +513,23 @@ state: string;
 zip_code: string;
 total_units: number;
 owner_id?: UUID;
-organization_id?: UUID;
+organization_id: UUID;
 created_at?: Timestamp;
 updated_at?: Timestamp;
 monthly_revenue?: number;
 occupancy_rate?: number;
 active_leases?: number;
-property_manager_id?: UUID;
 last_activity_date?: Timestamp;
-property_status?: string;
+status?: string;
+property_type: string;
+
+}
+
+export interface PropertyImages {
+id: UUID;
+property_id: UUID;
+image_url: string;
+created_at?: Timestamp;
 
 }
 
@@ -575,11 +592,21 @@ updated_at?: Timestamp;
 
 }
 
+export interface RentalApplicationDocuments {
+id: UUID;
+rental_application_id: UUID;
+file_name: string;
+file_path: string;
+file_type: string;
+uploaded_at?: Timestamp;
+uploaded_by: UUID;
+
+}
+
 export interface RentalApplications {
 id: UUID;
 property_id?: UUID;
 unit_id?: UUID;
-applicant_id?: UUID;
 application_date?: Timestamp;
 desired_move_in_date?: Date;
 lease_term?: number;
@@ -601,6 +628,15 @@ reviewed_by?: UUID;
 review_date?: Timestamp;
 created_at?: Timestamp;
 updated_at?: Timestamp;
+applicant_id: any;
+id_type?: string;
+expiry_date?: Date;
+is_employed: boolean;
+organization_id: UUID;
+applicant_name: string;
+applicant_email?: string;
+applicant_phone_number?: string;
+preferred_contact_method?: Array<UUID>;
 
 }
 
@@ -624,7 +660,7 @@ status: string;
 due_date?: Timestamp;
 owner_id?: UUID;
 assigned_to?: UUID;
-related_to_type?: string;
+type?: string;
 related_to_id?: UUID;
 created_at?: Timestamp;
 updated_at?: Timestamp;
@@ -647,11 +683,7 @@ id: UUID;
 user_id?: UUID;
 created_at?: Timestamp;
 updated_at?: Timestamp;
-move_in_date?: Date;
-lease_end_date?: Date;
 current_property_id?: UUID;
-current_unit_id?: UUID;
-rent_amount?: number;
 status?: string;
 emergency_contact_phone?: string;
 emergency_contact_relationship?: string;
@@ -664,38 +696,36 @@ pets?: JSONB;
 vehicles?: JSONB;
 eviction_history?: boolean;
 special_accommodations?: string;
-lease_start_date?: Date;
 emergency_contact?: JSONB;
 background_check_status?: string;
 background_check_date?: Date;
-name?: string;
 email?: string;
 phone?: string;
 organization_id: UUID;
+first_name?: string;
+last_name?: string;
 
 }
 
 export interface Units {
 id: UUID;
-property_id?: UUID;
-unit_number: string;
+property_id: UUID;
+unit_number?: string;
 floor_plan?: string;
-square_feet?: number;
+area?: number;
 bedrooms?: number;
 bathrooms?: number;
 rent_amount?: number;
 status?: string;
 created_at?: Timestamp;
 updated_at?: Timestamp;
-current_tenant_id?: UUID;
-lease_start_date?: Date;
-lease_end_date?: Date;
 last_inspection_date?: Date;
 next_inspection_date?: Date;
 smart_lock_enabled?: boolean;
 smart_lock_details?: JSONB;
 utility_meters?: JSONB;
 maintenance_history?: JSONB;
+organization_id: UUID;
 
 }
 
@@ -748,10 +778,12 @@ emergency_service?: boolean;
 payment_terms?: string;
 preferred_bank_account_id?: UUID;
 performance_rating?: number;
-contact_name?: string;
 email?: string;
 phone?: string;
 organization_id: UUID;
+contact_person_name?: string;
+contact_person_email?: string;
+vendor_name?: string;
 
 }
 
@@ -781,6 +813,7 @@ maintenance_types: MaintenanceTypes[];
 notifications: Notifications[];
 organization_invitations: OrganizationInvitations[];
 organizations: Organizations[];
+owner_properties: OwnerProperties[];
 owners: Owners[];
 payment_categories: PaymentCategories[];
 payment_methods: PaymentMethods[];
@@ -788,10 +821,12 @@ payment_schedules: PaymentSchedules[];
 payment_transactions: PaymentTransactions[];
 payments: Payments[];
 properties: Properties[];
+property_images: PropertyImages[];
 property_inspections: PropertyInspections[];
 property_managers: PropertyManagers[];
 property_metrics: PropertyMetrics[];
 property_stakeholders: PropertyStakeholders[];
+rental_application_documents: RentalApplicationDocuments[];
 rental_applications: RentalApplications[];
 roles: Roles[];
 tasks: Tasks[];

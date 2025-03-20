@@ -1,58 +1,150 @@
-import React, { useState } from 'react';
-import { User, Calendar, DollarSign, FileText, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Calendar, DollarSign, FileText, Search, NotepadText } from 'lucide-react';
 import { format } from 'date-fns';
 import ApplicationDetailsDrawer from './ApplicationDetailsDrawer';
 import AddApplicationDrawer from './AddApplicationDrawer';
+import { useAuth } from '../../contexts/AuthContext';
+import { rentalService } from '../../services/rental.service';
+import { applicationService, RentalApplication } from '../../services/application.service';
+import toast from 'react-hot-toast';
 
-interface RentalApplication {
+// Define a frontend application model that combines DB data with UI needs
+interface ApplicationViewModel {
   id: string;
   applicant: {
     name: string;
-    email: string;
-    phone: string;
+    id: number;
     imageUrl?: string;
   };
   submitDate: string;
   desiredMoveIn: string;
   status: 'pending' | 'approved' | 'rejected';
-  creditScore: number;
-  income: number;
-  documents: string[];
+  monthly_income?: number;
+  documents: { 
+    id: string; 
+    file_name?: string;
+    file_path?: string;
+    file_type?: string;
+    uploaded_at?: string;
+    document_name?: string; 
+    document_url?: string;
+    document_type?: string;
+  }[];
+  unit?: {
+    id: string;
+    unit_number: string;
+    rent_amount?: number;
+    bedrooms?: number;
+    bathrooms?: number;
+    area?: number;
+    floor_plan?: string;
+  };
+  // Include all other application fields
+  has_pets: boolean;
+  has_vehicles: boolean; 
+  is_employed: boolean;
+  emergency_contact?: {
+    name?: string;
+    phone?: string; 
+    relationship?: string;
+  };
+  notes?: string;
+  id_type: 'passport' | 'qid' | 'driving_license';
+  lease_term: number;
+  organization_id: string;
+  // Add fields from schema
+  application_date: string;
+  desired_move_in_date: string;
+  applicant_id: number;
+  applicant_name: string;
+  applicant_email?: string;
+  applicant_phone_number?: string;
+  preferred_contact_method?: string[];
+  property_id: string;
+  unit_id: string;
+  background_check_status?: 'pending' | 'passed' | 'failed';
+  credit_check_status?: 'pending' | 'approved' | 'rejected';
+  previous_address?: string;
+  vehicle_details?: Record<string, any>;
+  pet_details?: Record<string, any>;
+  application_fee_paid?: boolean;
+  employment_info?: Record<string, any>;
+  rejection_reason?: string;
+  reviewed_by?: string;
+  review_date?: string;
+  expiry_date?: string;
+  property?: {
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    state: string;
+  };
 }
 
-const mockApplications: RentalApplication[] = [
-  {
-    id: 'APP001',
+// Helper function to convert API data to view model
+const mapToViewModel = (application: RentalApplication, documents: any[] = []): ApplicationViewModel => {
+  // Make sure we have a documents array from either the documents parameter or the application
+  const applicationDocuments = application.documents || documents || [];
+  
+  // Transform document properties if needed
+  const transformedDocuments = applicationDocuments.map(doc => ({
+    id: doc.id,
+    file_name: doc.file_name,
+    file_path: doc.file_path,
+    file_type: doc.file_type,
+    uploaded_at: doc.uploaded_at,
+    // Keep these for backward compatibility
+    document_name: doc.document_name || doc.file_name,
+    document_url: doc.document_url || doc.file_path,
+    document_type: doc.document_type || doc.file_type
+  }));
+  
+  return {
+    id: application.id || '',
     applicant: {
-      name: 'Sarah Johnson',
-      email: 'sarah.j@example.com',
-      phone: '(555) 123-4567',
-      imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=crop&w=256&h=256&q=80'
+      name: application.applicant_name,
+      id: application.applicant_id,
     },
-    submitDate: '2024-03-15',
-    desiredMoveIn: '2024-04-01',
-    status: 'pending',
-    creditScore: 720,
-    income: 75000,
-    documents: ['background_check.pdf', 'employment_verification.pdf']
-  },
-  {
-    id: 'APP002',
-    applicant: {
-      name: 'Michael Chen',
-      email: 'michael.c@example.com',
-      phone: '(555) 234-5678'
-    },
-    submitDate: '2024-03-14',
-    desiredMoveIn: '2024-04-15',
-    status: 'approved',
-    creditScore: 750,
-    income: 85000,
-    documents: ['background_check.pdf', 'employment_verification.pdf', 'reference_letter.pdf']
-  }
-];
+    submitDate: application.application_date || new Date().toISOString(),
+    desiredMoveIn: application.desired_move_in_date,
+    status: (application.status as 'pending' | 'approved' | 'rejected') || 'pending',
+    monthly_income: application.monthly_income,
+    documents: transformedDocuments,
+    unit: application.unit,
+    has_pets: application.has_pets,
+    has_vehicles: application.has_vehicles,
+    is_employed: application.is_employed,
+    emergency_contact: application.emergency_contact,
+    notes: application.notes,
+    id_type: application.id_type,
+    lease_term: application.lease_term,
+    organization_id: application.organization_id,
+    application_date: application.application_date || new Date().toISOString(),
+    desired_move_in_date: application.desired_move_in_date,
+    applicant_id: application.applicant_id,
+    applicant_name: application.applicant_name,
+    applicant_email: application.applicant_email,
+    applicant_phone_number: application.applicant_phone_number,
+    preferred_contact_method: application.preferred_contact_method,
+    property_id: application.property_id,
+    unit_id: application.unit_id,
+    background_check_status: application.background_check_status,
+    credit_check_status: application.credit_check_status,
+    previous_address: application.previous_address,
+    vehicle_details: application.vehicle_details,
+    pet_details: application.pet_details,
+    application_fee_paid: application.application_fee_paid,
+    employment_info: application.employment_info,
+    rejection_reason: application.rejection_reason,
+    reviewed_by: application.reviewed_by,
+    review_date: application.review_date ? application.review_date.toString() : undefined,
+    expiry_date: application.expiry_date ? application.expiry_date.toString() : undefined,
+    property: application.property
+  };
+};
 
-const getStatusColor = (status: RentalApplication['status']) => {
+const getStatusColor = (status: ApplicationViewModel['status']) => {
   switch (status) {
     case 'pending':
       return 'bg-yellow-100 text-yellow-800';
@@ -65,25 +157,175 @@ const getStatusColor = (status: RentalApplication['status']) => {
   }
 };
 
-export default function RentalApplications() {
+interface RentalApplicationsProps {
+  rentalId: string;
+}
+
+// Helper function to cast Lucide icon components to React elements
+const IconWrapper = ({ icon: Icon, size = 20, className = "" }) => {
+  return <Icon size={size} className={className} />;
+};
+
+export default function RentalApplications({ rentalId }: RentalApplicationsProps) {
+  const { userProfile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedApplication, setSelectedApplication] = useState<typeof mockApplications[0] | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<ApplicationViewModel | null>(null);
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
-  const [applications, setApplications] = useState(mockApplications);
+  const [applications, setApplications] = useState<ApplicationViewModel[]>([]);
+  const [availableUnits, setAvailableUnits] = useState<Array<{ id: string; unit_number: string }>>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch available units for the rental property
+  useEffect(() => {
+    const fetchAvailableUnits = async () => {
+      if (!rentalId || !userProfile?.organization_id) return;
+      
+      try {
+        setLoading(true);
+        const propertyData = await rentalService.getRentalById(rentalId, userProfile.organization_id);
+        if (propertyData && propertyData.units) {
+          // Get all units for the property
+          const allUnits = propertyData.units.map(unit => ({
+            id: unit.id,
+            unit_number: unit.unit_number || unit.number || `${unit.name || 'Unit'}`
+          }));
+          setAvailableUnits(allUnits);
+        }
+      } catch (error) {
+        console.error('Error fetching property units:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAvailableUnits();
+  }, [rentalId, userProfile?.organization_id]);
+  
+  // Fetch applications
+  useEffect(() => {
+    const fetchApplications = async () => {
+      if (!rentalId || !userProfile?.organization_id) return;
+      
+      try {
+        setLoading(true);
+        const applications = await applicationService.getPropertyApplications(rentalId, userProfile.organization_id);
+        
+        if (applications && applications.length > 0) {
+          // First get basic list
+          const basicList = applications.map(app => mapToViewModel(app));
+          setApplications(basicList);
+          
+          // Then fetch detailed data for each application including documents
+          const detailedApplications = await Promise.all(
+            applications.map(async (app) => {
+              try {
+                const detailedApp = await applicationService.getApplicationById(
+                  app.id || '',
+                  userProfile.organization_id
+                );
+                return mapToViewModel(detailedApp);
+              } catch (error) {
+                console.error(`Error fetching details for application ${app.id}:`, error);
+                return mapToViewModel(app); // Return basic data if detailed fetch fails
+              }
+            })
+          );
+          
+          setApplications(detailedApplications);
+        } else {
+          setApplications([]);
+        }
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+        toast.error('Failed to load applications');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchApplications();
+  }, [rentalId, userProfile?.organization_id]);
 
   const filteredApplications = applications.filter(application => 
     application.applicant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    application.applicant.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     application.status.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddApplication = (applicationData: any) => {
-    // TODO: Implement application submission logic
-    console.log('New application:', applicationData);
+  const handleAddApplication = () => {
+    // Refresh applications after adding a new one
+    if (rentalId && userProfile?.organization_id) {
+      setLoading(true);
+      applicationService.getPropertyApplications(rentalId, userProfile.organization_id)
+        .then(async applications => {
+          // First get basic list
+          const basicList = applications.map(app => mapToViewModel(app));
+          setApplications(basicList);
+          
+          // Then fetch detailed data for each application including documents
+          const detailedApplications = await Promise.all(
+            applications.map(async (app) => {
+              try {
+                const detailedApp = await applicationService.getApplicationById(
+                  app.id || '',
+                  userProfile.organization_id || ''
+                );
+                return mapToViewModel(detailedApp);
+              } catch (error) {
+                console.error(`Error fetching details for application ${app.id}:`, error);
+                return mapToViewModel(app);
+              }
+            })
+          );
+          
+          setApplications(detailedApplications);
+          toast.success('Application added successfully');
+        })
+        .catch(error => {
+          console.error('Error refreshing applications:', error);
+          toast.error('Failed to refresh applications');
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+    setIsAddDrawerOpen(false);
   };
 
-  const handleStatusUpdate = (applicationId: string, newStatus: 'approved' | 'rejected') => {
+  const handleStatusUpdate = async (applicationId: string, newStatus: 'approved' | 'rejected') => {
+    if (!userProfile?.organization_id) return;
+    
+    try {
+      setLoading(true);
+      // First update the status
+      const updatedApp = await applicationService.updateApplicationStatus(
+        applicationId, 
+        newStatus, 
+        userProfile.organization_id
+      );
+      
+      console.log("Status update successful:", updatedApp);
+      
+      try {
+        // Try to fetch the full updated application with documents
+        const fullUpdatedApplication = await applicationService.getApplicationById(
+          applicationId,
+          userProfile.organization_id
+        );
+        
+        // Update with the full data if fetch succeeded
+        setApplications(prevApplications =>
+          prevApplications.map(app =>
+            app.id === applicationId
+              ? mapToViewModel(fullUpdatedApplication)
+              : app
+          )
+        );
+      } catch (fetchError) {
+        // If fetching the updated application fails, still update the status in the UI
+        console.warn("Error fetching updated application:", fetchError);
+        
+        // Update just the status in the UI
     setApplications(prevApplications =>
       prevApplications.map(app =>
         app.id === applicationId
@@ -91,6 +333,15 @@ export default function RentalApplications() {
           : app
       )
     );
+      }
+      
+      toast.success(`Application ${newStatus}`);
+    } catch (error) {
+      console.error(`Error updating application status:`, error);
+      toast.error(`Failed to ${newStatus} application`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -103,7 +354,7 @@ export default function RentalApplications() {
         </div>
         <div className="flex items-center gap-4">
           <div className="relative w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <IconWrapper icon={Search} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
               placeholder="Search applications..."
@@ -123,7 +374,19 @@ export default function RentalApplications() {
 
       {/* Applications List */}
       <div className="p-4 space-y-4">
-        {filteredApplications.map((application) => (
+        {loading && (
+          <div className="flex justify-center items-center py-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2C3539]"></div>
+          </div>
+        )}
+        
+        {!loading && filteredApplications.length === 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
+            <p className="text-[#6B7280]">No applications found for this property.</p>
+          </div>
+        )}
+        
+        {!loading && filteredApplications.map((application) => (
           <div
             key={application.id}
             onClick={() => {
@@ -134,20 +397,12 @@ export default function RentalApplications() {
           >
             <div className="flex items-start justify-between mb-6">
               <div className="flex items-center">
-                {application.applicant.imageUrl ? (
-                  <img
-                    src={application.applicant.imageUrl}
-                    alt={application.applicant.name}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
-                    <User className="w-6 h-6 text-gray-500" />
+                  <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <IconWrapper icon={NotepadText} className="w-6 h-6 text-gray-500" />
                   </div>
-                )}
                 <div className="ml-4">
                   <h3 className="text-lg font-semibold text-[#2C3539]">{application.applicant.name}</h3>
-                  <p className="text-sm text-[#6B7280]">{application.applicant.email}</p>
+                  <p className="text-sm text-[#6B7280]">ID: {application.applicant.id}</p>
                 </div>
               </div>
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
@@ -158,7 +413,7 @@ export default function RentalApplications() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <div>
                 <div className="flex items-center text-sm text-[#6B7280] mb-1">
-                  <Calendar className="w-4 h-4 mr-2" />
+                  <IconWrapper icon={Calendar} className="w-4 h-4 mr-2" />
                   Submit Date
                 </div>
                 <p className="text-[#2C3539] font-medium">
@@ -167,7 +422,7 @@ export default function RentalApplications() {
               </div>
               <div>
                 <div className="flex items-center text-sm text-[#6B7280] mb-1">
-                  <Calendar className="w-4 h-4 mr-2" />
+                  <IconWrapper icon={Calendar} className="w-4 h-4 mr-2" />
                   Desired Move-in
                 </div>
                 <p className="text-[#2C3539] font-medium">
@@ -176,20 +431,20 @@ export default function RentalApplications() {
               </div>
               <div>
                 <div className="flex items-center text-sm text-[#6B7280] mb-1">
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Annual Income
+                  <IconWrapper icon={DollarSign} className="w-4 h-4 mr-2" />
+                  Monthly Income
                 </div>
                 <p className="text-[#2C3539] font-medium">
-                  ${application.income.toLocaleString()}
+                  ${application.monthly_income?.toLocaleString() || 'Not specified'}
                 </p>
               </div>
               <div>
                 <div className="flex items-center text-sm text-[#6B7280] mb-1">
-                  <FileText className="w-4 h-4 mr-2" />
+                  <IconWrapper icon={FileText} className="w-4 h-4 mr-2" />
                   Documents
                 </div>
                 <p className="text-[#2C3539] font-medium">
-                  {application.documents.length} files
+                  {application.documents?.length || 0} files
                 </p>
               </div>
             </div>
@@ -212,7 +467,10 @@ export default function RentalApplications() {
       <AddApplicationDrawer
         isOpen={isAddDrawerOpen}
         onClose={() => setIsAddDrawerOpen(false)}
-        onSubmit={handleAddApplication}
+        propertyId={rentalId}
+        organizationId={userProfile?.organization_id || ''}
+        onSuccess={handleAddApplication}
+        availableUnits={availableUnits}
       />
 
       {/* Backdrop */}

@@ -17,9 +17,15 @@
     "start": "npm run start --workspace=backend",
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
-    "deploy": "netlify deploy --prod"
+    "deploy": "netlify deploy --prod",
+    "generate-swagger": "node scripts/generate-swagger.js",
+    "postman-setup": "npm run generate-swagger && node scripts/generate-postman-collection.js",
+    "update-postman": "npm run generate-swagger && node scripts/update-postman.js"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "react-phone-number-input": "^3.4.12"
   }
 }

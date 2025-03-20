@@ -1,6 +1,7 @@
 import React from 'react';
-import { User } from 'lucide-react';
+import { User, Mail, Phone } from 'lucide-react';
 import { TeamMember } from '../../types/people';
+import Icon from '../common/Icon';
 
 interface TeamMemberCardProps {
   member: TeamMember;
@@ -21,26 +22,44 @@ const getStatusColor = (status: string) => {
 
 export default function TeamMemberCard({ member }: TeamMemberCardProps) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-4">
-      <div className="flex items-center space-x-3">
+    <div className="bg-white rounded-lg border border-gray-100 p-4 hover:border-gray-200 transition-colors">
+      <div className="flex items-center space-x-4">
         <div className="relative">
           {member.imageUrl ? (
             <img
               src={member.imageUrl}
               alt={member.name}
-              className="w-10 h-10 rounded-full object-cover"
+              className="w-12 h-12 rounded-full object-cover"
             />
           ) : (
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
-              <User className="w-5 h-5 text-gray-500" />
+            <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center">
+              <Icon icon={User} className="w-6 h-6 text-gray-500" />
             </div>
           )}
-          <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white ${getStatusColor(member.status)}`} />
+          <span className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white ${getStatusColor(member.status)}`} />
         </div>
-        <div>
-          <h3 className="text-sm font-medium text-[#2C3539]">{member.name}</h3>
-          <p className="text-xs text-[#6B7280]">{member.role}</p>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-[#2C3539] truncate">
+            {member.name}
+          </p>
+          <p className="text-sm text-[#6B7280] truncate">
+            {member.role}
+          </p>
         </div>
+      </div>
+      <div className="mt-4 space-y-2">
+        {member.email && (
+          <div className="flex items-center text-sm text-[#6B7280]">
+            <Icon icon={Mail} className="w-4 h-4 mr-2" />
+            <span className="truncate">{member.email}</span>
+          </div>
+        )}
+        {member.phone && (
+          <div className="flex items-center text-sm text-[#6B7280]">
+            <Icon icon={Phone} className="w-4 h-4 mr-2" />
+            <span>{member.phone}</span>
+          </div>
+        )}
       </div>
     </div>
   );

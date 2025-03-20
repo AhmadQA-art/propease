@@ -9,6 +9,7 @@
   NPM_FLAGS = "--legacy-peer-deps"
   VITE_SUPABASE_URL = "https://ljojrcciojdprmvrtbdb.supabase.co"
   VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxqb2pyY2Npb2pkcHJtdnJ0YmRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzg2MTM5MTMsImV4cCI6MjA1NDE4OTkxM30.-iqJefSjdHCvChvfYXnZOJIqKHTympzRpVSOy7R2bRc"
+  VITE_API_URL = "/.netlify/functions/api"
 
 [build.processing]
   skip_processing = false

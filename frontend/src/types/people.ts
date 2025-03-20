@@ -1,41 +1,27 @@
-export type PersonType = 'team' | 'tenant' | 'owner' | 'vendor';
+export type PersonType = 'tenant' | 'owner' | 'vendor' | 'team';
 
 export interface BasePerson {
   id: string;
   type: PersonType;
   name: string;
-  email: string;
-  phone: string;
+  email?: string;
+  phone?: string;
+  status: 'active' | 'inactive' | 'pending';
   imageUrl?: string;
   createdAt: string;
-  status: 'active' | 'inactive';
-}
-
-export interface TeamMember extends BasePerson {
-  type: 'team';
-  role: string;
-  department?: string;
-  jobTitle: string;
-  reportsTo?: string;
-  lastActive?: string;
+  // Additional fields for form handling
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface Tenant extends BasePerson {
   type: 'tenant';
-  unit: string;
-  property: string;
-  leaseStart: string;
-  leaseEnd: string;
-  rentStatus: 'current' | 'late' | 'paid';
-}
-
-export interface Vendor extends BasePerson {
-  type: 'vendor';
-  company: string;
-  service: string;
-  rating: number;
-  lastService: string;
-  totalServices: number;
+  unit?: string;
+  property?: string;
+  leaseStart?: string;
+  leaseEnd?: string;
+  rentStatus?: 'current' | 'late' | 'paid';
+  organization_id?: string;
 }
 
 export interface Owner extends BasePerson {
@@ -47,22 +33,48 @@ export interface Owner extends BasePerson {
   }>;
 }
 
-export type Person = TeamMember | Tenant | Vendor | Owner;
+export interface Vendor extends BasePerson {
+  type: 'vendor';
+  company?: string;  // UI-friendly alias for vendor_name
+  company_name?: string; // For backward compatibility, maps to vendor_name
+  vendor_name?: string; // New primary field from the schema
+  service?: string;  // UI-friendly alias for service_type 
+  service_type?: string;
+  contact_person_name?: string;
+  contact_person_email?: string;
+  rating?: number; // UI-friendly alias for performance_rating
+  performance_rating?: number;
+  lastService?: string;
+  totalServices?: number;
+  // Additional fields from schema
+  payment_terms?: string;
+  notes?: string;
+}
+
+export interface TeamMember extends BasePerson {
+  type: 'team';
+  role?: string;
+  department?: string;
+  tasks?: Task[];
+  activities?: Activity[];
+}
 
 export interface Task {
   id: string;
   title: string;
-  description: string;
+  description?: string;
+  status: 'todo' | 'in_progress' | 'completed';
+  dueDate?: string;
   assignedTo: string;
-  dueDate: string;
-  status: 'pending' | 'in-progress' | 'completed';
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'normal' | 'high';
 }
 
 export interface Activity {
   id: string;
-  userId: string;
-  type: string;
+  type: 'task_update' | 'comment' | 'status_change';
   description: string;
   timestamp: string;
+  userId: string;
 }
+
+export type Person = Tenant | Owner | Vendor | TeamMember;

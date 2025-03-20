@@ -19,7 +19,7 @@
     "jsx": "react-jsx",
 
     /* Linting */
-    "strict": false,
+    "strict": true,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": false,
@@ -28,7 +28,10 @@
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
-    "strictNullChecks": false
+    "strictNullChecks": false,
+    "types": ["react", "node"],
+    "typeRoots": ["./node_modules/@types"],
+    "jsxImportSource": "react"
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

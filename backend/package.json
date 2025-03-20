@@ -4,7 +4,7 @@
   "description": "PropEase property management system backend",
   "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon src/index.js",
+    "dev": "nodemon --config nodemon.json src/index.js",
     "build": "mkdir -p netlify/functions && cp -r src/* netlify/functions/",
     "start": "node src/index.js",
     "generate-docs": "node scripts/swagger-to-postman.js",
@@ -13,16 +13,19 @@
     "update-postman": "node scripts/update-postman-collection.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.8",
+    "@supabase/supabase-js": "^2.49.1",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
+    "node-fetch": "^3.3.2",
     "serverless-http": "^3.1.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.0"
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

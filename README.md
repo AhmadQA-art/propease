@@ -125,3 +125,71 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ### Accessing the Application
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5000
+
+# PropEase Frontend Implementation
+
+## Frontend People Feature Implementation
+
+This update implements the frontend changes specified in the implementation plan for the People feature. The following changes have been made:
+
+### Dialog Components
+
+1. **AddPersonDialog.tsx**
+   - Left unchanged as requested, preserves team member invitation flow
+   - Used for inviting team members via email
+
+2. **AddOwnerDialog.tsx**
+   - Created new component with fields:
+     - First Name (required)
+     - Last Name (required)
+     - Email (required)
+     - Phone (required)
+     - Company Name (optional)
+     - Properties (optional, searchable multi-select)
+
+3. **AddTenantDialog.tsx**
+   - Updated with fields:
+     - First Name (required)
+     - Last Name (required)
+     - Email (required)
+     - Phone (required)
+     - Unit (optional, searchable dropdown)
+     - Lease Start Date (required if unit is selected)
+     - Lease End Date (required if unit is selected)
+
+4. **AddVendorDialog.tsx**
+   - Updated with fields:
+     - First Name (required)
+     - Last Name (required)
+     - Email (required)
+     - Phone (required)
+     - Company Name (required)
+     - Service Type (required, dropdown)
+     - Business Type (required, dropdown)
+     - Status (required, dropdown)
+
+### Main Page Components
+
+1. **People.tsx**
+   - Added dropdown menu for "Add New" button in All People tab
+   - Connected appropriate dialog components based on selected person type
+   - Preserved Team tab view as required
+   - Added state management for dialog open/close
+
+2. **TableToolbar.tsx**
+   - Added customAddButton prop to support the dropdown menu
+
+## Usage
+
+- **All People Tab**: Click "Add New" to see a dropdown with options for Team Member, Owner, Tenant, and Vendor
+- **Team Tab**: Click "Add Member" to open the team member invitation dialog
+- **Owners Tab**: Click "Add Owner" to open the owner creation dialog
+- **Tenants Tab**: Click "Add Tenant" to open the tenant creation dialog
+- **Vendors Tab**: Click "Add Vendor" to open the vendor creation dialog
+
+## Notes
+
+- The UI is built according to the implementation plan specifications
+- All dialogs use consistent styling and field layouts
+- Form validation is included for required fields
+- The Team View and team member invitation flow remain unchanged

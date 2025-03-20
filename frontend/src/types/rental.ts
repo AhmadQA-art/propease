@@ -15,7 +15,7 @@ export interface Unit {
   isAvailable?: boolean;
   number?: string;
   floor_plan?: string;
-  square_feet?: number;
+  area?: number;
   bedrooms?: number;
   bathrooms?: number;
   created_at?: string;
@@ -68,6 +68,9 @@ export interface RentalDetails extends Property {
     email: string;
   };
   agreementFile?: string;
+  monthly_revenue?: number;
+  active_leases?: number;
+  occupancy_rate?: number;
 }
 
 export type NewRentalDetails = Omit<RentalDetails, 'id' | 'status'>;

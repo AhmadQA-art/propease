@@ -27,7 +27,7 @@ const getStatusColor = (status: string) => {
   }
 };
 
-export default function TeamView({ teamMembers, tasks, activities }: TeamViewProps) {
+export default function TeamView({ teamMembers = [], tasks = [], activities = [] }: TeamViewProps) {
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [isAddTaskDrawerOpen, setIsAddTaskDrawerOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -45,10 +45,10 @@ export default function TeamView({ teamMembers, tasks, activities }: TeamViewPro
     setIsTaskDetailsOpen(true);
   };
 
-  const filteredTasks = tasks.filter(task =>
+  const filteredTasks = tasks?.filter(task =>
     task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    task.assignee.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    (task.assignee?.name && task.assignee.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  ) || [];
 
   return (
     <div className="min-h-screen flex flex-col">

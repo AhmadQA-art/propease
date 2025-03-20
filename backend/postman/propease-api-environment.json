@@ -1,115 +1,25 @@
 {
-  "id": "propease-api-environment",
   "name": "PropEase API Environment",
   "values": [
     {
       "key": "baseUrl",
       "value": "http://localhost:5001",
-      "type": "default",
-      "enabled": true
+      "type": "string"
     },
     {
       "key": "accessToken",
       "value": "",
-      "type": "secret",
-      "enabled": true
+      "type": "string"
     },
     {
       "key": "userId",
       "value": "",
-      "type": "default",
-      "enabled": true
+      "type": "string"
     },
     {
       "key": "organizationId",
       "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "userName",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "userEmail",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "userRole",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "tenantId",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "ownerId",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "vendorId",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "propertyId",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "unitId",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "leaseId",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "maintenanceId",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "paymentId",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "invitationToken",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "testEmail",
-      "value": "test@example.com",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "testPassword",
-      "value": "Password123!",
-      "type": "secret",
-      "enabled": true
+      "type": "string"
     }
-  ],
-  "_postman_variable_scope": "environment"
+  ]
 }
