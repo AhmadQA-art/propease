@@ -14,14 +14,24 @@ export interface BasePerson {
   lastName?: string;
 }
 
+export interface LeaseInfo {
+  id?: string;
+  unitName?: string;
+  property?: string;
+  rentAmount?: number;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+}
+
 export interface Tenant extends BasePerson {
   type: 'tenant';
   unit?: string;
   property?: string;
-  leaseStart?: string;
-  leaseEnd?: string;
   rentStatus?: 'current' | 'late' | 'paid';
   organization_id?: string;
+  preferredContactMethods?: string[];
+  lease?: LeaseInfo;
 }
 
 export interface Owner extends BasePerson {

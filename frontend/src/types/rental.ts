@@ -6,25 +6,16 @@ export interface Person {
 
 export interface Unit {
   id: string;
-  property_id: string;
   unit_number: string;
-  name: string;
-  rentAmount: number;
-  occupancyStatus: 'vacant' | 'occupied';
-  status: 'vacant' | 'occupied' | 'maintenance';
-  isAvailable?: boolean;
-  number?: string;
-  floor_plan?: string;
-  area?: number;
-  bedrooms?: number;
-  bathrooms?: number;
-  created_at?: string;
-  updated_at?: string;
-  resident?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  rent_amount: number;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  status: 'vacant' | 'occupied' | 'deleted';
+  floor_plan: string;
+  smart_lock_enabled: boolean;
+  property_id: string;
+  organization_id: string;
 }
 
 export interface Property {
@@ -37,18 +28,11 @@ export interface Property {
   total_units: number;
   owner_id: string;
   organization_id: string;
-  created_at?: string;
-  updated_at?: string;
+  property_type: 'residential' | 'commercial';
   units?: Unit[];
-  owner?: {
-    id: string;
-    user: {
-      id: string;
-      first_name: string;
-      last_name: string;
-      email: string;
-    };
-  };
+  monthly_revenue?: number;
+  active_leases?: number;
+  occupancy_rate?: number;
 }
 
 export interface RentalDetails extends Property {

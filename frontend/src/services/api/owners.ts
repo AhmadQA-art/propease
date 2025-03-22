@@ -7,7 +7,8 @@ export interface Owner {
   email: string;
   phone: string;
   company_name: string;
-  business_type: string;
+  owner_type: string;
+  business_type?: string;
   status: string;
   created_at: string;
 }
@@ -25,8 +26,9 @@ export interface CreateOwnerData {
   last_name: string;
   email: string;
   phone: string;
-  company_name: string;
-  business_type: string;
+  company_name?: string;
+  owner_type: string;
+  business_type?: string;
   notes?: string;
 }
 

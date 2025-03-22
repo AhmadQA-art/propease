@@ -213,23 +213,134 @@ class RentalController {
     }
   }
 
-  // Update rental
+  // Update rental with units
   async updateRental(req, res) {
     try {
-      const { data, error } = await supabase
+      const { property, units } = req.body;
+      const { id } = req.params;
+      const { organization_id } = req.user; // Assuming from auth middleware
+
+      // Fetch the current property to ensure it exists
+      const { data: existingProperty, error: fetchError } = await supabase
         .from('properties')
-        .update(req.body)
-        .eq('id', req.params.id)
-        .select()
+        .select('*')
+        .eq('id', id)
+        .eq('organization_id', organization_id)
         .single();
 
-      if (error) throw error;
-      if (!data) {
+      if (fetchError || !existingProperty) {
         return res.status(404).json({ error: 'Rental not found' });
       }
 
-      res.json(data);
+      // Update property details
+      const { data: updatedProperty, error: propertyError } = await supabase
+        .from('properties')
+        .update(property)
+        .eq('id', id)
+        .eq('organization_id', organization_id)
+        .select()
+        .single();
+
+      if (propertyError) throw propertyError;
+
+      // Handle units: add, update, mark as deleted (instead of physically deleting)
+      if (units) {
+        const { add, update, markAsDeleted } = units;
+
+        // Add new units (check for duplicates first)
+        if (add && add.length > 0) {
+          // Get existing unit numbers for this property
+          const { data: existingUnits, error: unitsError } = await supabase
+            .from('units')
+            .select('unit_number')
+            .eq('property_id', id)
+            .eq('organization_id', organization_id)
+            .neq('status', 'deleted');
+            
+          if (unitsError) throw unitsError;
+          
+          const existingUnitNumbers = new Set(existingUnits.map(u => u.unit_number));
+          
+          // Check for duplicates
+          const duplicateUnits = add.filter(unit => 
+            existingUnitNumbers.has(unit.unit_number)
+          );
+          
+          if (duplicateUnits.length > 0) {
+            return res.status(400).json({
+              error: 'Duplicate unit numbers found',
+              duplicates: duplicateUnits.map(u => u.unit_number)
+            });
+          }
+
+          // Add valid units
+          const unitsToAdd = add.map(unit => ({
+            ...unit,
+            property_id: id,
+            organization_id: organization_id,
+          }));
+          
+          const { error: addError } = await supabase
+            .from('units')
+            .insert(unitsToAdd);
+            
+          if (addError) throw addError;
+        }
+
+        // Update existing units
+        if (update && update.length > 0) {
+          for (const unit of update) {
+            const { id: unitId, ...unitData } = unit;
+            const { error: updateError } = await supabase
+              .from('units')
+              .update(unitData)
+              .eq('id', unitId)
+              .eq('property_id', id)
+              .eq('organization_id', organization_id);
+              
+            if (updateError) throw updateError;
+          }
+        }
+
+        // Mark units as deleted (soft delete) rather than physically removing
+        if (markAsDeleted && markAsDeleted.length > 0) {
+          const { error: deleteError } = await supabase
+            .from('units')
+            .update({ status: 'deleted' })
+            .in('id', markAsDeleted)
+            .eq('property_id', id)
+            .eq('organization_id', organization_id);
+            
+          if (deleteError) throw deleteError;
+        }
+      }
+
+      // Fetch the updated property with units
+      const { data: completeProperty, error: fetchUpdatedError } = await supabase
+        .from('properties')
+        .select(`
+          *,
+          units (
+            id, 
+            unit_number, 
+            floor_plan, 
+            area, 
+            bedrooms, 
+            bathrooms, 
+            rent_amount, 
+            status,
+            smart_lock_enabled
+          )
+        `)
+        .eq('id', id)
+        .eq('organization_id', organization_id)
+        .single();
+
+      if (fetchUpdatedError) throw fetchUpdatedError;
+
+      res.json(completeProperty);
     } catch (error) {
+      console.error('Error updating rental:', error);
       res.status(500).json({ error: error.message });
     }
   }

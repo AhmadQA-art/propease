@@ -64,7 +64,11 @@ const getActivityIcon = (type: ActivityItem['type']) => {
   }
 };
 
-export default function RentalActivities() {
+interface RentalActivitiesProps {
+  rentalId: string;
+}
+
+export default function RentalActivities({ rentalId }: RentalActivitiesProps) {
   return (
     <div className="space-y-6">
       <div className="flow-root">

@@ -93,8 +93,7 @@ export const autoApi = {
         last_name: data.last_name,
         email: data.email,
         phone: data.phone,
-        company_name: data.company_name,
-        business_type: data.business_type,
+        owner_type: data.owner_type,
         notes: data.notes,
         status: data.status || 'active',
         user_id: null // Explicitly set user_id to null

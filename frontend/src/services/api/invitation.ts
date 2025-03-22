@@ -121,9 +121,8 @@ export const invitationApi = {
     email: string;
     name?: string;
     phone?: string;
-    company_name?: string;
     address?: string;
-    business_type?: string;
+    owner_type?: string;
     tax_id?: string;
     payment_schedule?: string;
     payment_method?: string;

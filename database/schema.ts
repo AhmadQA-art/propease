@@ -1,6 +1,6 @@
 /**
 * PropEase Database Schema TypeScript Definitions
-* Auto-generated on: Thu Mar 20 04:04:49 PM +03 2025
+* Auto-generated on: Sat Mar 22 03:06:05 PM +03 2025
 */
 
 // Type definitions for common PostgreSQL data types
@@ -410,7 +410,7 @@ created_at?: Timestamp;
 updated_at?: Timestamp;
 company_name?: string;
 tax_id?: string;
-business_type?: string;
+owner_type?: string;
 email?: string;
 address?: string;
 payment_method?: string;
@@ -726,6 +726,7 @@ smart_lock_details?: JSONB;
 utility_meters?: JSONB;
 maintenance_history?: JSONB;
 organization_id: UUID;
+maintenance: boolean;
 
 }
 
@@ -784,6 +785,7 @@ organization_id: UUID;
 contact_person_name?: string;
 contact_person_email?: string;
 vendor_name?: string;
+contact_person_phone?: string;
 
 }
 

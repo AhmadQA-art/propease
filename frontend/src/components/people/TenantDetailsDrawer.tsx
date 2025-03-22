@@ -1,15 +1,16 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     X,
     Mail,
     Phone,
     Home,
     Calendar,
-    CreditCard,
     FileText,
-    User
+    User,
+    Loader2
 } from 'lucide-react';
-import {format} from 'date-fns';
+import { format } from 'date-fns';
+import { peopleApi } from '../../services/api/people';
 
 interface TenantDetailsDrawerProps {
     tenant: {
@@ -18,42 +19,79 @@ interface TenantDetailsDrawerProps {
         email: string;
         phone: string;
         imageUrl?: string;
-        property: string;
-        unit: string;
+        property?: string;
+        unit?: string;
         leaseStart?: string;
         leaseEnd?: string;
         rentAmount?: number;
-        rentStatus: string;
-        documents?: {
-            name: string;
-            date: string
-        }[];
-        paymentHistory?: {
-            amount: number;
-            date: string;
-            status: string
-        }[];
+        rentStatus?: string;
     } | null;
     isOpen: boolean;
     onClose: () => void;
 }
 
-export default function TenantDetailsDrawer({tenant, isOpen, onClose} : TenantDetailsDrawerProps) {
-    if (!isOpen || !tenant) 
-        return null;
-    
+interface DetailedTenant {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    imageUrl?: string;
+    lease?: {
+        id: string;
+        property: string;
+        unitName: string;
+        startDate: string;
+        endDate: string;
+        rentAmount: number;
+        status: string;
+    };
+    documents?: {
+        id: string;
+        name: string;
+        date: string;
+        url: string;
+    }[];
+}
+
+export default function TenantDetailsDrawer({ tenant, isOpen, onClose }: TenantDetailsDrawerProps) {
+    const [detailedTenant, setDetailedTenant] = useState<DetailedTenant | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isOpen && tenant) {
+            fetchTenantDetails(tenant.id);
+        } else {
+            setDetailedTenant(null);
+        }
+    }, [isOpen, tenant]);
+
+    const fetchTenantDetails = async (tenantId: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            // Fetch tenant details including lease and documents
+            const response = await peopleApi.getTenantDetails(tenantId);
+            setDetailedTenant(response);
+        } catch (err) {
+            console.error('Error fetching tenant details:', err);
+            setError('Failed to load tenant details');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (!isOpen || !tenant) return null;
 
     return (
         <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50"
             onClick={onClose}>
             <div className={
-                    `w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out h-full flex flex-col ${
-                        isOpen ? 'translate-x-0' : 'translate-x-full'
-                    }`
-                }
-                onClick={
-                    (e) => e.stopPropagation()
-                }
+                `w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out h-full flex flex-col ${
+                    isOpen ? 'translate-x-0' : 'translate-x-full'
+                }`
+            }
+                onClick={(e) => e.stopPropagation()}
                 // Prevent closing when clicking inside
             >
                 {/* Header - Fixed */}
@@ -73,152 +111,153 @@ export default function TenantDetailsDrawer({tenant, isOpen, onClose} : TenantDe
 
                 {/* Content - Scrollable */}
                 <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
-                    <div className="p-6 space-y-6">
-                        {/* Tenant Info */}
-                        <div className="flex items-center space-x-4">
-                            {
-                            tenant.imageUrl ? (
-                                <img src={
-                                        tenant.imageUrl
-                                    }
-                                    alt={
-                                        tenant.name
-                                    }
-                                    className="w-16 h-16 rounded-full object-cover"/>
-                            ) : (
-                                <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <User className="w-8 h-8 text-gray-500"/>
-                                </div>
-                            )
-                        }
-                            <div>
-                                <h3 className="text-lg font-semibold text-[#2C3539]">
-                                    {
-                                    tenant.name
-                                }</h3>
-                                <div className="space-y-1 mt-1">
-                                    <div className="flex items-center text-sm text-[#6B7280]">
-                                        <Mail className="w-4 h-4 mr-2"/> {
-                                        tenant.email
-                                    } </div>
-                                    <div className="flex items-center text-sm text-[#6B7280]">
-                                        <Phone className="w-4 h-4 mr-2"/> {
-                                        tenant.phone
-                                    } </div>
-                                </div>
-                            </div>
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center h-full p-6">
+                            <Loader2 className="w-8 h-8 text-[#2C3539] animate-spin mb-2" />
+                            <p className="text-[#6B7280]">Loading tenant details...</p>
                         </div>
-
-                        {/* Property Info */}
-                        <div className="space-y-4">
-                            <h4 className="text-sm font-medium text-[#6B7280]">Property Information</h4>
-                            <div className="bg-gray-50 rounded-lg p-4">
-                                <div className="flex items-center space-x-2 mb-2">
-                                    <Home className="w-4 h-4 text-[#6B7280]"/>
-                                    <span className="text-sm font-medium text-[#2C3539]">
-                                        {
-                                        tenant.property
-                                    }</span>
-                                </div>
-                                <p className="text-sm text-[#6B7280]">Unit {
-                                    tenant.unit
-                                }</p>
-                            </div>
+                    ) : error ? (
+                        <div className="flex flex-col items-center justify-center h-full p-6">
+                            <p className="text-red-500 mb-2">{error}</p>
+                            <button 
+                                onClick={() => tenant && fetchTenantDetails(tenant.id)}
+                                className="px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+                            >
+                                Retry
+                            </button>
                         </div>
-
-                        {/* Lease Details */}
-                        <div className="space-y-4">
-                            <h4 className="text-sm font-medium text-[#6B7280]">Lease Details</h4>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                        <Calendar className="w-4 h-4 text-[#6B7280]"/>
-                                        <span className="text-sm text-[#6B7280]">Start Date</span>
+                    ) : (
+                        <div className="p-6 space-y-6">
+                            {/* Tenant Info */}
+                            <div className="flex items-center space-x-4">
+                                {(detailedTenant?.imageUrl || tenant.imageUrl) ? (
+                                    <img 
+                                        src={detailedTenant?.imageUrl || tenant.imageUrl} 
+                                        alt={detailedTenant?.name || tenant.name}
+                                        className="w-16 h-16 rounded-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+                                        <User className="w-8 h-8 text-gray-500"/>
                                     </div>
-                                    <p className="text-sm font-medium text-[#2C3539]">
-                                        {
-                                        tenant.leaseStart ? format(new Date(tenant.leaseStart), 'MMM d, yyyy') : 'N/A'
-                                    } </p>
-                                </div>
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                    <div className="flex items-center space-x-2 mb-1">
-                                        <Calendar className="w-4 h-4 text-[#6B7280]"/>
-                                        <span className="text-sm text-[#6B7280]">End Date</span>
+                                )}
+                                <div>
+                                    <h3 className="text-lg font-semibold text-[#2C3539]">
+                                        {detailedTenant?.name || tenant.name}
+                                    </h3>
+                                    <div className="space-y-1 mt-1">
+                                        <div className="flex items-center text-sm text-[#6B7280]">
+                                            <Mail className="w-4 h-4 mr-2"/> 
+                                            {detailedTenant?.email || tenant.email}
+                                        </div>
+                                        <div className="flex items-center text-sm text-[#6B7280]">
+                                            <Phone className="w-4 h-4 mr-2"/> 
+                                            {detailedTenant?.phone || tenant.phone}
+                                        </div>
                                     </div>
-                                    <p className="text-sm font-medium text-[#2C3539]">
-                                        {
-                                        tenant.leaseEnd ? format(new Date(tenant.leaseEnd), 'MMM d, yyyy') : 'N/A'
-                                    } </p>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Payment History */}
-                        {
-                        tenant.paymentHistory && (
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-medium text-[#6B7280]">Recent Payments</h4>
-                                <div className="space-y-2">
-                                    {
-                                    tenant.paymentHistory.map((payment, index) => (
-                                        <div key={index}
-                                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <div>
-                                                <p className="text-sm font-medium text-[#2C3539]">
-                                                    {
-                                                    format(new Date(payment.date), 'MMM d, yyyy')
-                                                }</p>
-                                                <p className="text-sm text-[#6B7280]">
-                                                    {
-                                                    payment.amount.toLocaleString()
+                            {/* Show "No active lease" message if no lease */}
+                            {!detailedTenant?.lease && (
+                                <div className="bg-gray-50 rounded-lg p-6 text-center">
+                                    <p className="text-[#6B7280] italic">No active lease agreement</p>
+                                </div>
+                            )}
+
+                            {/* Property Info - Only show if lease exists */}
+                            {detailedTenant?.lease && (
+                                <div className="space-y-4">
+                                    <h4 className="text-sm font-medium text-[#6B7280]">Property Information</h4>
+                                    <div className="bg-gray-50 rounded-lg p-4">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                            <Home className="w-4 h-4 text-[#6B7280]"/>
+                                            <span className="text-sm font-medium text-[#2C3539]">
+                                                {detailedTenant.lease.property}
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-[#6B7280]">Unit {detailedTenant.lease.unitName}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Lease Details - Only show if lease exists */}
+                            {detailedTenant?.lease && (
+                                <div className="space-y-4">
+                                    <h4 className="text-sm font-medium text-[#6B7280]">Lease Details</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <div className="flex items-center space-x-2 mb-1">
+                                                <Calendar className="w-4 h-4 text-[#6B7280]"/>
+                                                <span className="text-sm text-[#6B7280]">Start Date</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-[#2C3539]">
+                                                {detailedTenant.lease.startDate ? 
+                                                    format(new Date(detailedTenant.lease.startDate), 'MMM d, yyyy') : 
+                                                    'N/A'
                                                 }
-                                                    rent payment</p>
-                                            </div>
-                                            <span className={
-                                                `px-2 py-1 rounded-full text-xs font-medium ${
-                                                    payment.status === 'paid' ? 'bg-green-100 text-green-800' : payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                                                }`
-                                            }>
-                                                {
-                                                payment.status
-                                            } </span>
+                                            </p>
                                         </div>
-                                    ))
-                                } </div>
-                            </div>
-                        )
-                    }
+                                        <div className="bg-gray-50 rounded-lg p-4">
+                                            <div className="flex items-center space-x-2 mb-1">
+                                                <Calendar className="w-4 h-4 text-[#6B7280]"/>
+                                                <span className="text-sm text-[#6B7280]">End Date</span>
+                                            </div>
+                                            <p className="text-sm font-medium text-[#2C3539]">
+                                                {detailedTenant.lease.endDate ? 
+                                                    format(new Date(detailedTenant.lease.endDate), 'MMM d, yyyy') : 
+                                                    'N/A'
+                                                }
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Rent Amount */}
+                                    <div className="bg-gray-50 rounded-lg p-4">
+                                        <div className="flex items-center space-x-2 mb-1">
+                                            <span className="text-sm text-[#6B7280]">Monthly Rent</span>
+                                        </div>
+                                        <p className="text-sm font-medium text-[#2C3539]">
+                                            ${detailedTenant.lease.rentAmount?.toLocaleString()} / month
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
-                        {/* Documents */}
-                        {
-                        tenant.documents && (
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-medium text-[#6B7280]">Documents</h4>
-                                <div className="space-y-2">
-                                    {
-                                    tenant.documents.map((doc, index) => (
-                                        <div key={index}
-                                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                            <div className="flex items-center space-x-2">
-                                                <FileText className="w-4 h-4 text-[#6B7280]"/>
-                                                <div>
-                                                    <p className="text-sm font-medium text-[#2C3539]">
-                                                        {
-                                                        doc.name
-                                                    }</p>
-                                                    <p className="text-xs text-[#6B7280]">
-                                                        {
-                                                        format(new Date(doc.date), 'MMM d, yyyy')
-                                                    }</p>
+                            {/* Documents - Only show if documents exist */}
+                            {detailedTenant?.documents && detailedTenant.documents.length > 0 && (
+                                <div className="space-y-4">
+                                    <h4 className="text-sm font-medium text-[#6B7280]">Documents</h4>
+                                    <div className="space-y-2">
+                                        {detailedTenant.documents.map((doc, index) => (
+                                            <div key={index}
+                                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                                <div className="flex items-center space-x-2">
+                                                    <FileText className="w-4 h-4 text-[#6B7280]"/>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-[#2C3539]">
+                                                            {doc.name}
+                                                        </p>
+                                                        <p className="text-xs text-[#6B7280]">
+                                                            {format(new Date(doc.date), 'MMM d, yyyy')}
+                                                        </p>
+                                                    </div>
                                                 </div>
+                                                <a 
+                                                    href={doc.url} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="text-sm text-[#2C3539] hover:text-[#3d474c]"
+                                                >
+                                                    View
+                                                </a>
                                             </div>
-                                            <button className="text-sm text-[#2C3539] hover:text-[#3d474c]">View</button>
-                                        </div>
-                                    ))
-                                } </div>
-                            </div>
-                        )
-                    } </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -4,6 +4,9 @@ import { peopleApi } from '../../services/api/people';
 import { authApi } from '../../services/api/auth';
 import type { Vendor } from '../../types/people';
 import { supabase } from '../../services/supabase/client';
+import PhoneInput from 'react-phone-number-input';
+import { isPossiblePhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 interface AddVendorDialogProps {
   isOpen: boolean;
@@ -21,6 +24,7 @@ interface VendorFormData {
   // Contact Person Details
   contactPersonName: string;
   contactPersonEmail: string;
+  contactPersonPhone: string;
 }
 
 // Service types for the dropdown
@@ -50,7 +54,8 @@ export default function AddVendorDialog({ isOpen, onClose, onSuccess }: AddVendo
     
     // Contact Person Details
     contactPersonName: '',
-    contactPersonEmail: ''
+    contactPersonEmail: '',
+    contactPersonPhone: ''
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -134,6 +139,16 @@ export default function AddVendorDialog({ isOpen, onClose, onSuccess }: AddVendo
         throw new Error('Vendor name and service type are required');
       }
       
+      // Validate phone number if provided
+      if (formData.vendorPhone && !isPossiblePhoneNumber(formData.vendorPhone)) {
+        throw new Error('Please enter a valid phone number');
+      }
+      
+      // Validate contact person phone if provided
+      if (formData.contactPersonPhone && !isPossiblePhoneNumber(formData.contactPersonPhone)) {
+        throw new Error('Please enter a valid contact person phone number');
+      }
+      
       // Check if we have an organization ID
       if (!organizationId) {
         throw new Error('Cannot create vendor: Organization ID is required. Please refresh or contact support.');
@@ -147,6 +162,7 @@ export default function AddVendorDialog({ isOpen, onClose, onSuccess }: AddVendo
         service_type: formData.serviceType,
         contact_person_name: formData.contactPersonName,
         contact_person_email: formData.contactPersonEmail,
+        contact_person_phone: formData.contactPersonPhone,
         organization_id: organizationId
       };
       
@@ -162,7 +178,8 @@ export default function AddVendorDialog({ isOpen, onClose, onSuccess }: AddVendo
         vendorPhone: '',
         serviceType: '',
         contactPersonName: '',
-        contactPersonEmail: ''
+        contactPersonEmail: '',
+        contactPersonPhone: ''
       });
       
       // Call success callback if provided
@@ -258,14 +275,19 @@ export default function AddVendorDialog({ isOpen, onClose, onSuccess }: AddVendo
                   <label className="block text-sm font-medium text-[#6B7280] mb-1">
                     Phone
                   </label>
-                  <input
-                    type="tel"
+                  <PhoneInput
+                    international
+                    countryCallingCodeEditable={false}
+                    defaultCountry="QA"
                     value={formData.vendorPhone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, vendorPhone: e.target.value }))}
+                    onChange={(value) => setFormData(prev => ({ ...prev, vendorPhone: value || '' }))}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                     placeholder="Phone number (optional)"
                     disabled={submitting}
                   />
+                  {formData.vendorPhone && !isPossiblePhoneNumber(formData.vendorPhone) && (
+                    <p className="mt-1 text-sm text-red-600">Please enter a valid phone number</p>
+                  )}
                 </div>
 
                 <div>
@@ -312,6 +334,25 @@ export default function AddVendorDialog({ isOpen, onClose, onSuccess }: AddVendo
                     placeholder="Contact person email"
                     disabled={submitting}
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                    Contact Person Phone
+                  </label>
+                  <PhoneInput
+                    international
+                    countryCallingCodeEditable={false}
+                    defaultCountry="QA"
+                    value={formData.contactPersonPhone}
+                    onChange={(value) => setFormData(prev => ({ ...prev, contactPersonPhone: value || '' }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                    placeholder="Contact person phone number"
+                    disabled={submitting}
+                  />
+                  {formData.contactPersonPhone && !isPossiblePhoneNumber(formData.contactPersonPhone) && (
+                    <p className="mt-1 text-sm text-red-600">Please enter a valid phone number</p>
+                  )}
                 </div>
               </div>
 

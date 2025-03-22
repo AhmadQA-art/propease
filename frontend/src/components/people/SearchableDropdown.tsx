@@ -12,6 +12,7 @@ export interface SearchableDropdownProps {
   selectedValues: string[];
   onChange: (values: string[]) => void;
   multiple?: boolean;
+  isMulti?: boolean;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -21,12 +22,16 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   selectedValues,
   onChange,
   multiple = false,
+  isMulti = false,
   placeholder = 'Select...',
   disabled = false
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Support both multiple and isMulti props
+  const allowMultiple = multiple || isMulti;
 
   const filteredOptions = options.filter((option) =>
     option.label.toLowerCase().includes(searchQuery.toLowerCase())
@@ -37,7 +42,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     .map((option) => option.label);
 
   const handleSelect = (value: string) => {
-    if (multiple) {
+    if (allowMultiple) {
       const newValues = selectedValues.includes(value)
         ? selectedValues.filter((v) => v !== value)
         : [...selectedValues, value];

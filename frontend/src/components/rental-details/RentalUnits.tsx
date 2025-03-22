@@ -53,7 +53,8 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
 
   // Update the filter effect to handle both search and status filters
   useEffect(() => {
-    let filtered = units;
+    // First filter out deleted units
+    let filtered = units.filter(unit => unit.status.toLowerCase() !== 'deleted');
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -87,22 +88,29 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
       // - Database uses snake_case (e.g. rent_amount)
       // - Some fields in the type don't exist in the database (name, occupancyStatus)
       
+      // Map status values correctly
+      let statusValue = 'vacant';
+      if (formData.status) {
+        // Convert UI status values to database values
+        const statusMap: { [key: string]: 'vacant' | 'occupied' | 'deleted' } = {
+          'available': 'vacant',
+          'vacant': 'vacant',
+          'occupied': 'occupied',
+          'maintenance': 'deleted',
+          'deleted': 'deleted'
+        };
+        statusValue = statusMap[formData.status.toLowerCase()] || 'vacant';
+      }
+
       // Create a unit data object with fields matching the actual database schema
       const unitData = {
         unit_number: formData.unitNumber,
-        status: formData.status as 'vacant' | 'occupied' | 'maintenance',
+        status: statusValue as 'vacant' | 'occupied' | 'deleted',
         rent_amount: formData.rentAmount || 0, // Database expects snake_case
         floor_plan: formData.floorPlan,
         area: formData.area,
         bedrooms: formData.bedrooms,
-        bathrooms: formData.bathrooms,
-        ...(formData.resident && {
-          resident: {
-            id: formData.resident.id,
-            name: formData.resident.name,
-            email: formData.resident.email
-          }
-        })
+        bathrooms: formData.bathrooms
       };
 
       // Type assertion to bypass the TypeScript checking
@@ -131,6 +139,8 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
         
         if (errorText.includes('duplicate key')) {
           errorMessage = 'A unit with this number already exists';
+        } else if (errorText.includes('already exist')) {
+          errorMessage = errorText;
         } else if (errorText.includes('not found')) {
           errorMessage = 'The rental property was not found';
         } else if (errorText.includes('schema cache')) {
@@ -172,6 +182,7 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
     const lowerStatus = status.toLowerCase();
     if (lowerStatus === 'vacant') return 'bg-green-100 text-green-800';
     if (lowerStatus === 'occupied') return 'bg-gray-100 text-gray-800';
+    if (lowerStatus === 'deleted') return 'hidden'; // Hide deleted units
     return 'bg-amber-100 text-amber-800'; // maintenance
   };
 
@@ -217,7 +228,6 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
                     <option value="all">All Statuses</option>
                     <option value="vacant">Vacant</option>
                     <option value="occupied">Occupied</option>
-                    <option value="maintenance">Maintenance</option>
                   </select>
                 </div>
                 <div className="pt-2 flex justify-end">
@@ -297,13 +307,13 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
 
               <div className="mt-3 grid grid-cols-3 gap-4">
                 {/* Monthly Rent */}
-            <div className="flex items-center">
+                <div className="flex items-center">
                   <svg className="w-4 h-4 text-[#6B7280] mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
                     <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"></path>
                     <path d="M12 18V6"></path>
                   </svg>
-                  <span className="text-sm text-[#2C3539]">${unit.rentAmount?.toLocaleString() || 0}/month</span>
+                  <span className="text-sm text-[#2C3539]">${unit.rent_amount?.toLocaleString() || 0}/month</span>
                 </div>
 
                 {/* Floor Plan */}
@@ -317,23 +327,16 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
                   </div>
                 )}
 
-                {/* Tenant or Specifications */}
-                {unit.status.toLowerCase() === 'occupied' && unit.resident ? (
+                {/* Status indicator for non-occupied units */}
+                {unit.status.toLowerCase() !== 'occupied' && (
                   <div className="flex items-center">
                     <svg className="w-4 h-4 text-[#6B7280] mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
                       <circle cx="12" cy="7" r="4"></circle>
                     </svg>
-                    <span className="text-sm text-[#2C3539]">{unit.resident.name}</span>
+                    <span className="text-sm text-[#2C3539]">{unit.status.charAt(0).toUpperCase() + unit.status.slice(1)}</span>
                   </div>
-                ) : unit.status.toLowerCase() === 'maintenance' ? (
-                  <div className="flex items-center">
-                    <svg className="w-4 h-4 text-[#6B7280] mr-2" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-                    </svg>
-                    <span className="text-sm text-[#2C3539]">Maintenance Required</span>
-                  </div>
-                ) : null}
+                )}
               </div>
 
               {/* Specifications Row */}
@@ -361,8 +364,8 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
                       <line x1="17" y1="19" x2="17" y2="21"></line>
                     </svg>
                     <span className="text-sm text-[#2C3539]">{unit.bathrooms} Bathrooms</span>
-                        </div>
-                      )}
+                </div>
+                )}
                 
                 {unit.area && (
                   <div className="flex items-center">
@@ -372,12 +375,12 @@ export default function RentalUnits({ rentalId }: RentalUnitsProps) {
                       <path d="M3 11v10a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V11"></path>
                     </svg>
                     <span className="text-sm text-[#2C3539]">{unit.area} sq m</span>
-              </div>
+                </div>
                 )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
 
       {/* Unit Details Drawer */}

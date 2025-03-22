@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { X, Mail, Phone, Briefcase, User, Calendar, Edit2, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Mail, Phone, Briefcase, User, Calendar, Edit2, Save, Home, MapPin } from 'lucide-react';
 import { UiOwner } from '../../services/adapters/ownerAdapter';
 import { ownersApi, CreateOwnerData } from '../../services/api/owners';
+import { propertyApi } from '../../services/api/properties';
+import { Property } from '../../services/supabase/types';
 import { toast } from 'react-hot-toast';
 
 interface OwnerDetailsDrawerProps {
@@ -18,9 +20,11 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [businessType, setBusinessType] = useState('');
+  const [ownerType, setOwnerType] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoadingProperties, setIsLoadingProperties] = useState(false);
+  
   // Initialize form when owner data changes
   React.useEffect(() => {
     if (owner) {
@@ -29,8 +33,28 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
       setEmail(owner.user_profiles.email);
       setPhone(owner.user_profiles.phone);
       setCompanyName(owner.company_name);
-      setBusinessType(owner.business_type);
+      setOwnerType(owner.owner_type || owner.business_type); // Support both field names
     }
+  }, [owner]);
+  
+  // Fetch properties when owner changes
+  useEffect(() => {
+    const fetchProperties = async () => {
+      if (!owner) return;
+      
+      setIsLoadingProperties(true);
+      try {
+        const ownerProperties = await propertyApi.getPropertiesByOwner(owner.id);
+        setProperties(ownerProperties);
+      } catch (error) {
+        console.error('Error fetching owner properties:', error);
+        toast.error('Failed to load properties');
+      } finally {
+        setIsLoadingProperties(false);
+      }
+    };
+    
+    fetchProperties();
   }, [owner]);
 
   const handleEditToggle = () => {
@@ -50,7 +74,7 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
         email,
         phone,
         company_name: companyName,
-        business_type: businessType
+        owner_type: ownerType
       };
       
       // Update owner in API
@@ -205,28 +229,28 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
               </div>
             </div>
             
-            {/* Business Type */}
+            {/* Owner Type */}
             <div className="mt-6">
-              <h4 className="text-sm font-medium text-[#6B7280] mb-2">Business Type</h4>
+              <h4 className="text-sm font-medium text-[#6B7280] mb-2">Owner Type</h4>
               {isEditing ? (
                 <select
-                  value={businessType}
-                  onChange={(e) => setBusinessType(e.target.value)}
+                  value={ownerType}
+                  onChange={(e) => setOwnerType(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                 >
-                  <option value="">Select business type</option>
+                  <option value="">Select owner type</option>
                   <option value="individual">Individual</option>
                   <option value="llc">LLC</option>
                   <option value="corporation">Corporation</option>
                   <option value="partnership">Partnership</option>
                 </select>
               ) : (
-                <p className="text-[#2C3539]">{owner.business_type || 'Not specified'}</p>
+                <p className="text-[#2C3539]">{owner.owner_type || owner.business_type || 'Not specified'}</p>
               )}
             </div>
           </div>
           
-          {/* Properties Section (Placeholder) */}
+          {/* Properties Section */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-[#2C3539]">Properties</h3>
@@ -235,12 +259,43 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
               </button>
             </div>
             
-            <div className="bg-gray-50 rounded-lg p-6 text-center">
-              <p className="text-[#6B7280]">No properties associated with this owner yet.</p>
-              <button className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium">
-                + Add Property
-              </button>
-            </div>
+            {isLoadingProperties ? (
+              <div className="bg-gray-50 rounded-lg p-6 text-center">
+                <p className="text-[#6B7280]">Loading properties...</p>
+              </div>
+            ) : properties.length === 0 ? (
+              <div className="bg-gray-50 rounded-lg p-6 text-center">
+                <p className="text-[#6B7280]">No properties associated with this owner yet.</p>
+                <button className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium">
+                  + Add Property
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {properties.map((property) => (
+                  <div key={property.id} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+                    <div className="flex items-start">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 flex-shrink-0 flex items-center justify-center mr-3">
+                        <Home size={20} className="text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-[#2C3539]">{property.name}</h4>
+                        <div className="flex items-center text-sm text-gray-500 mt-1">
+                          <MapPin size={14} className="mr-1" />
+                          <span>{property.address}</span>
+                        </div>
+                        <div className="mt-2 flex justify-between items-center">
+                          <span className="text-sm text-gray-500">{property.units} units</span>
+                          <button className="text-xs text-blue-600 hover:text-blue-800">
+                            View Details
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           
           {/* Activity Section (Placeholder) */}
@@ -248,12 +303,7 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
             <h3 className="text-lg font-semibold text-[#2C3539] mb-4">Recent Activity</h3>
             <div className="space-y-4">
               <div className="border-l-2 border-gray-200 pl-4 py-1">
-                <p className="text-sm text-[#2C3539]">Owner information updated</p>
-                <p className="text-xs text-[#6B7280]">Today at 2:30 PM</p>
-              </div>
-              <div className="border-l-2 border-gray-200 pl-4 py-1">
-                <p className="text-sm text-[#2C3539]">Owner created</p>
-                <p className="text-xs text-[#6B7280]">{new Date(owner.created_at).toLocaleString()}</p>
+                <p className="text-[#6B7280] text-sm">No recent activity</p>
               </div>
             </div>
           </div>

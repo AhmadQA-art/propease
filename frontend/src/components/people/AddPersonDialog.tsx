@@ -6,6 +6,9 @@ import { supabase } from '@/services/supabase/client';
 import { ownersApi, CreateOwnerData } from '@/services/api/owners';
 import { autoApi } from '@/services/api/autoApi';
 import { authApi } from '@/services/api/auth';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { isPossiblePhoneNumber } from 'react-phone-number-input';
 
 interface AddPersonDialogProps {
   isOpen: boolean;
@@ -77,14 +80,26 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
         setError('Phone number is required for owners');
         return;
       }
-      if (!companyName) {
-        setError('Company name is required for owners');
+      // Validate phone number format
+      if (phone && !isPossiblePhoneNumber(phone)) {
+        setError('Please enter a valid phone number');
         return;
       }
       if (!businessType) {
-        setError('Business type is required for owners');
+        setError('Owner type is required for owners');
         return;
       }
+      // Check if company name is required based on owner type
+      if (isCompanyNameRequired(businessType) && !companyName) {
+        setError('Company name is required for this owner type');
+        return;
+      }
+    }
+
+    // For other person types, validate phone if provided
+    if ((personType === 'tenant' || personType === 'vendor') && phone && !isPossiblePhoneNumber(phone)) {
+      setError('Please enter a valid phone number');
+      return;
     }
 
     try {
@@ -111,17 +126,21 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
               console.log('Creating owner using auto-generated API, authenticated as:', session.user.email);
               
               // Create owner data object matching the database schema
-              const ownerData = {
+              const ownerData: any = {
                 first_name: firstName,
                 last_name: lastName,
                 email,
                 phone,
-                company_name: companyName,
-                business_type: businessType,
+                owner_type: businessType,
                 notes,
                 status: 'active', // Set default status
                 user_id: null // Explicitly set user_id to null
               };
+              
+              // Add company name only if required/provided
+              if (isCompanyNameRequired(businessType) && companyName) {
+                ownerData.company_name = companyName;
+              }
               
               // Use the auto-generated API to create a new owner
               await autoApi.create('owners', ownerData);
@@ -197,14 +216,20 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
           });
           break;
         case 'owner':
-          await invitationApi.inviteOwner({
+          const ownerInviteData: any = {
             email,
             name: `${firstName} ${lastName}`,
             phone,
-            company_name: companyName,
-            business_type: businessType,
+            owner_type: businessType,
             notes
-          });
+          };
+          
+          // Add company name only if required/provided
+          if (isCompanyNameRequired(businessType) && companyName) {
+            ownerInviteData.company_name = companyName;
+          }
+          
+          await invitationApi.inviteOwner(ownerInviteData);
           break;
         default:
           throw new Error('Invalid person type');
@@ -235,6 +260,11 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Add this helper function near the top of the component
+  const isCompanyNameRequired = (ownerType: string): boolean => {
+    return ['corporation', 'llc', 'partnership'].includes(ownerType.toLowerCase());
   };
 
   if (!isOpen) return null;
@@ -308,14 +338,19 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
                   <label className="block text-sm font-medium text-[#6B7280] mb-1">
                     Phone Number
                   </label>
-                  <input
-                    type="tel"
+                  <PhoneInput
+                    international
+                    countryCallingCodeEditable={false}
+                    defaultCountry="QA"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={setPhone as (value: string | undefined) => void}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                     placeholder="Enter phone number"
                     required={personType === 'owner'}
                   />
+                  {phone && !isPossiblePhoneNumber(phone) && (
+                    <p className="mt-1 text-sm text-red-600">Please enter a valid phone number</p>
+                  )}
                 </div>
               )}
 
@@ -355,21 +390,7 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
                 <>
                   <div>
                     <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                      Company Name
-                    </label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                      placeholder="Enter company name"
-                      required={personType === 'owner'}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                      Business Type
+                      Owner Type
                     </label>
                     <select
                       value={businessType}
@@ -377,13 +398,30 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                       required={personType === 'owner'}
                     >
-                      <option value="">Select business type</option>
+                      <option value="">Select owner type</option>
                       <option value="individual">Individual</option>
                       <option value="llc">LLC</option>
                       <option value="corporation">Corporation</option>
                       <option value="partnership">Partnership</option>
                     </select>
                   </div>
+
+                  {/* Conditionally show company name field based on owner type */}
+                  {businessType && isCompanyNameRequired(businessType) && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                        Company Name
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                        placeholder="Enter company name"
+                        required={isCompanyNameRequired(businessType)}
+                      />
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium text-[#6B7280] mb-1">

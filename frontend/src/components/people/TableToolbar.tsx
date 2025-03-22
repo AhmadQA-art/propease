@@ -4,13 +4,14 @@ import { Search, Filter, Plus } from 'lucide-react';
 interface TableToolbarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  onFilter: () => void;
+  onFilter?: () => void;
   onAdd: () => void;
   addButtonText?: string;
   selectedIds?: string[];
   onBulkDelete?: () => void;
   onExport?: () => void;
   customAddButton?: React.ReactNode;
+  tabType?: string;
 }
 
 const TableToolbar: React.FC<TableToolbarProps> = ({
@@ -22,7 +23,8 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
   selectedIds = [],
   onBulkDelete,
   onExport,
-  customAddButton
+  customAddButton,
+  tabType = ''
 }) => {
   return (
     <div className="w-full flex items-center justify-between gap-4">
@@ -38,13 +40,16 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
         />
       </div>
       
-      {/* Filter Button */}
-      <button 
-        onClick={onFilter}
-        className="h-10 w-10 flex-shrink-0 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-      >
-        <Filter className="w-5 h-5 text-[#2C3539]" />
-      </button>
+      {/* Filter Button - only show if onFilter is provided */}
+      {onFilter && (
+        <button 
+          onClick={onFilter}
+          className="h-10 w-10 flex-shrink-0 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          title={`Filter ${tabType}`}
+        >
+          <Filter className="w-5 h-5 text-[#2C3539]" />
+        </button>
+      )}
 
       {/* Bulk Actions */}
       {selectedIds.length > 0 && (

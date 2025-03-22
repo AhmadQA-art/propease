@@ -33,7 +33,7 @@ interface AddUnitFormProps {
   onSubmit: (unitData: {
     unitNumber: string;
     floorPlan: string;
-    area?: number;
+    area: number; // Changed from square_feet
     bedrooms: number;
     bathrooms: number;
     status: string;
@@ -48,7 +48,7 @@ export default function AddUnitForm({ onClose, onSubmit }: AddUnitFormProps) {
   const [formData, setFormData] = useState({
     unitNumber: '',
     floorPlan: 'Studio',
-    area: '',
+    area: '', // Changed from square_feet
     bedrooms: '1',
     bathrooms: '1',
     status: 'vacant',
@@ -227,14 +227,14 @@ export default function AddUnitForm({ onClose, onSubmit }: AddUnitFormProps) {
         <div className="grid grid-cols-3 gap-4">
           {/* Area (sq m) */}
           <div className="space-y-2">
-            <label className="text-sm text-[#6B7280]">Area (sq m) *</label>
+            <label className="text-sm text-[#6B7280]">Area (m²) *</label>
             <input
               type="number"
               required
               value={formData.area}
               onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-              placeholder="Min 25"
+              placeholder="Enter unit area in square meters"
               min="25"
             />
           </div>

@@ -2,78 +2,47 @@ import { supabase, supabaseAdmin, getSupabaseClient } from '../lib/supabase';
 
 // Define interfaces for the application service
 export interface RentalApplication {
-  id?: string;
+  id: string;
+  organization_id: string;
+  applicant_id: number;
   property_id: string;
   unit_id: string;
-  application_date?: string;
+  applicant_name: string;
+  application_date: string;
   desired_move_in_date: string;
-  lease_term: number; // in months
+  status: 'pending' | 'approved' | 'rejected';
   monthly_income?: number;
-  status?: 'pending' | 'approved' | 'rejected';
-  background_check_status?: 'pending' | 'passed' | 'failed';
+  lease_term?: number;
+  is_employed: boolean;
   credit_check_status?: 'pending' | 'approved' | 'rejected';
+  background_check_status?: 'pending' | 'passed' | 'failed';
   has_pets: boolean;
   has_vehicles: boolean;
-  is_employed: boolean;
-  emergency_contact?: {
-    name?: string;
-    phone?: string;
-    relationship?: string;
-  };
+  emergency_contact?: Record<string, any>;
   notes?: string;
-  id_type: 'passport' | 'qid' | 'driving_license';
-  applicant_id: number;
-  applicant_name: string;
-  applicant_email?: string;
-  applicant_phone_number?: string;
-  preferred_contact_method?: string[];
-  organization_id: string;
-  
-  // Additional fields from database schema
   previous_address?: string;
   vehicle_details?: Record<string, any>;
   pet_details?: Record<string, any>;
   application_fee_paid?: boolean;
   employment_info?: Record<string, any>;
-  rejection_reason?: string;
-  reviewed_by?: string;
-  review_date?: string;
-  expiry_date?: string;
-  
-  // Joined fields through select query
-  unit?: {
-    id: string;
-    unit_number: string;
-    rent_amount?: number;
-    bedrooms?: number;
-    bathrooms?: number;
-    area?: number;
-    floor_plan?: string;
-  };
-  property?: {
-    id: string;
-    name: string;
-    address: string;
-    city: string;
-    state: string;
-  };
-  documents?: {
+  documents: {
     id: string;
     file_name: string;
-    file_path: string;
     file_type: string;
+    file_path: string;
+    uploaded_by: string;
     uploaded_at: string;
   }[];
 }
 
 export interface ApplicationDocument {
-  id?: string;
+  id: string;
   rental_application_id: string;
   file_name: string;
   file_path: string;
   file_type: string;
-  uploaded_at?: string;
-  uploaded_by?: string;
+  uploaded_by: string;
+  uploaded_at: string;
 }
 
 export const applicationService = {
@@ -251,13 +220,13 @@ export const applicationService = {
       // First upload the file to storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `rental-application-docs/${organizationId}/${applicationId}/${fileName}`;
-      
+      // Remove any duplicate bucket names in the path
+      const filePath = `${organizationId}/${applicationId}/${fileName}`;
+
       console.log('Uploading file to path:', filePath);
-      
-      // Use supabaseAdmin client if available, otherwise fall back to regular client
+
       const client = getSupabaseClient(true);
-      
+
       const { error: uploadError, data: uploadData } = await client.storage
         .from('rental-application-docs')
         .upload(filePath, file, {

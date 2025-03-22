@@ -1,5 +1,5 @@
-import React from 'react';
-import { MoreVertical } from 'lucide-react';
+import React, { useState } from 'react';
+import { MoreVertical, Eye, Edit, Trash2 } from 'lucide-react';
 import type { Person } from '../../types/people';
 
 export interface Column {
@@ -16,6 +16,7 @@ export interface PeopleTableProps {
   loading?: boolean;
   selectedIds?: string[];
   onAction?: (action: string, person: Person) => void;
+  onRowClick?: (person: Person) => void;
 }
 
 const PeopleTable: React.FC<PeopleTableProps> = ({
@@ -25,11 +26,27 @@ const PeopleTable: React.FC<PeopleTableProps> = ({
   onSelect,
   loading = false,
   selectedIds = [],
-  onAction
+  onAction,
+  onRowClick
 }) => {
+  const [activeActionMenu, setActiveActionMenu] = useState<string | null>(null);
+
   // Helper function to get initials from name
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('');
+  };
+
+  // Toggle action menu for a row
+  const toggleActionMenu = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setActiveActionMenu(activeActionMenu === id ? null : id);
+  };
+
+  // Handle action click
+  const handleActionClick = (e: React.MouseEvent, action: string, person: Person) => {
+    e.stopPropagation();
+    setActiveActionMenu(null);
+    onAction?.(action, person);
   };
 
   // Default cell renderer for the name column
@@ -102,7 +119,11 @@ const PeopleTable: React.FC<PeopleTableProps> = ({
             </tr>
           ) : (
             data.map((row) => (
-              <tr key={row.id} className="hover:bg-gray-50">
+              <tr 
+                key={row.id} 
+                className="hover:bg-gray-50 cursor-pointer" 
+                onClick={() => onRowClick?.(row)}
+              >
                 {columns.map((column) => (
                   <td key={column.key} className="px-6 py-4 whitespace-nowrap">
                     {column.key === 'name' ? renderNameCell(row) :
@@ -112,13 +133,46 @@ const PeopleTable: React.FC<PeopleTableProps> = ({
                     }
                   </td>
                 ))}
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">
                   <button 
                     className="text-gray-400 hover:text-gray-600"
-                    onClick={() => onAction?.('menu', row)}
+                    onClick={(e) => toggleActionMenu(e, row.id)}
                   >
                     <MoreVertical className="w-5 h-5" />
                   </button>
+                  
+                  {activeActionMenu === row.id && (
+                    <div className="absolute right-6 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+                      <div className="py-1" role="menu" aria-orientation="vertical">
+                        {row.type === 'tenant' && (
+                          <button
+                            onClick={(e) => handleActionClick(e, 'view', row)}
+                            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                            role="menuitem"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => handleActionClick(e, 'edit', row)}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                          role="menuitem"
+                        >
+                          <Edit className="w-4 h-4 mr-2" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={(e) => handleActionClick(e, 'delete', row)}
+                          className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                          role="menuitem"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))

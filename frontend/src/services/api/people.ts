@@ -29,7 +29,7 @@ export const peopleApi = {
         // Get tenants  
         supabase
           .from('tenants')
-          .select('id, first_name, last_name, phone, email, unit_id, lease_start, lease_end, created_at, status')
+          .select('id, first_name, last_name, phone, email, created_at, status, preferred_contact_methods')
           .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' }),
         
         // Get vendors - updated to use correct field names  
@@ -65,10 +65,9 @@ export const peopleApi = {
         phone: tenant.phone,
         status: (tenant.status as 'active' | 'inactive' | 'pending') || 'active',
         createdAt: tenant.created_at,
-        unit: tenant.unit_id?.toString(),
-        property: '', // Get from related unit if needed
-        leaseStart: tenant.lease_start,
-        leaseEnd: tenant.lease_end,
+        unit: '', // Empty unit reference
+        property: '', // Empty property reference
+        preferredContactMethods: tenant.preferred_contact_methods,
         rentStatus: 'current' // Default value
       }));
 
@@ -168,7 +167,33 @@ export const peopleApi = {
     try {
       let query = supabase
         .from('tenants')
-        .select('id, first_name, last_name, phone, email, unit_id, lease_start, lease_end, created_at, status')
+        .select(`
+          id, 
+          first_name, 
+          last_name, 
+          phone, 
+          email, 
+          created_at, 
+          status, 
+          preferred_contact_methods,
+          leases(
+            id,
+            start_date,
+            end_date,
+            rent_amount,
+            status,
+            unit_id,
+            units(
+              id,
+              unit_number,
+              property_id,
+              properties(
+                id,
+                name
+              )
+            )
+          )
+        `)
         .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' });
 
       // Apply search if provided
@@ -189,20 +214,44 @@ export const peopleApi = {
       if (error) throw error;
 
       // Transform data to match the Tenant interface
-      const tenants = data.map((tenant): Tenant => ({
-        id: tenant.id,
-        type: 'tenant',
-        name: `${tenant.first_name} ${tenant.last_name}`,
-        email: tenant.email,
-        phone: tenant.phone,
-        status: (tenant.status as 'active' | 'inactive' | 'pending') || 'active',
-        createdAt: tenant.created_at,
-        unit: tenant.unit_id?.toString(),
-        property: '', // Get from related unit if needed
-        leaseStart: tenant.lease_start,
-        leaseEnd: tenant.lease_end,
-        rentStatus: 'current' // Default value
-      }));
+      const tenants = data.map((tenant): Tenant => {
+        // Find active lease
+        const tenantLeases = tenant.leases || [];
+        const activeLease = tenantLeases.length > 0 
+          ? tenantLeases.find((lease: any) => lease.status === 'Active') || tenantLeases[0]
+          : null;
+        
+        // Extract lease information if available
+        let leaseInfo = null;
+        if (activeLease) {
+          // Use type assertions to handle complex nested objects
+          const unit = activeLease.units as Record<string, any> || {};
+          const property = unit.properties as Record<string, any> || {};
+          
+          leaseInfo = {
+            id: activeLease.id,
+            unitName: unit.unit_number || 'Unknown Unit',
+            property: property.name || 'Unknown Property',
+            rentAmount: activeLease.rent_amount,
+            startDate: activeLease.start_date,
+            endDate: activeLease.end_date,
+            status: activeLease.status
+          };
+        }
+
+        return {
+          id: tenant.id,
+          type: 'tenant',
+          name: `${tenant.first_name} ${tenant.last_name}`,
+          email: tenant.email,
+          phone: tenant.phone,
+          status: (tenant.status as 'active' | 'inactive' | 'pending') || 'active',
+          createdAt: tenant.created_at,
+          preferredContactMethods: tenant.preferred_contact_methods,
+          rentStatus: 'current', // Default value
+          lease: leaseInfo
+        };
+      });
 
       return {
         data: tenants,
@@ -211,6 +260,115 @@ export const peopleApi = {
       };
     } catch (error) {
       console.error('Error fetching tenants:', error);
+      throw error;
+    }
+  },
+
+  // Get detailed information for a single tenant, including lease and documents
+  getTenantDetails: async (tenantId: string): Promise<any> => {
+    try {
+      // First, get the tenant's basic information
+      const { data: tenant, error: tenantError } = await supabase
+        .from('tenants')
+        .select(`
+          id,
+          first_name,
+          last_name,
+          phone,
+          email,
+          status,
+          created_at
+        `)
+        .eq('id', tenantId)
+        .single();
+
+      if (tenantError) throw tenantError;
+      if (!tenant) throw new Error('Tenant not found');
+
+      // Next, get the tenant's active lease information
+      const { data: leases, error: leaseError } = await supabase
+        .from('leases')
+        .select(`
+          id,
+          start_date,
+          end_date,
+          rent_amount,
+          status,
+          unit_id,
+          units(
+            id,
+            unit_number,
+            property_id,
+            properties(
+              id,
+              name
+            )
+          )
+        `)
+        .eq('tenant_id', tenantId)
+        .order('start_date', { ascending: false });
+
+      if (leaseError) throw leaseError;
+
+      // Find the most recent active lease
+      const activeLease = leases?.length > 0 
+        ? leases.find((lease: any) => lease.status === 'Active') || leases[0]
+        : null;
+
+      // Get tenant documents using correct field names and relationship
+      const { data: documents, error: docError } = await supabase
+        .from('documents')
+        .select(`
+          id,
+          document_name,
+          document_url,
+          created_at,
+          document_type
+        `)
+        .eq('related_to_id', tenantId)
+        .eq('related_to_type', 'tenant')
+        .order('created_at', { ascending: false });
+
+      if (docError) throw docError;
+
+      // Format lease data if available
+      let leaseInfo = null;
+      if (activeLease) {
+        // Use type assertions for nested objects
+        const unit = activeLease.units as Record<string, any> || {};
+        const property = unit.properties as Record<string, any> || {};
+        
+        leaseInfo = {
+          id: activeLease.id,
+          unitName: unit.unit_number || 'Unknown Unit',
+          property: property.name || 'Unknown Property',
+          rentAmount: activeLease.rent_amount,
+          startDate: activeLease.start_date,
+          endDate: activeLease.end_date,
+          status: activeLease.status
+        };
+      }
+
+      // Format documents with correct field mappings
+      const formattedDocuments = documents?.map((doc: any) => ({
+        id: doc.id,
+        name: doc.document_name || `Document ${doc.document_type || ''}`,
+        date: doc.created_at,
+        url: doc.document_url || '#'
+      })) || [];
+
+      // Return the complete tenant details
+      return {
+        id: tenant.id,
+        name: `${tenant.first_name} ${tenant.last_name}`,
+        email: tenant.email,
+        phone: tenant.phone,
+        imageUrl: null, // No image in this API
+        lease: leaseInfo,
+        documents: formattedDocuments
+      };
+    } catch (error) {
+      console.error('Error fetching tenant details:', error);
       throw error;
     }
   },
@@ -403,17 +561,12 @@ export const peopleApi = {
         last_name: tenantData.lastName,
         email: tenantData.email,
         phone: tenantData.phone,
-        lease_start: tenantData.leaseStart,
-        lease_end: tenantData.leaseEnd,
         status: tenantData.status || 'active',
-        organization_id: tenantData.organization_id
+        organization_id: tenantData.organization_id,
+        preferred_contact_methods: tenantData.preferredContactMethods || null
       };
       
-      // IMPORTANT: For development purposes, we'll completely omit the unit_id field
-      // Rather than sending invalid units, which would cause foreign key constraint errors
-      // In production, this should be fixed by ensuring all units exist in the database
-      console.log('NOTE: Intentionally omitting unit_id for development: ', tenantData.unit);
-      
+      // NOTE: Removed lease fields as they no longer exist in the schema
       console.log('Tenant data for database insertion:', dbData);
 
       const { data, error } = await supabase
@@ -427,11 +580,7 @@ export const peopleApi = {
         
         // Provide more helpful error messages for common issues
         if (error.message && error.message.includes('foreign key constraint')) {
-          if (error.message.includes('unit_id')) {
-            throw new Error('Failed to create tenant: The selected unit does not exist in the database.');
-          } else {
-            throw new Error('Failed to create tenant: Foreign key constraint violated. Please contact support.');
-          }
+          throw new Error('Failed to create tenant: Foreign key constraint violated. Please contact support.');
         } else {
           throw new Error(error.message || 'Failed to create tenant');
         }
@@ -446,10 +595,9 @@ export const peopleApi = {
         phone: data.phone,
         status: (data.status as 'active' | 'inactive' | 'pending') || 'active',
         createdAt: data.created_at,
-        unit: data.unit_id?.toString(),
+        unit: '', // Empty unit reference
         property: tenantData.property || '', // Property is not stored directly in tenants table
-        leaseStart: data.lease_start,
-        leaseEnd: data.lease_end,
+        preferredContactMethods: data.preferred_contact_methods,
         rentStatus: 'current' // Default value
       };
     } catch (error) {
@@ -578,10 +726,8 @@ export const peopleApi = {
           if (data.phone) updateData.phone = data.phone;
           if (data.status) updateData.status = data.status;
           
-          // Tenant-specific fields
-          if (tenantData.unit) updateData.unit_id = tenantData.unit;
-          if (tenantData.leaseStart) updateData.lease_start = tenantData.leaseStart;
-          if (tenantData.leaseEnd) updateData.lease_end = tenantData.leaseEnd;
+          // Tenant-specific fields - removed lease fields
+          if (tenantData.preferredContactMethods) updateData.preferred_contact_methods = tenantData.preferredContactMethods;
           
           // Update tenant in database
           const { data: updatedData, error } = await supabase
@@ -601,10 +747,9 @@ export const peopleApi = {
             phone: updatedData.phone,
             status: (updatedData.status as 'active' | 'inactive' | 'pending') || 'active',
             createdAt: updatedData.created_at,
-            unit: updatedData.unit_id?.toString(),
-            property: '', // Would need to fetch from related unit
-            leaseStart: updatedData.lease_start,
-            leaseEnd: updatedData.lease_end,
+            unit: '', // Empty unit reference
+            property: '', // Empty property reference
+            preferredContactMethods: updatedData.preferred_contact_methods,
             rentStatus: 'current' // Default value
           };
         }

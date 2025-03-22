@@ -8,9 +8,10 @@ import { propertyImageService, PropertyImage } from '../../services/property-ima
 import { ClipboardList, FileText, Edit2, UserCog, Users2, DoorOpen, Building2, MapPin, DollarSign, Home, PercentCircle, Plus, Upload } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-interface RentalOverviewProps {
+interface RentalOverviewsProps {
   rental: RentalDetails;
   onEdit: (id: string) => void;
+  showAddTask?: boolean;
 }
 
 // Extended RentalDetails type to include property manager
@@ -36,7 +37,7 @@ interface User {
   avatar_url?: string;
 }
 
-export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) {
+export default function RentalOverview({ rental, onEdit, showAddTask = false }: RentalOverviewProps) {
   const [isAddTaskDrawerOpen, setIsAddTaskDrawerOpen] = useState(false);
   const [isAddApplicationDrawerOpen, setIsAddApplicationDrawerOpen] = useState(false);
   const [propertyImages, setPropertyImages] = useState<PropertyImage[]>([]);
@@ -165,18 +166,20 @@ export default function RentalOverview({ rental, onEdit }: RentalOverviewProps) 
     <div>
       {/* Action Buttons */}
       <div className="flex justify-end items-center -mt-1 mb-2 space-x-2">
-        <button
-          onClick={() => setIsAddTaskDrawerOpen(true)}
-          className="flex items-center px-3 py-1.5 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          {/* ClipboardList icon */}
-          <svg className="w-3.5 h-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-            <path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44Z"></path>
-          </svg>
-          <span className="text-sm">Add Task</span>
-        </button>
+        {showAddTask && (
+          <button
+            onClick={() => setIsAddTaskDrawerOpen(true)}
+            className="flex items-center px-3 py-1.5 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            {/* ClipboardList icon */}
+            <svg className="w-3.5 h-3.5 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+              <path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44Z"></path>
+            </svg>
+            <span className="text-sm">Add Task</span>
+          </button>
+        )}
         <button
           onClick={() => setIsAddApplicationDrawerOpen(true)}
           className="flex items-center px-3 py-1.5 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"

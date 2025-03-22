@@ -99,6 +99,7 @@ function MainRoutes() {
         <Route path="properties" element={<Properties />} />
         <Route path="rentals" element={<Rentals />} />
         <Route path="rentals/:id" element={<RentalDetails />} />
+        <Route path="rentals/:id/edit" element={<RentalDetails mode="edit" />} />
         <Route path="leases" element={<Leases />} />
         <Route path="finances" element={<Finances />} />
         <Route path="payments" element={<Payments />} />

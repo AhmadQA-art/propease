@@ -11,6 +11,16 @@ export const propertyApi = {
     return data as Property[];
   },
 
+  async getPropertiesByOwner(ownerId: string) {
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .eq('owner_id', ownerId);
+    
+    if (error) throw error;
+    return data as Property[];
+  },
+
   async getProperty(id: string) {
     const { data, error } = await supabase
       .from('properties')

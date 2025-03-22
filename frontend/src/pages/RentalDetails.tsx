@@ -3,13 +3,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { rentalService } from '../services/rental.service';
-import { RentalDetails } from '../types/rental';
+import { RentalDetails, Property } from '../types/rental';
 import TabHeader from '../components/tabs/TabHeader';
 import RentalOverview from '../components/rental-details/RentalOverview';
 import RentalUnits from '../components/rental-details/RentalUnits';
 import RentalApplications from '../components/rental-details/RentalApplications';
 import RentalTasks from '../components/rental-details/RentalTasks';
 import RentalActivities from '../components/rental-details/RentalActivities';
+import { isDevelopmentUser } from '../config/constants';
+import AddRentalForm from '../components/AddRentalForm';
 
 // Extend Property type to include property_type
 interface ExtendedProperty {
@@ -24,9 +26,34 @@ interface ExtendedProperty {
   occupancy_rate?: number;
 }
 
-const tabs = ['Overview', 'Units', 'Rental Applications', 'Tasks', 'Activities'];
+// Define CustomUnit interface
+interface CustomUnit {
+  id?: string;
+  unit_number: string;
+  rent_amount: number;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  status: 'vacant' | 'occupied' | 'deleted';
+  floor_plan: string;
+  smart_lock_enabled: boolean;
+  property_id?: string;
+}
 
-export default function RentalDetailsPage() {
+const getAvailableTabs = (userEmail: string | undefined) => {
+  const baseTabs = ['Overview', 'Units', 'Rental Applications'];
+  const devOnlyTabs = ['Tasks', 'Activities'];
+  
+  return userEmail && isDevelopmentUser(userEmail)
+    ? [...baseTabs, ...devOnlyTabs]
+    : baseTabs;
+};
+
+interface RentalDetailsPageProps {
+  mode?: 'view' | 'edit';
+}
+
+export default function RentalDetailsPage({ mode = 'view' }: RentalDetailsPageProps) {
   const navigate = useNavigate();
   const { id } = useParams();
   const { userProfile } = useAuth();
@@ -34,7 +61,11 @@ export default function RentalDetailsPage() {
   const [rental, setRental] = useState<RentalDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [propertyManagers, setPropertyManagers] = useState([]);
+  const [propertyOwners, setPropertyOwners] = useState([]);
   const dataLoadedRef = useRef(false);
+
+  const availableTabs = getAvailableTabs(userProfile?.email);
 
   useEffect(() => {
     // Only load data if we haven't loaded it yet or if the ID or organization changed
@@ -42,6 +73,7 @@ export default function RentalDetailsPage() {
       console.log(`Loading rental details for ${id}`);
       dataLoadedRef.current = true;
       loadRentalDetails();
+      loadPropertyOwnersAndManagers();
     }
   }, [id, userProfile]);
 
@@ -77,19 +109,19 @@ export default function RentalDetailsPage() {
       
       // Transform the property to rental details format with type assertions
       const extendedData = data as unknown as ExtendedProperty;
-      setRental({
+      const transformedRental: RentalDetails = {
         ...data,
         type: extendedData.property_type || 'residential',
         unit: data.total_units,
         status: (extendedData.status || 'active') as 'active' | 'inactive' | 'pending',
         propertyName: data.name,
-        rentAmount: data.units?.[0]?.rentAmount || 0,
         manager: assignedManager,
         monthly_revenue: extendedData.monthly_revenue || 0,
         active_leases: extendedData.active_leases || 0,
         occupancy_rate: extendedData.occupancy_rate || 0
-      });
+      };
       
+      setRental(transformedRental);
       console.log(`Successfully loaded rental details for ${id}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load rental details';
@@ -103,8 +135,161 @@ export default function RentalDetailsPage() {
     }
   };
 
+  const loadPropertyOwnersAndManagers = async () => {
+    if (!userProfile?.organization_id) return;
+    
+    try {
+      const owners = await rentalService.getOwners(userProfile.organization_id);
+      const managers = await rentalService.getPropertyManagers(userProfile.organization_id);
+      
+      setPropertyOwners(owners || []);
+      setPropertyManagers(managers || []);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load owners and managers';
+      console.error(message);
+    }
+  };
+
   const handleEdit = () => {
     navigate(`/rentals/${id}/edit`);
+  };
+
+  const handleEditSubmit = async (values: any) => {
+    if (!userProfile?.organization_id || !id) return;
+    
+    try {
+      console.log("Form values received:", values);
+      
+      // Access units from the right structure (values or values.units)
+      const units = Array.isArray(values.units) ? values.units : 
+                   (values.property && Array.isArray(values.property.units)) ? values.property.units : 
+                   [];
+                   
+      // Get property data from the right structure
+      const property = values.property || values;
+      
+      // Step 1: Calculate the actual total_units based on active units
+      const activeUnits = units.filter((unit: CustomUnit) => 
+        (unit.status || '').toLowerCase() !== 'deleted'
+      );
+      
+      // Ensure total_units is at least 1 to prevent constraint violation
+      const newTotalUnits = Math.max(1, activeUnits.length);
+      
+      // Step 2: Prepare property update data
+      const rentalUpdate = {
+        name: property.name,
+        address: property.address,
+        city: property.city,
+        state: property.state,
+        zip_code: property.zip_code,
+        property_type: property.property_type,
+        owner_id: property.owner_id,
+        total_units: newTotalUnits, // Set total_units based on active units count (minimum 1)
+        organization_id: userProfile.organization_id
+      };
+      
+      console.log("Rental update data:", rentalUpdate);
+      
+      // Step 3: Categorize units into add, update, and delete operations
+      // Get current units for comparison
+      const currentUnits = rental?.units || [];
+      
+      // Create maps for quick lookups
+      const currentUnitIdMap = new Map();
+      currentUnits.forEach(unit => {
+        if (unit.id) currentUnitIdMap.set(unit.id, unit);
+      });
+      
+      // Categorize units by operation type
+      const unitsToAdd = units
+        .filter((unit: CustomUnit) => !unit.id && (unit.status || '').toLowerCase() !== 'deleted')
+        .map((unit: CustomUnit) => ({
+          unit_number: unit.unit_number,
+          rent_amount: unit.rent_amount,
+          bedrooms: unit.bedrooms,
+          bathrooms: unit.bathrooms,
+          area: unit.area,
+          status: (unit.status || 'vacant').toLowerCase() as 'vacant' | 'occupied' | 'deleted',
+          floor_plan: unit.floor_plan,
+          smart_lock_enabled: unit.smart_lock_enabled,
+          organization_id: userProfile.organization_id
+        }));
+        
+      const unitsToUpdate = units
+        .filter((unit: CustomUnit) => unit.id && (unit.status || '').toLowerCase() !== 'deleted')
+        .map((unit: CustomUnit) => ({
+          id: unit.id,
+          unit_number: unit.unit_number,
+          rent_amount: unit.rent_amount,
+          bedrooms: unit.bedrooms,
+          bathrooms: unit.bathrooms,
+          area: unit.area,
+          status: (unit.status || 'vacant').toLowerCase() as 'vacant' | 'occupied' | 'deleted',
+          floor_plan: unit.floor_plan,
+          smart_lock_enabled: unit.smart_lock_enabled,
+          organization_id: userProfile.organization_id
+        }));
+        
+      // Find units to mark as deleted (not in the new values or explicitly marked as deleted)
+      // First, get all IDs from the form submission
+      const formUnitIds = new Set(
+        units
+          .filter((unit: CustomUnit) => unit.id)
+          .map((unit: CustomUnit) => unit.id)
+      );
+      
+      // Units that exist in the database but not in the form (deleted directly)
+      const missingUnitIds = currentUnits
+        .filter(unit => !formUnitIds.has(unit.id) && unit.status !== 'deleted')
+        .map(unit => unit.id);
+        
+      // Units that are in the form but marked as deleted
+      const markedAsDeletedIds = units
+        .filter((unit: CustomUnit) => unit.id && (unit.status || '').toLowerCase() === 'deleted')
+        .map((unit: CustomUnit) => unit.id);
+        
+      // Combine both types of deleted units
+      const unitsToMarkAsDeleted = [...new Set([...missingUnitIds, ...markedAsDeletedIds])];
+      
+      // Step 4: Use the new service method to handle all operations in one call
+      const unitsData = {
+        add: unitsToAdd,
+        update: unitsToUpdate,
+        markAsDeleted: unitsToMarkAsDeleted
+      };
+      
+      const updatedRental = await rentalService.updateRentalWithUnits(
+        id,
+        rentalUpdate,
+        unitsData,
+        userProfile.organization_id
+      );
+      
+      // Step 5: Update UI with transformed rental data
+      const transformedRental: RentalDetails = {
+        ...updatedRental,
+        type: property.property_type || 'residential',
+        unit: newTotalUnits,
+        status: 'active',
+        propertyName: property.name,
+        monthly_revenue: updatedRental.monthly_revenue || 0,
+        active_leases: updatedRental.active_leases || 0,
+        occupancy_rate: updatedRental.occupancy_rate || 0
+      };
+      
+      setRental(transformedRental);
+      navigate(`/rentals/${id}`);
+      toast.success('Rental property updated successfully');
+      
+    } catch (error) {
+      console.error('Error updating rental:', error);
+      toast.error('Failed to update rental: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  const handleEditCancel = () => {
+    navigate(`/rentals/${id}`);
   };
 
   const handleDelete = async () => {
@@ -126,23 +311,21 @@ export default function RentalDetailsPage() {
   const renderTabContent = () => {
     if (!rental) return null;
 
+    const isDevelopmentAccount = userProfile?.email && isDevelopmentUser(userProfile.email);
+
     switch (activeTab) {
       case 'Overview':
-        return <RentalOverview rental={rental} onEdit={handleEdit} />;
+        return <RentalOverview rental={rental} onEdit={handleEdit} showAddTask={isDevelopmentAccount} />;
       case 'Units':
-        // @ts-ignore - ignore rentalId prop error
         return <RentalUnits rentalId={rental.id} />;
       case 'Rental Applications':
-        // @ts-ignore - ignore rentalId prop error
         return <RentalApplications rentalId={rental.id} />;
       case 'Tasks':
-        // @ts-ignore - ignore rentalId prop error
-        return <RentalTasks rentalId={rental.id} />;
+        return isDevelopmentAccount ? <RentalTasks rentalId={rental.id} /> : null;
       case 'Activities':
-        // @ts-ignore - ignore rentalId prop error
-        return <RentalActivities rentalId={rental.id} />;
+        return isDevelopmentAccount ? <RentalActivities rentalId={rental.id} /> : null;
       default:
-        return <RentalOverview rental={rental} onEdit={handleEdit} />;
+        return <RentalOverview rental={rental} onEdit={handleEdit} showAddTask={isDevelopmentAccount} />;
     }
   };
 
@@ -199,6 +382,19 @@ export default function RentalDetailsPage() {
     );
   }
 
+  if (mode === 'edit') {
+    return (
+      <AddRentalForm
+        initialData={rental}
+        mode="edit"
+        onSubmit={handleEditSubmit}
+        onCancel={handleEditCancel}
+        propertyManagers={propertyManagers}
+        propertyOwners={propertyOwners}
+      />
+    );
+  }
+
   return (
     <div className="p-6">
       <div className="flex items-center mb-6">
@@ -215,7 +411,7 @@ export default function RentalDetailsPage() {
       
       <div className="mb-6">
         <TabHeader
-          tabs={tabs}
+          tabs={availableTabs}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />

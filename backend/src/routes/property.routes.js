@@ -190,7 +190,7 @@ router.post('/',
  */
 router.put('/:id',
   authenticateToken,
-  checkRole(['super_admin', 'admin']),
+  checkRole(['organization_admin', 'team_member']),
   propertyController.updateProperty
 );
 
@@ -224,7 +224,7 @@ router.put('/:id',
  */
 router.delete('/:id',
   authenticateToken,
-  checkRole(['super_admin', 'admin']),
+  checkRole(['organization_admin', 'team_member']),
   propertyController.deleteProperty
 );
 

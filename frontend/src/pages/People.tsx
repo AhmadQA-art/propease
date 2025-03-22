@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Tab } from '@headlessui/react';
 import TabHeader from '../components/tabs/TabHeader';
-import PeopleTable from '../components/people/PeopleTable';
+import PeopleTable, { Column } from '../components/people/PeopleTable';
 import TableToolbar from '../components/people/TableToolbar';
 import FilterPanel from '../components/people/FilterPanel';
 import TeamView from '../components/people/TeamView';
@@ -14,8 +14,13 @@ import AddVendorDialog from '../components/people/AddVendorDialog';
 import { peopleApi } from '../services/api/people';
 import { useNavigate } from 'react-router-dom';
 import * as Tabs from '@radix-ui/react-tabs';
+import { useAuth } from '../contexts/AuthContext';
+import { isDevelopmentUser } from '../config/constants';
+import TenantDetailsDrawer from '../components/people/TenantDetailsDrawer';
+import OwnerDetailsDrawer from '../components/people/OwnerDetailsDrawer';
+import { apiToUiOwner, UiOwner } from '../services/adapters/ownerAdapter';
 
-const tabs = ['All People', 'Team', 'Owners', 'Tenants', 'Vendors'];
+const baseTabs = ['All People', 'Team', 'Owners', 'Tenants', 'Vendors'];
 
 const baseColumns = [
   {
@@ -42,10 +47,31 @@ const columnsByType = {
       key: 'phone',
       label: 'Phone',
     },
-    { key: 'unit', label: 'Unit' },
-    { key: 'leaseStart', label: 'Lease Start' },
-    { key: 'leaseEnd', label: 'Lease End' },
-    { key: 'status', label: 'Status' },
+    { 
+      key: 'lease', 
+      label: 'Lease',
+      render: (row: Person) => {
+        if (row.type !== 'tenant') return null;
+        
+        const tenant = row as Tenant;
+        if (!tenant.lease) {
+          return (
+            <div className="text-sm text-gray-500 italic">No active lease</div>
+          );
+        }
+        
+        return (
+          <div>
+            <div className="text-sm font-medium text-gray-900">
+              {tenant.lease.unitName} - {tenant.lease.property}
+            </div>
+            <div className="text-sm text-gray-500">
+              ${tenant.lease.rentAmount?.toLocaleString()} / month
+            </div>
+          </div>
+        );
+      }
+    },
   ],
   owner: [
     {
@@ -74,49 +100,111 @@ const columnsByType = {
 };
 
 // Helper to get columns based on active tab
-const getColumns = (tab: string) => {
-  switch(tab) {
-    case 'Owners':
-      return [
-        { key: 'name', label: 'Name' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'company_name', label: 'Company' },
-        { key: 'status', label: 'Status' }
-      ];
-    case 'Tenants':
-      return [
-        { key: 'name', label: 'Name' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'unit', label: 'Unit' },
-        { key: 'property', label: 'Property' },
-        { key: 'status', label: 'Status' }
-      ];
-    case 'Vendors':
-      return [
-        { key: 'name', label: 'Name' },
-        { key: 'phone', label: 'Phone' },
-        { key: 'service_type', label: 'Service' },
-        { key: 'status', label: 'Status' }
-      ];
-    default:
-      return baseColumns;
-  }
+const getColumns = (tab: string): Column[] => {
+  const baseColumns = [
+    { key: 'name', label: 'Name' },
+    { key: 'status', label: 'Status' }
+  ];
+
+  const columnsMap = {
+    'All People': [...baseColumns],
+    'Team': [...baseColumns, { key: 'role', label: 'Role' }],
+    'Owners': [...baseColumns, { key: 'company', label: 'Company' }],
+    'Tenants': [
+      { key: 'name', label: 'Name' },
+      { key: 'phone', label: 'Phone' },
+      {
+        key: 'lease', 
+        label: 'Lease',
+        render: (row: Person) => {
+          if (row.type !== 'tenant') return null;
+          
+          const tenant = row as Tenant;
+          if (!tenant.lease) {
+            return (
+              <div className="text-sm text-gray-500 italic">No active lease</div>
+            );
+          }
+          
+          return (
+            <div>
+              <div className="text-sm font-medium text-gray-900">
+                {tenant.lease.unitName} - {tenant.lease.property}
+              </div>
+              <div className="text-sm text-gray-500">
+                ${tenant.lease.rentAmount?.toLocaleString()} / month
+              </div>
+            </div>
+          );
+        }
+      }
+    ],
+    'Vendors': [
+      ...baseColumns,
+      { key: 'serviceType', label: 'Service Type' },
+      {
+        key: 'performance',
+        label: 'Performance',
+        render: (row: Person) => {
+          if (row.type !== 'vendor') return null;
+          
+          // Type assertion to handle the performance property
+          const vendor = row as Vendor & { performance?: number };
+          if (!vendor.performance) return null;
+          
+          const stars = [];
+          for (let i = 0; i < 5; i++) {
+            stars.push(
+              <svg
+                key={i}
+                className={`h-4 w-4 ${i < vendor.performance ? 'text-yellow-400' : 'text-gray-300'}`}
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+            );
+          }
+          return <div className="flex">{stars}</div>;
+        }
+      }
+    ]
+  };
+
+  return columnsMap[tab as keyof typeof columnsMap] || baseColumns;
 };
 
 export default function People() {
-  const [activeTab, setActiveTab] = useState('All People');
+  const [activeTab, setActiveTab] = useState('Team');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState<{
     types: PersonType[];
     status: string[];
+    hasLease: string[];
   }>({
     types: [],
     status: [],
+    hasLease: [],
   });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedPersonType, setSelectedPersonType] = useState<PersonType | 'team'>('owner');
+  
+  // Get current user profile to check if development account
+  const { userProfile } = useAuth();
+  
+  // Filter tabs based on user role
+  const tabs = userProfile?.email && isDevelopmentUser(userProfile.email) 
+    ? baseTabs 
+    : baseTabs.filter(tab => tab !== 'All People');
+  
+  // Reset to "Team" tab if current tab is "All People" and user is not a development account
+  useEffect(() => {
+    if (activeTab === 'All People' && userProfile?.email && !isDevelopmentUser(userProfile.email)) {
+      setActiveTab('Team');
+    }
+  }, [activeTab, userProfile]);
   
   // Dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -141,6 +229,14 @@ export default function People() {
   const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
 
+  // Add state for tenant details drawer
+  const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
+  const [isTenantDetailsOpen, setIsTenantDetailsOpen] = useState(false);
+  
+  // Add state for owner details drawer
+  const [selectedOwner, setSelectedOwner] = useState<UiOwner | null>(null);
+  const [isOwnerDetailsOpen, setIsOwnerDetailsOpen] = useState(false);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -160,11 +256,23 @@ export default function People() {
     setLoading(true);
     setError(null);
     try {
+      // Check if user is attempting to access the "All People" tab when they shouldn't
+      if (activeTab === 'All People' && userProfile?.email && !isDevelopmentUser(userProfile.email)) {
+        setActiveTab('Team');
+        setLoading(false);
+        return;
+      }
+      
       let result;
       const params = {
         page: currentPage,
-        limit: pageSize,
-        search: searchQuery || undefined
+        pageSize: pageSize,
+        searchQuery: searchQuery || undefined,
+        filters: {
+          types: filters.types,
+          status: filters.status,
+          hasLease: filters.hasLease
+        }
       };
 
       switch (activeTab) {
@@ -210,10 +318,39 @@ export default function People() {
     }
   };
 
-  // Fetch data when tab, page, or search changes
+  // Fetch data when tab, page, search, or filters change
   useEffect(() => {
     fetchData();
-  }, [activeTab, currentPage, pageSize, searchQuery]);
+  }, [activeTab, currentPage, pageSize, searchQuery, filters]);
+
+  // Apply lease filters to tenant data after it's fetched
+  const applyLeaseFilter = (people: Person[]) => {
+    // Skip filtering if no lease filters are applied
+    if (filters.hasLease.length === 0) {
+      return people;
+    }
+
+    return people.filter(person => {
+      // Only apply lease filter to tenants
+      if (person.type !== 'tenant') {
+        return true;
+      }
+
+      const tenant = person as Tenant;
+      const hasLease = tenant.lease !== null && tenant.lease !== undefined;
+
+      if (filters.hasLease.includes('has_lease') && hasLease) {
+        return true;
+      }
+
+      if (filters.hasLease.includes('no_lease') && !hasLease) {
+        return true;
+      }
+
+      // If we get here, this tenant doesn't match the filter criteria
+      return false;
+    });
+  };
 
   const handleAction = async (action: string, person: Person) => {
     try {
@@ -248,6 +385,16 @@ export default function People() {
           await peopleApi.updatePerson(person.id, person.type, { ...person, status: newStatus });
           // Refresh data after status change (similar to delete)
           fetchData();
+          break;
+        case 'view':
+          // Handle viewing details based on person type
+          if (person.type === 'tenant') {
+            setSelectedTenant(person as Tenant);
+            setIsTenantDetailsOpen(true);
+          } else if (person.type === 'owner') {
+            setSelectedOwner(apiToUiOwner(person as Owner));
+            setIsOwnerDetailsOpen(true);
+          }
           break;
         default:
           break;
@@ -359,8 +506,8 @@ export default function People() {
       if (activeTab === 'All People' || activeTab === personType + 's') {
         fetchData();
       }
-    } catch (err) {
-      console.error(`Error creating ${personType}:`, err);
+    } catch (error) {
+      console.error(error);
       setError(`Failed to create ${personType}. Please try again.`);
     }
   };
@@ -372,6 +519,11 @@ export default function People() {
   };
 
   const renderContent = () => {
+    // Don't render All People tab content for non-development users
+    if (activeTab === 'All People' && userProfile?.email && !isDevelopmentUser(userProfile.email)) {
+      return null;
+    }
+    
     if (loading) {
       return <div className="py-6 text-center">Loading...</div>;
     }
@@ -406,20 +558,28 @@ export default function People() {
       // based on which tab is selected, so we're reusing the same table component
       return (
         <PeopleTable
-          data={data}
+          data={applyLeaseFilter(data)}
           columns={getColumns(activeTab)}
           onSort={handleSort}
           onAction={handleAction}
           selectedIds={selectedIds}
           onSelect={setSelectedIds}
           loading={loading}
+          onRowClick={handleRowClick}
         />
       );
     }
   };
 
   const renderAddButton = () => {
+    // Don't render All People tab button for non-development users
     if (activeTab === 'All People') {
+      // This should never happen for non-development users due to our tab filtering,
+      // but adding this as an extra safety measure
+      if (userProfile?.email && !isDevelopmentUser(userProfile.email)) {
+        return null;
+      }
+      
       return (
         <Popover.Root open={isAddPopoverOpen} onOpenChange={setIsAddPopoverOpen}>
           <Popover.Anchor>
@@ -566,6 +726,17 @@ export default function People() {
     }
   };
 
+  // Add handler for row click
+  const handleRowClick = (person: Person) => {
+    if (person.type === 'tenant') {
+      setSelectedTenant(person as Tenant);
+      setIsTenantDetailsOpen(true);
+    } else if (person.type === 'owner') {
+      setSelectedOwner(apiToUiOwner(person as Owner));
+      setIsOwnerDetailsOpen(true);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -579,41 +750,48 @@ export default function People() {
         onTabChange={setActiveTab}
       />
 
-      <div className="mt-6 space-y-4">
-        {activeTab !== 'Team' && (
-          <div className="w-full">
-            <TableToolbar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              onFilter={() => setShowFilters(!showFilters)}
-              onAdd={() => handleAdd()}
-              selectedIds={selectedIds}
-              onBulkDelete={handleBulkDelete}
-              onExport={handleExport}
-              customAddButton={renderAddButton()}
-            />
+      {/* Hide All People tab content from non-development users */}
+      {(activeTab !== 'All People' || (userProfile?.email && isDevelopmentUser(userProfile.email))) && (
+        <div className="mt-6 space-y-4">
+          {activeTab !== 'Team' && (
+            <div className="w-full">
+              <TableToolbar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                onFilter={activeTab !== 'Team' ? () => setShowFilters(!showFilters) : undefined}
+                onAdd={() => handleAdd()}
+                selectedIds={selectedIds}
+                onBulkDelete={handleBulkDelete}
+                onExport={handleExport}
+                customAddButton={renderAddButton()}
+                tabType={activeTab}
+              />
 
-            <Popover.Root open={showFilters} onOpenChange={setShowFilters}>
-              <Popover.Anchor />
-              <Popover.Portal>
-                <Popover.Content
-                  className="z-10"
-                  side="bottom"
-                  align="end"
-                  sideOffset={8}
-                >
-                  <FilterPanel
-                    filters={filters}
-                    onFiltersChange={handleFiltersChange}
-                  />
-                </Popover.Content>
-              </Popover.Portal>
-            </Popover.Root>
-          </div>
-        )}
+              {activeTab !== 'Team' && (
+                <Popover.Root open={showFilters} onOpenChange={setShowFilters}>
+                  <Popover.Anchor />
+                  <Popover.Portal>
+                    <Popover.Content
+                      className="z-10"
+                      side="bottom"
+                      align="end"
+                      sideOffset={8}
+                    >
+                      <FilterPanel
+                        filters={filters}
+                        onFiltersChange={handleFiltersChange}
+                        tabType={activeTab}
+                      />
+                    </Popover.Content>
+                  </Popover.Portal>
+                </Popover.Root>
+              )}
+            </div>
+          )}
 
-        {renderContent()}
-      </div>
+          {renderContent()}
+        </div>
+      )}
 
       {/* Dialog Components */}
       <AddPersonDialog 
@@ -637,6 +815,31 @@ export default function People() {
         onClose={() => setVendorDialogOpen(false)}
         onSuccess={handleVendorAdded}
       />
+      
+      {/* Tenant Details Drawer */}
+      {selectedTenant && (
+        <TenantDetailsDrawer
+          tenant={{
+            id: selectedTenant.id,
+            name: selectedTenant.name,
+            email: selectedTenant.email || '',
+            phone: selectedTenant.phone || '',
+            imageUrl: selectedTenant.imageUrl
+          }}
+          isOpen={isTenantDetailsOpen}
+          onClose={() => setIsTenantDetailsOpen(false)}
+        />
+      )}
+      
+      {/* Owner Details Drawer */}
+      {selectedOwner && (
+        <OwnerDetailsDrawer
+          owner={selectedOwner}
+          isOpen={isOwnerDetailsOpen}
+          onClose={() => setIsOwnerDetailsOpen(false)}
+          onUpdate={fetchData}
+        />
+      )}
     </div>
   );
 }

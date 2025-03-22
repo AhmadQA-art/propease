@@ -3,6 +3,8 @@ import SearchableDropdown from './SearchableDropdown';
 import { peopleApi } from '../../services/api/people';
 import type { Tenant } from '../../types/people';
 import { supabase } from '../../services/supabase/client';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 interface AddTenantDialogProps {
   isOpen: boolean;
@@ -15,9 +17,16 @@ interface TenantFormData {
   lastName: string;
   email: string;
   phone: string;
-  property: string;
-  unit: string;
+  preferredContactMethods: string[];
 }
+
+// Contact method options for the multi-select
+const contactMethodOptions = [
+  { value: 'email', label: 'Email' },
+  { value: 'phone', label: 'Phone' },
+  { value: 'sms', label: 'SMS' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+];
 
 // Mock property options for the dropdown selection
 const mockProperties = [
@@ -28,34 +37,6 @@ const mockProperties = [
   { value: '523e4567-e89b-12d3-a456-426614174004', label: 'Riverside Condos' },
 ];
 
-// Mock unit options based on selected property
-const mockUnits = {
-  '123e4567-e89b-12d3-a456-426614174000': [
-    { value: '623e4567-e89b-12d3-a456-426614174101', label: 'Unit 101' },
-    { value: '623e4567-e89b-12d3-a456-426614174102', label: 'Unit 102' },
-    { value: '623e4567-e89b-12d3-a456-426614174103', label: 'Unit 103' },
-  ],
-  '223e4567-e89b-12d3-a456-426614174001': [
-    { value: '723e4567-e89b-12d3-a456-426614174201', label: 'Unit 201' },
-    { value: '723e4567-e89b-12d3-a456-426614174202', label: 'Unit 202' },
-  ],
-  '323e4567-e89b-12d3-a456-426614174002': [
-    { value: '823e4567-e89b-12d3-a456-426614174301', label: 'Unit 301' },
-    { value: '823e4567-e89b-12d3-a456-426614174302', label: 'Unit 302' },
-    { value: '823e4567-e89b-12d3-a456-426614174303', label: 'Unit 303' },
-    { value: '823e4567-e89b-12d3-a456-426614174304', label: 'Unit 304' },
-  ],
-  '423e4567-e89b-12d3-a456-426614174003': [
-    { value: '923e4567-e89b-12d3-a456-426614174401', label: 'Unit 401' },
-    { value: '923e4567-e89b-12d3-a456-426614174402', label: 'Unit 402' },
-  ],
-  '523e4567-e89b-12d3-a456-426614174004': [
-    { value: 'a23e4567-e89b-12d3-a456-426614174501', label: 'Unit 501' },
-    { value: 'a23e4567-e89b-12d3-a456-426614174502', label: 'Unit 502' },
-    { value: 'a23e4567-e89b-12d3-a456-426614174503', label: 'Unit 503' },
-  ],
-};
-
 // Fallback organization ID for development/testing
 const FALLBACK_ORGANIZATION_ID = '94152e65-aeba-4496-ad7a-e3f539b9d5e7';
 
@@ -65,16 +46,12 @@ export default function AddTenantDialog({ isOpen, onClose, onSuccess }: AddTenan
     lastName: '',
     email: '',
     phone: '',
-    property: '',
-    unit: '',
+    preferredContactMethods: [],
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [orgIdStatus, setOrgIdStatus] = useState<'loading' | 'success' | 'error'>('loading');
-
-  // Get available units based on selected property
-  const availableUnits = formData.property ? mockUnits[formData.property as keyof typeof mockUnits] || [] : [];
 
   // Fetch the current user's organization ID on component mount
   useEffect(() => {
@@ -158,28 +135,17 @@ export default function AddTenantDialog({ isOpen, onClose, onSuccess }: AddTenan
         throw new Error('Cannot create tenant: Organization ID is required. Please refresh or contact support.');
       }
       
-      // Check if unit is a valid UUID
-      const isValidUuid = (uuid: string) => {
-        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-        return uuidRegex.test(uuid);
-      };
-
-      // For demo purposes, we'll set unit_id to null since mock data doesn't use real UUIDs
-      const unit_id = formData.unit && isValidUuid(formData.unit) ? formData.unit : null;
-      
       // Convert form data to match the Tenant type
       const tenantData: Partial<Tenant> = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
-        property: formData.property ? mockProperties.find(p => p.value === formData.property)?.label || '' : '',
-        unit: unit_id, // Only pass if it's a valid UUID, otherwise null
+        preferredContactMethods: formData.preferredContactMethods,
         organization_id: organizationId
       };
       
       console.log('Submitting tenant data with organization ID:', organizationId);
-      console.log('Unit ID being sent (null if invalid UUID):', unit_id);
       
       // Call the API to create the tenant
       const newTenant = await peopleApi.createTenant(tenantData);
@@ -190,8 +156,7 @@ export default function AddTenantDialog({ isOpen, onClose, onSuccess }: AddTenan
         lastName: '',
         email: '',
         phone: '',
-        property: '',
-        unit: '',
+        preferredContactMethods: [],
       });
       
       // Call success callback if provided
@@ -300,11 +265,12 @@ export default function AddTenantDialog({ isOpen, onClose, onSuccess }: AddTenan
                 <label className="block text-sm font-medium text-[#6B7280] mb-1">
                   Phone <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="tel"
-                  required
+                <PhoneInput
+                  international
+                  countryCallingCodeEditable={false}
+                  defaultCountry="QA"
                   value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  onChange={(value) => setFormData(prev => ({ ...prev, phone: value || '' }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                   placeholder="Phone number"
                   disabled={submitting || orgIdStatus === 'loading'}
@@ -313,39 +279,19 @@ export default function AddTenantDialog({ isOpen, onClose, onSuccess }: AddTenan
 
               <div>
                 <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                  Property
+                  Preferred Contact Methods
                 </label>
                 <SearchableDropdown
-                  options={mockProperties}
-                  selectedValues={formData.property ? [formData.property] : []}
-                  onChange={(values) => {
-                    const property = values[0] || '';
-                    setFormData(prev => ({ 
-                      ...prev, 
-                      property, 
-                      // Reset unit if property changes
-                      unit: property !== prev.property ? '' : prev.unit 
-                    }));
-                  }}
-                  placeholder="Select property"
+                  options={contactMethodOptions}
+                  selectedValues={formData.preferredContactMethods}
+                  onChange={(values) => setFormData(prev => ({ ...prev, preferredContactMethods: values }))}
+                  placeholder="Select contact methods"
                   disabled={submitting || orgIdStatus === 'loading'}
+                  isMulti={true}
                 />
-                <div className="mt-1 text-xs text-blue-600">
-                  <i>Note: This is a development preview. Property/unit selection will not affect the created tenant.</i>
+                <div className="mt-1 text-xs text-gray-500">
+                  Select all contact methods that apply
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                  Unit
-                </label>
-                <SearchableDropdown
-                  options={availableUnits}
-                  selectedValues={formData.unit ? [formData.unit] : []}
-                  onChange={(values) => setFormData(prev => ({ ...prev, unit: values[0] || '' }))}
-                  placeholder={formData.property ? "Select unit" : "Select a property first"}
-                  disabled={!formData.property || submitting || orgIdStatus === 'loading'}
-                />
               </div>
             </form>
           </div>

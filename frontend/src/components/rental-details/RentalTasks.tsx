@@ -153,7 +153,11 @@ const getStatusColor = (status: Task['status']) => {
   }
 };
 
-export default function RentalTasks() {
+interface RentalTasksProps {
+  rentalId: string;
+}
+
+export default function RentalTasks({ rentalId }: RentalTasksProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);

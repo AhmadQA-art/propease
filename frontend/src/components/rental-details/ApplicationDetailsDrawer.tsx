@@ -1,47 +1,51 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User, Calendar, DollarSign, FileText, Phone, Mail, CreditCard, Check, X as XIcon, Home, Briefcase, Car, Cat, ChevronDown, NotepadText, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { applicationService } from '../../services/application.service';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../services/supabase/client';
 
 // Helper function to cast Lucide icon components to React elements
 const IconWrapper = ({ icon: Icon, size = 20, className = "" }) => {
   return <Icon size={size} className={className} />;
 };
 
-// Match the interface from RentalApplications component
+// Update the ApplicationViewModel interface to match the schema
 interface ApplicationViewModel {
-    id: string;
-    applicant: {
-      name: string;
-    id: number;
-      imageUrl?: string;
-    };
-  submitDate: string; // application_date
-  desiredMoveIn: string; // desired_move_in_date
-    status: 'pending' | 'approved' | 'rejected';
+  id: string;
+  organization_id: string;
+  applicant_id: number;
+  property_id: string;
+  unit_id: string;
+  applicant_name: string;
+  application_date: string;
+  desired_move_in_date: string;
+  status: 'pending' | 'approved' | 'rejected';
   monthly_income?: number;
-  documents: { 
-    id: string; 
-    file_name?: string;
-    file_path?: string;
-    file_type?: string;
-    uploaded_at?: string;
-    document_name?: string; 
-    document_url?: string;
-    document_type?: string;
-  }[];
-  unit?: {
-    id: string;
-    unit_number: string;
-    // Add other unit fields from DB
-    rent_amount?: number;
-    bedrooms?: number;
-    bathrooms?: number;
-    area?: number;
-    floor_plan?: string;
-  };
+  lease_term?: number;
+  is_employed: boolean;
+  credit_check_status?: 'pending' | 'approved' | 'rejected';
+  background_check_status?: 'pending' | 'passed' | 'failed';
+  has_pets: boolean;
+  has_vehicles: boolean;
+  emergency_contact?: Record<string, any>;
+  notes?: string;
+  previous_address?: string;
+  vehicle_details?: Record<string, any>;
+  pet_details?: Record<string, any>;
+  application_fee_paid?: boolean;
+  employment_info?: Record<string, any>;
+  applicant_email?: string;
+  applicant_phone_number?: string;
+  preferred_contact_method?: string[];
+  rejection_reason?: string;
+  id_type?: 'passport' | 'qid' | 'driving_license';
+  reviewed_by?: string;
+  review_date?: string;
+  expiry_date?: string;
+  created_at: string;
+  updated_at: string;
   property?: {
     id: string;
     name: string;
@@ -49,39 +53,22 @@ interface ApplicationViewModel {
     city: string;
     state: string;
   };
-  // All fields from rental_applications schema
-  application_date: string;
-  desired_move_in_date: string; 
-  lease_term: number;
-  is_employed: boolean;
-  credit_check_status?: 'pending' | 'approved' | 'rejected';
-  background_check_status?: 'pending' | 'passed' | 'failed';
-  has_pets: boolean;
-  has_vehicles: boolean;
-  emergency_contact?: {
-    name?: string;
-    phone?: string;
-    relationship?: string;
+  unit?: {
+    id: string;
+    unit_number: string;
+    rent_amount?: number;
+    bedrooms?: number;
+    bathrooms?: number;
+    area?: number;
   };
-  notes?: string;
-  previous_address?: string;
-  vehicle_details?: Record<string, any>;
-  pet_details?: Record<string, any>;
-  application_fee_paid?: boolean;
-  employment_info?: Record<string, any>;
-  applicant_id: number;
-  applicant_name: string;
-  property_id: string;
-  unit_id: string;
-  rejection_reason?: string;
-  id_type?: 'passport' | 'qid' | 'driving_license';
-  organization_id: string;
-  reviewed_by?: string;
-  review_date?: string;
-  expiry_date?: string;
-  applicant_email?: string;
-  applicant_phone_number?: string;
-  preferred_contact_method?: string[];
+  documents: {
+    id: string;
+    file_name: string;
+    file_type: string;
+    file_path: string;
+    uploaded_by: string;
+    uploaded_at: string;
+  }[];
 }
 
 interface ApplicationDetailsDrawerProps {
@@ -94,22 +81,90 @@ interface ApplicationDetailsDrawerProps {
 /**
  * Helper function to get a viewable URL for documents
  */
-const getViewableUrl = (url?: string): string => {
-  if (!url) return '';
-  
-  // If it's already a full URL, return it
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
+const getViewableUrl = async (filePath?: string): Promise<string> => {
+  if (!filePath) return '';
+
+  try {
+    const bucketName = 'rental-application-docs';
+    let relativePath = filePath;
+
+    // Check if filePath is a full URL
+    if (filePath.startsWith('https://')) {
+      const url = new URL(filePath);
+      const pathParts = url.pathname.split('/').filter(Boolean);
+
+      // Find the index of 'object' in the URL structure
+      const objectIndex = pathParts.indexOf('object');
+      if (objectIndex !== -1 && objectIndex + 2 < pathParts.length) {
+        // Extract everything after '/object/public/' or '/object/sign/'
+        relativePath = pathParts.slice(objectIndex + 3).join('/');
+      } else {
+        throw new Error('Invalid file path format');
+      }
+    }
+
+    console.log('Relative path used for signed URL:', relativePath);
+
+    const { data, error } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(relativePath, 3600); // 3600 seconds = 1 hour expiration
+
+    if (error) {
+      console.error('Error creating signed URL:', error.message);
+      throw error;
+    }
+
+    return data.signedUrl;
+  } catch (error) {
+    console.error('Error in getViewableUrl:', error);
+    return '';
   }
-  
-  // If it's a storage path, convert it to a viewable URL
-  if (url.startsWith('rental-application-docs/')) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const bucketName = 'documents';
-    return `${supabaseUrl}/storage/v1/object/public/${bucketName}/${url}`;
-  }
-  
-  return url;
+};
+
+const DocumentItem = ({ doc }: { doc: { id: string; file_name: string; file_path: string; file_type: string; uploaded_by: string; uploaded_at: string } }) => {
+  const [viewUrl, setViewUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadUrl = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const signedUrl = await getViewableUrl(doc.file_path);
+        setViewUrl(signedUrl);
+      } catch (err) {
+        setError('Failed to load document');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUrl();
+  }, [doc.file_path]);
+
+  const docName = doc.file_name || 'Unnamed Document';
+
+  return (
+    <div key={doc.id} className="flex items-center justify-between">
+      <div className="flex items-center">
+        <span className="ml-2">{docName}</span>
+        {isLoading && <span className="ml-2 text-gray-500">Loading...</span>}
+        {error && <span className="ml-2 text-red-500">{error}</span>}
+      </div>
+      {viewUrl && !isLoading && !error && (
+        <a
+          href={viewUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-500 hover:text-blue-700 transition-colors"
+        >
+          View
+        </a>
+      )}
+    </div>
+  );
 };
 
 export default function ApplicationDetailsDrawer({ application, isOpen, onClose, onStatusUpdate }: ApplicationDetailsDrawerProps) {
@@ -556,41 +611,9 @@ export default function ApplicationDetailsDrawer({ application, isOpen, onClose,
                   <p className="text-sm text-gray-500 mb-2">
                     Total documents: {application.documents.length}
                   </p>
-                  {application.documents.map((doc) => {
-                    // Get document name with fallbacks
-                    let docName = doc.file_name || doc.document_name || 'Unnamed Document';
-                    
-                    // Get document URL with fallbacks
-                    let docUrl = doc.file_path || doc.document_url || '';
-                    docUrl = getViewableUrl(docUrl);
-                    
-                    console.log('Document:', {
-                      id: doc.id,
-                      name: docName,
-                      url: docUrl,
-                      has_file_path: !!doc.file_path,
-                      has_document_url: !!doc.document_url
-                    });
-                    
-                    return (
-                      <div key={doc.id} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <IconWrapper icon={FileText} />
-                          <span className="ml-2">{docName}</span>
-                        </div>
-                        {docUrl && (
-                          <a
-                            href={docUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-500 hover:text-blue-700 transition-colors"
-                          >
-                            View
-                          </a>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {application.documents.map((doc) => (
+                    <DocumentItem key={doc.id} doc={doc} />
+                  ))}
                 </div>
               ) : (
                 <p className="text-sm text-gray-500">No documents uploaded</p>

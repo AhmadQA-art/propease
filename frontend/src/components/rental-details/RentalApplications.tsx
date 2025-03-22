@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Calendar, DollarSign, FileText, Search, NotepadText } from 'lucide-react';
+import { User, Calendar, DollarSign, FileText, Filter, Search, NotepadText } from 'lucide-react';
 import { format } from 'date-fns';
 import ApplicationDetailsDrawer from './ApplicationDetailsDrawer';
 import AddApplicationDrawer from './AddApplicationDrawer';
@@ -169,6 +169,8 @@ const IconWrapper = ({ icon: Icon, size = 20, className = "" }) => {
 export default function RentalApplications({ rentalId }: RentalApplicationsProps) {
   const { userProfile } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('');
   const [selectedApplication, setSelectedApplication] = useState<ApplicationViewModel | null>(null);
   const [isDetailsDrawerOpen, setIsDetailsDrawerOpen] = useState(false);
   const [isAddDrawerOpen, setIsAddDrawerOpen] = useState(false);
@@ -247,10 +249,14 @@ export default function RentalApplications({ rentalId }: RentalApplicationsProps
     fetchApplications();
   }, [rentalId, userProfile?.organization_id]);
 
-  const filteredApplications = applications.filter(application => 
-    application.applicant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    application.status.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredApplications = applications.filter(application => {
+    const matchesSearch = application.applicant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      application.status.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesStatus = !statusFilter || application.status.toLowerCase() === statusFilter.toLowerCase();
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const handleAddApplication = () => {
     // Refresh applications after adding a new one
@@ -353,15 +359,51 @@ export default function RentalApplications({ rentalId }: RentalApplicationsProps
           <p className="text-sm text-[#6B7280]">Manage rental applications</p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="relative w-64">
-            <IconWrapper icon={Search} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
             <input
               type="text"
               placeholder="Search applications..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 h-9 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
             />
+          </div>
+          <div className="relative">
+            <button 
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+              className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Filter className="w-5 h-5 text-[#2C3539]" />
+            </button>
+            {isFilterDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10 p-4">
+                <h3 className="font-medium text-[#2C3539] mb-2">Filter Applications</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-[#6B7280] mb-1">Status</label>
+                    <select 
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
+                    >
+                      <option value="">All Statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </div>
+                  <div className="pt-2 flex justify-end">
+                    <button 
+                      onClick={() => setIsFilterDropdownOpen(false)}
+                      className="px-4 py-2 bg-[#2C3539] text-white rounded-lg text-sm"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           <button 
             onClick={() => setIsAddDrawerOpen(true)}

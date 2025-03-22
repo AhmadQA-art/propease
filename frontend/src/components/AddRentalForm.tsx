@@ -12,20 +12,21 @@ interface CustomUnit {
   rent_amount: number;
   bedrooms: number;
   bathrooms: number;
-  square_feet: number;
-  status: string;
+  area: number;
+  status: 'vacant' | 'occupied' | 'deleted';
   floor_plan: string;
   smart_lock_enabled: boolean;
   property_id?: string;
 }
 
 interface FormUnit {
+  id?: string;
   unit_number: string;
   rent_amount: number;
   bedrooms: number;
   bathrooms: number;
-  square_feet: number;
-  status: 'Available' | 'Occupied' | 'Maintenance' | 'Reserved';
+  area: number;
+  status: 'vacant' | 'occupied' | 'deleted';
   floor_plan: string;
   smart_lock_enabled: boolean;
 }
@@ -57,6 +58,17 @@ interface AddRentalFormProps {
   propertyOwners: Person[];
 }
 
+const FLOOR_PLAN_OPTIONS = [
+  'Studio',
+  '1 Bedroom',
+  '2 Bedrooms',
+  '3 Bedrooms',
+  '4 Bedrooms',
+  'Penthouse',
+  'Townhouse',
+  'Villa'
+];
+
 export default function AddRentalForm({ 
   onSubmit, 
   onCancel, 
@@ -81,17 +93,44 @@ export default function AddRentalForm({
 
   useEffect(() => {
     if (initialData && mode === 'edit') {
+      // Map status values from API to the form values
+      const mapStatus = (status: string): 'vacant' | 'occupied' | 'deleted' => {
+        const statusMap: Record<string, 'vacant' | 'occupied' | 'deleted'> = {
+          'Available': 'vacant',
+          'Vacant': 'vacant',
+          'Occupied': 'occupied',
+          'Maintenance': 'vacant',
+          'Reserved': 'vacant',
+          'Deleted': 'deleted'
+        };
+        
+        // Convert to lowercase first to ensure consistent matching
+        const normalizedStatus = status.toLowerCase();
+        
+        // Direct match for our expected values
+        if (normalizedStatus === 'vacant' || normalizedStatus === 'occupied' || normalizedStatus === 'deleted') {
+          return normalizedStatus as 'vacant' | 'occupied' | 'deleted';
+        }
+        
+        // Try to map from the status map
+        const mappedStatus = statusMap[status];
+        
+        // Return the mapped status or default to vacant
+        return mappedStatus || 'vacant';
+      };
+
       const mappedUnits: FormUnit[] = (initialData.units || []).map(unit => ({
+        id: unit.id, // Preserve unit ID for existing units
         unit_number: unit.unit_number || '',
         rent_amount: unit.rent_amount || 0,
         bedrooms: unit.bedrooms || 0,
         bathrooms: unit.bathrooms || 0,
-        square_feet: unit.square_feet || 0,
-        status: (unit.status as 'Available' | 'Occupied' | 'Maintenance' | 'Reserved') || 'Available',
+        area: unit.area || 0, // Changed from square_feet to area
+        status: mapStatus(unit.status), // Use the mapping function here
         floor_plan: unit.floor_plan || '',
         smart_lock_enabled: unit.smart_lock_enabled || false
       }));
-
+  
       setFormData({
         name: initialData.name,
         address: initialData.address,
@@ -110,13 +149,11 @@ export default function AddRentalForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate that at least one unit is added
     if (formData.units.length === 0) {
       toast.error('Please add at least one unit to the property');
       return;
     }
     
-    // Check for duplicate unit numbers
     const unitNumbers = formData.units.map(unit => unit.unit_number);
     const uniqueUnitNumbers = new Set(unitNumbers);
     
@@ -137,18 +174,33 @@ export default function AddRentalForm({
       property_type: formData.property_type,
     };
     
+    // Map status values to ensure they use the expected enum values
     const units = formData.units.map(unit => {
-      // Create a unit object that matches the database schema
+      // Ensure status is one of the expected values: 'vacant', 'occupied', 'deleted'
+      let normalizedStatus: 'vacant' | 'occupied' | 'deleted' = 'vacant';
+      
+      if (typeof unit.status === 'string') {
+        const status = unit.status.toLowerCase();
+        if (status === 'occupied') normalizedStatus = 'occupied';
+        else if (status === 'deleted') normalizedStatus = 'deleted';
+        else normalizedStatus = 'vacant'; // Default to vacant for any other value
+      }
+      
       const unitData: any = {
         unit_number: unit.unit_number,
         rent_amount: unit.rent_amount,
         bedrooms: unit.bedrooms,
         bathrooms: unit.bathrooms,
-        square_feet: unit.square_feet,
-        status: unit.status,
+        area: unit.area,
+        status: normalizedStatus,
         floor_plan: unit.floor_plan,
         smart_lock_enabled: unit.smart_lock_enabled
       };
+      
+      // If this is an existing unit, include its ID
+      if (unit.id) {
+        unitData.id = unit.id;
+      }
       
       return unitData;
     });
@@ -199,7 +251,6 @@ export default function AddRentalForm({
 
   // Update the addUnit function to ensure unique unit numbers
   const addUnit = () => {
-    // Generate a unique unit number based on existing units
     let unitNumber = '';
     let counter = formData.units.length + 1;
     
@@ -217,8 +268,8 @@ export default function AddRentalForm({
           rent_amount: 0,
           bedrooms: 1,
           bathrooms: 1,
-          square_feet: 0,
-          status: 'Available',
+          area: 0, // Changed from square_feet to area
+          status: 'vacant', // Updated default status
           floor_plan: '',
           smart_lock_enabled: false
         },
@@ -478,23 +529,6 @@ export default function AddRentalForm({
                     
                     <div>
                       <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                        Occupancy Status
-                      </label>
-                      <select
-                        value={unit.status}
-                        onChange={(e) => updateUnit(index, { status: e.target.value as any })}
-                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
-                        required
-                      >
-                        <option value="Available">Available</option>
-                        <option value="Occupied">Occupied</option>
-                        <option value="Maintenance">Maintenance</option>
-                        <option value="Reserved">Reserved</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-[#2C3539] mb-2">
                         Bedrooms
                       </label>
                       <input
@@ -526,12 +560,12 @@ export default function AddRentalForm({
                     
                     <div>
                       <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                        Square Feet
+                        Area (m²)
                       </label>
                       <input
                         type="number"
-                        value={unit.square_feet}
-                        onChange={(e) => updateUnit(index, { square_feet: Number(e.target.value) })}
+                        value={unit.area}
+                        onChange={(e) => updateUnit(index, { area: Number(e.target.value) })}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
                         placeholder="850"
                         min="0"
@@ -543,13 +577,18 @@ export default function AddRentalForm({
                       <label className="block text-sm font-medium text-[#2C3539] mb-2">
                         Floor Plan
                       </label>
-                      <input
-                        type="text"
+                      <select
                         value={unit.floor_plan}
                         onChange={(e) => updateUnit(index, { floor_plan: e.target.value })}
                         className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent bg-white"
-                        placeholder="e.g. Studio, 1BR, etc."
-                      />
+                      >
+                        <option value="">Select Floor Plan</option>
+                        {FLOOR_PLAN_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     
                     <div className="flex items-center">

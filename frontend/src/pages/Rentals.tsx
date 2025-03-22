@@ -16,7 +16,7 @@ interface CustomUnit {
   rent_amount: number;
   bedrooms: number;
   bathrooms: number;
-  square_feet: number;
+  area: number; // Changed from square_feet to area
   status: string;
   floor_plan: string;
   smart_lock_enabled: boolean;
@@ -38,8 +38,11 @@ export default function Rentals() {
   const [propertyManagers, setPropertyManagers] = useState<Person[]>([]);
   const [propertyOwners, setPropertyOwners] = useState<Person[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [propertyTypeFilter, setPropertyTypeFilter] = useState<string>('');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const dataLoadedRef = useRef(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+  const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   const transformPropertyToRentalDetails = (property: Property): RentalDetails => {
     // Use type assertion to handle property_type
@@ -74,6 +77,24 @@ export default function Rentals() {
       // Only reset the ref when organization changes, not on normal unmounts
     };
   }, [userProfile?.organization_id]);
+
+  // Add click outside handler
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (isFilterDropdownOpen &&
+          filterDropdownRef.current &&
+          filterButtonRef.current &&
+          !filterDropdownRef.current.contains(event.target as Node) &&
+          !filterButtonRef.current.contains(event.target as Node)) {
+        setIsFilterDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isFilterDropdownOpen]);
 
   const loadRentals = async () => {
     if (!userProfile?.organization_id) {
@@ -134,13 +155,20 @@ export default function Rentals() {
     }
   };
 
-  // Filter rentals by name
+  // Filter rentals by name and property type
   const filteredRentals = rentals.filter(rental => {
-    if (!searchQuery) return true;
+    const matchesSearch = !searchQuery || 
+      (rental.propertyName || rental.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     
-    const propertyName = rental.propertyName || rental.name || '';
-    return propertyName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPropertyType = !propertyTypeFilter || 
+      rental.type.toLowerCase() === propertyTypeFilter.toLowerCase();
+    
+    return matchesSearch && matchesPropertyType;
   });
+
+  const handleApplyFilters = () => {
+    setIsFilterDropdownOpen(false);
+  };
 
   if (!isAuthenticated) {
     return <div>Please log in to view rentals.</div>;
@@ -174,8 +202,8 @@ export default function Rentals() {
       </div>
 
       {/* Search and Filter Controls */}
-      <div className="flex items-center space-x-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex items-center gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
@@ -185,54 +213,52 @@ export default function Rentals() {
             className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
           />
         </div>
-        <div className="relative">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <button 
+            ref={filterButtonRef}
             onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
             className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <Filter className="w-5 h-5 text-[#2C3539]" />
           </button>
-          {isFilterDropdownOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10 p-4">
-              <h3 className="font-medium text-[#2C3539] mb-2">Filter Properties</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#6B7280] mb-1">Property Type</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                  >
-                    <option value="">All Types</option>
-                    <option value="residential">Residential</option>
-                    <option value="commercial">Commercial</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[#6B7280] mb-1">Status</label>
-                  <select 
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
-                  >
-                    <option value="">All Statuses</option>
-                    <option value="active">Active</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="inactive">Inactive</option>
-                  </select>
-                </div>
-                <div className="pt-2 flex justify-end">
-                  <button className="px-4 py-2 bg-[#2C3539] text-white rounded-lg text-sm">
-                    Apply Filters
-                  </button>
-                </div>
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors whitespace-nowrap"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Rental
+          </button>
+        </div>
+        {isFilterDropdownOpen && (
+          <div 
+            ref={filterDropdownRef}
+            className="absolute right-6 mt-32 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-10 p-4"
+          >
+            <h3 className="font-medium text-[#2C3539] mb-2">Filter Properties</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[#6B7280] mb-1">Property Type</label>
+                <select 
+                  value={propertyTypeFilter}
+                  onChange={(e) => setPropertyTypeFilter(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] focus:border-transparent"
+                >
+                  <option value="">All Types</option>
+                  <option value="residential">Residential</option>
+                  <option value="commercial">Commercial</option>
+                </select>
+              </div>
+              <div className="pt-2 flex justify-end">
+                <button 
+                  onClick={handleApplyFilters}
+                  className="px-4 py-2 bg-[#2C3539] text-white rounded-lg text-sm"
+                >
+                  Apply Filters
+                </button>
               </div>
             </div>
-          )}
-        </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="flex items-center px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Rental
-        </button>
+          </div>
+        )}
       </div>
 
       {loading ? (

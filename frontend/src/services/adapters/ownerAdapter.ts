@@ -10,7 +10,8 @@ export interface UiOwner {
     phone: string;
   };
   company_name: string;
-  business_type: string;
+  owner_type: string;
+  business_type?: string; // Keep for backward compatibility
   status: string;
   created_at: string;
   notes?: string;
@@ -40,7 +41,7 @@ export const apiToUiOwner = (apiOwner: any): UiOwner => {
         phone: '',
       },
       company_name: '',
-      business_type: '',
+      owner_type: '',
       status: 'inactive',
       created_at: new Date().toISOString(),
     };
@@ -61,7 +62,8 @@ export const apiToUiOwner = (apiOwner: any): UiOwner => {
         phone: apiOwner.phone || '',
       },
       company_name: apiOwner.company_name || '',
-      business_type: apiOwner.business_type || '',
+      owner_type: apiOwner.owner_type || apiOwner.business_type || '',
+      business_type: apiOwner.business_type, // Keep for backward compatibility
       status: apiOwner.status || 'active',
       created_at: apiOwner.created_at || new Date().toISOString(),
       notes: apiOwner.notes,
@@ -82,7 +84,8 @@ export const apiToUiOwner = (apiOwner: any): UiOwner => {
         phone: apiOwner.phone || userProfiles.phone || '',
       },
       company_name: apiOwner.company_name || '',
-      business_type: apiOwner.business_type || '',
+      owner_type: apiOwner.owner_type || apiOwner.business_type || '',
+      business_type: apiOwner.business_type, // Keep for backward compatibility
       status: apiOwner.status || 'active',
       created_at: apiOwner.created_at || new Date().toISOString(),
       notes: apiOwner.notes,
