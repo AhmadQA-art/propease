@@ -103,12 +103,14 @@ export const uiVendorToPerson = (uiVendor: UiVendor): Vendor => {
   return {
     id: uiVendor.id,
     type: 'vendor',
-    name: uiVendor.vendor_name || 'Unknown Vendor',
+    name: uiVendor.contact_person_name || 'Unknown Contact',
     email: uiVendor.email,
     phone: uiVendor.phone,
     status: 'active', // Vendors don't have status in the database
     createdAt: uiVendor.created_at,
     company_name: uiVendor.vendor_name, // Use vendor_name as company_name
+    vendor_name: uiVendor.vendor_name, // Add the vendor_name directly
+    contact_person_name: uiVendor.contact_person_name, // Add the contact person name
     service_type: uiVendor.service_type,
     rating: uiVendor.performance_rating || 0,
     lastService: '', // Not in schema, placeholder

@@ -167,6 +167,13 @@ export const peopleApi = {
   // Get tenants with pagination
   getTenants: async (params: PaginationParams = {}): Promise<any> => {
     try {
+      console.log('Fetching tenants, params:', {
+        page: params.page,
+        pageSize: params.pageSize,
+        searchQuery: params.searchQuery
+      });
+      
+      // First get all tenants
       let query = supabase
         .from('tenants')
         .select(`
@@ -195,13 +202,18 @@ export const peopleApi = {
               )
             )
           )
-        `)
+        `, { count: 'exact' })
         .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' });
 
       // Apply search if provided
       if (params.searchQuery) {
         const searchQuery = params.searchQuery.toLowerCase();
         query = query.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+      }
+
+      // Apply status filter
+      if (params.filters?.status && params.filters.status.length > 0) {
+        query = query.in('status', params.filters.status);
       }
 
       // Apply pagination
@@ -211,7 +223,16 @@ export const peopleApi = {
         query = query.range(from, to);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
+
+      // Log the count and pagination details
+      console.log('Tenants fetch results:', {
+        count,
+        tenantsReturned: data?.length || 0,
+        pageSize: params.pageSize || 10,
+        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0,
+        currentPage: params.page || 1
+      });
 
       if (error) throw error;
 
@@ -257,8 +278,8 @@ export const peopleApi = {
 
       return {
         data: tenants,
-        total: data.length,
-        totalPages: Math.ceil(data.length / (params.pageSize || 10))
+        total: count || 0,
+        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0
       };
     } catch (error) {
       console.error('Error fetching tenants:', error);
@@ -378,17 +399,27 @@ export const peopleApi = {
   // Get vendors with pagination
   getVendors: async (params: PaginationParams = {}): Promise<any> => {
     try {
-      console.log('Fetching vendors with params:', params);
+      console.log('Fetching vendors, params:', {
+        page: params.page,
+        pageSize: params.pageSize,
+        searchQuery: params.searchQuery
+      });
       
+      // First get all vendors
       let query = supabase
         .from('vendors')
-        .select('*')  // Select all fields to support the new schema
+        .select('*', { count: 'exact' })
         .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' });
 
       // Apply search if provided
       if (params.searchQuery) {
         const searchQuery = params.searchQuery.toLowerCase();
-        query = query.or(`vendor_name.ilike.%${searchQuery}%,contact_person_name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+        query = query.or(`vendor_name.ilike.%${searchQuery}%,contact_person_name.ilike.%${searchQuery}%,contact_person_email.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+      }
+
+      // Apply status filter
+      if (params.filters?.status && params.filters.status.length > 0) {
+        query = query.in('status', params.filters.status);
       }
 
       // Apply pagination
@@ -398,14 +429,18 @@ export const peopleApi = {
         query = query.range(from, to);
       }
 
-      const { data, error } = await query;
+      const { data, error, count } = await query;
 
-      if (error) {
-        console.error('Error fetching vendors:', error);
-        throw error;
-      }
+      // Log the count and pagination details
+      console.log('Vendors fetch results:', {
+        count,
+        vendorsReturned: data?.length || 0,
+        pageSize: params.pageSize || 10,
+        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0,
+        currentPage: params.page || 1
+      });
 
-      console.log('Vendors data received:', data);
+      if (error) throw error;
 
       // First transform to UiVendor format
       const uiVendors = apiToUiVendors(data);
@@ -415,8 +450,8 @@ export const peopleApi = {
 
       return {
         data: vendors,
-        total: data.length,
-        totalPages: Math.ceil(data.length / (params.pageSize || 10))
+        total: count || 0,
+        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0
       };
     } catch (error) {
       console.error('Error fetching vendors:', error);
@@ -914,10 +949,17 @@ export const peopleApi = {
   // Get owners with their properties
   getOwnersWithProperties: async (params: PaginationParams = {}): Promise<any> => {
     try {
+      console.log('Fetching owners with properties, params:', {
+        page: params.page,
+        pageSize: params.pageSize,
+        searchQuery: params.searchQuery,
+        ownerTypes: params.filters?.ownerTypes
+      });
+
       // First get all owners
       let ownersQuery = supabase
         .from('owners')
-        .select('id, first_name, last_name, phone, email, company_name, owner_type, created_at')
+        .select('id, first_name, last_name, phone, email, company_name, owner_type, created_at', { count: 'exact' })
         .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' });
 
       // Apply search if provided
@@ -939,6 +981,15 @@ export const peopleApi = {
       }
 
       const { data: ownersData, error: ownersError, count } = await ownersQuery;
+
+      // Log the count and pagination details
+      console.log('Owners fetch results:', {
+        count,
+        ownersReturned: ownersData?.length || 0,
+        pageSize: params.pageSize || 10,
+        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0,
+        currentPage: params.page || 1
+      });
 
       if (ownersError) throw ownersError;
       

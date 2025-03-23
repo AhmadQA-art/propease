@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Tab } from '@headlessui/react';
 import TabHeader from '../components/tabs/TabHeader';
 import PeopleTable, { Column } from '../components/people/PeopleTable';
@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { isDevelopmentUser } from '../config/constants';
 import TenantDetailsDrawer from '../components/people/TenantDetailsDrawer';
 import OwnerDetailsDrawer from '../components/people/OwnerDetailsDrawer';
+import VendorDetailsDrawer from '../components/people/VendorDetailsDrawer';
 import { apiToUiOwner, UiOwner } from '../services/adapters/ownerAdapter';
 
 const baseTabs = ['All People', 'Team', 'Owners', 'Tenants', 'Vendors'];
@@ -178,32 +179,69 @@ const getColumns = (tab: string): Column[] => {
       }
     ],
     'Vendors': [
-      ...baseColumns,
-      { key: 'serviceType', label: 'Service Type' },
-      {
-        key: 'performance',
-        label: 'Performance',
+      { key: 'vendor_name', label: 'Vendor', 
         render: (row: Person) => {
           if (row.type !== 'vendor') return null;
+          const vendor = row as Vendor;
+          return vendor.vendor_name || vendor.company_name || vendor.company || 'Unknown Vendor';
+        }
+      },
+      { 
+        key: 'name', 
+        label: 'Contact Person', 
+        render: (row: Person) => {
+          if (row.type !== 'vendor') return null;
+          const vendor = row as Vendor;
           
-          // Type assertion to handle the performance property
-          const vendor = row as Vendor & { performance?: number };
-          if (!vendor.performance) return null;
+          // Get contact person name and email from the vendor
+          const contactName = vendor.contact_person_name;
+          const contactEmail = vendor.contact_person_email;
           
-          const stars = [];
-          for (let i = 0; i < 5; i++) {
-            stars.push(
-              <svg
-                key={i}
-                className={`h-4 w-4 ${i < vendor.performance ? 'text-yellow-400' : 'text-gray-300'}`}
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            );
-          }
-          return <div className="flex">{stars}</div>;
+          // If both fields are empty, return null
+          if (!contactName && !contactEmail) return null;
+          
+          return (
+            <div>
+              {contactName && (
+                <div className="text-sm font-medium text-gray-900">{contactName}</div>
+              )}
+              {contactEmail && (
+                <div className="text-xs text-gray-500">{contactEmail}</div>
+              )}
+            </div>
+          );
+        },
+        skipDefaultRenderer: true
+      },
+      { 
+        key: 'phone', 
+        label: 'Phone',
+        render: (row: Person) => {
+          if (row.type !== 'vendor') return null;
+          const vendor = row as Vendor;
+          
+          // Use vendor's phone since contact_person_phone doesn't exist in the interface
+          return vendor.phone || null;
+        }
+      },
+      { 
+        key: 'email', 
+        label: 'Email',
+        render: (row: Person) => {
+          if (row.type !== 'vendor') return null;
+          const vendor = row as Vendor;
+          
+          // Prefer contact person's email, fall back to vendor email
+          const emailToShow = vendor.contact_person_email || vendor.email || '';
+          
+          return emailToShow ? emailToShow : null;
+        }
+      },
+      { key: 'service_type', label: 'Service Type',
+        render: (row: Person) => {
+          if (row.type !== 'vendor') return null;
+          const vendor = row as Vendor;
+          return vendor.service_type || 'Not specified';
         }
       }
     ]
@@ -277,6 +315,10 @@ export default function People() {
   const [selectedOwner, setSelectedOwner] = useState<UiOwner | null>(null);
   const [isOwnerDetailsOpen, setIsOwnerDetailsOpen] = useState(false);
 
+  // Add state for vendor details drawer
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+  const [isVendorDetailsOpen, setIsVendorDetailsOpen] = useState(false);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -295,6 +337,8 @@ export default function People() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
+    console.log('Fetching data for tab:', activeTab, 'with page:', currentPage, 'pageSize:', pageSize);
+    
     try {
       // Check if user is attempting to access the "All People" tab when they shouldn't
       if (activeTab === 'All People' && userProfile?.email && !isDevelopmentUser(userProfile.email)) {
@@ -350,6 +394,13 @@ export default function People() {
           setData([]);
           setTotalPages(1);
       }
+
+      console.log('Data fetch result:', {
+        tab: activeTab,
+        dataLength: result?.data?.length || 0,
+        totalPages: result?.totalPages || 1,
+        total: result?.total || 0
+      });
     } catch (err: any) {
       console.error(`Error fetching ${activeTab} data:`, err);
       setError(`Failed to load ${activeTab} data: ${err.message}`);
@@ -581,6 +632,20 @@ export default function People() {
     // The useEffect will trigger a data refresh
   };
 
+  // Add handler for row click
+  const handleRowClick = (person: Person) => {
+    if (person.type === 'tenant') {
+      setSelectedTenant(person as Tenant);
+      setIsTenantDetailsOpen(true);
+    } else if (person.type === 'owner') {
+      setSelectedOwner(apiToUiOwner(person as Owner));
+      setIsOwnerDetailsOpen(true);
+    } else if (person.type === 'vendor') {
+      setSelectedVendor(person as Vendor);
+      setIsVendorDetailsOpen(true);
+    }
+  };
+
   const renderContent = () => {
     // Don't render All People tab content for non-development users
     if (activeTab === 'All People' && userProfile?.email && !isDevelopmentUser(userProfile.email)) {
@@ -624,19 +689,36 @@ export default function People() {
       } else if (activeTab === 'Owners') {
         filteredData = applyOwnerTypeFilter(filteredData);
       }
+
+      console.log(`Rendering ${activeTab} tab:`, {
+        currentPage,
+        totalPages,
+        dataLength: filteredData.length
+      });
       
       // All other tabs use the same table structure but with different columns and data
       return (
-        <PeopleTable
-          data={filteredData}
-          columns={getColumns(activeTab)}
-          onSort={handleSort}
-          onAction={handleAction}
-          selectedIds={selectedIds}
-          onSelect={setSelectedIds}
-          loading={loading}
-          onRowClick={handleRowClick}
-        />
+        <div>
+          <div className="mb-2 text-sm text-gray-500">
+            Page {currentPage} of {totalPages} (Showing {filteredData.length} records)
+          </div>
+          <PeopleTable
+            data={filteredData}
+            columns={getColumns(activeTab)}
+            onSort={handleSort}
+            onAction={handleAction}
+            selectedIds={selectedIds}
+            onSelect={setSelectedIds}
+            loading={loading}
+            onRowClick={handleRowClick}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => {
+              console.log(`Changing page from ${currentPage} to ${page}`);
+              setCurrentPage(page);
+            }}
+          />
+        </div>
       );
     }
   };
@@ -796,17 +878,6 @@ export default function People() {
     }
   };
 
-  // Add handler for row click
-  const handleRowClick = (person: Person) => {
-    if (person.type === 'tenant') {
-      setSelectedTenant(person as Tenant);
-      setIsTenantDetailsOpen(true);
-    } else if (person.type === 'owner') {
-      setSelectedOwner(apiToUiOwner(person as Owner));
-      setIsOwnerDetailsOpen(true);
-    }
-  };
-
   return (
     <div className="space-y-8">
       <div>
@@ -908,6 +979,15 @@ export default function People() {
           isOpen={isOwnerDetailsOpen}
           onClose={() => setIsOwnerDetailsOpen(false)}
           onUpdate={fetchData}
+        />
+      )}
+
+      {/* Vendor Details Drawer */}
+      {selectedVendor && (
+        <VendorDetailsDrawer
+          vendor={selectedVendor}
+          isOpen={isVendorDetailsOpen}
+          onClose={() => setIsVendorDetailsOpen(false)}
         />
       )}
     </div>
