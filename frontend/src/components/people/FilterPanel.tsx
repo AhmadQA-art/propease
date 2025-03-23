@@ -7,8 +7,14 @@ interface FilterPanelProps {
     types: PersonType[];
     status: string[];
     hasLease: string[];
+    ownerTypes?: string[];
   };
-  onFiltersChange: (filters: { types: PersonType[]; status: string[]; hasLease: string[] }) => void;
+  onFiltersChange: (filters: { 
+    types: PersonType[]; 
+    status: string[]; 
+    hasLease: string[];
+    ownerTypes?: string[];
+  }) => void;
   tabType?: 'Tenants' | 'Owners' | 'Vendors' | string;
 }
 
@@ -18,8 +24,16 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChange, tab
     { value: 'no_lease', label: 'Not Active' },
   ];
 
-  // Owner-specific filter options could be added here
-  const ownerOptions = [
+  // Owner type filter options
+  const ownerTypeOptions = [
+    { value: 'individual', label: 'Individual' },
+    { value: 'llc', label: 'LLC' },
+    { value: 'corporation', label: 'Corporation' },
+    { value: 'partnership', label: 'Partnership' },
+  ];
+
+  // Property status filter options
+  const ownerPropertyOptions = [
     { value: 'has_properties', label: 'Has Properties' },
     { value: 'no_properties', label: 'No Properties' },
   ];
@@ -46,16 +60,27 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChange, tab
         );
       case 'Owners':
         return (
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">Property Status</p>
-            <SearchableDropdown
-              options={ownerOptions}
-              selectedValues={[]} // Currently not tracking owner filters
-              onChange={() => {}} // Placeholder - would need to implement owner filtering
-              multiple
-              disabled={true}
-            />
-            <p className="text-xs text-gray-500 mt-1">Owner filters coming soon</p>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Owner Type</p>
+              <SearchableDropdown
+                options={ownerTypeOptions}
+                selectedValues={filters.ownerTypes || []}
+                onChange={(values) => onFiltersChange({ ...filters, ownerTypes: values })}
+                multiple
+              />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Property Status</p>
+              <SearchableDropdown
+                options={ownerPropertyOptions}
+                selectedValues={[]} 
+                onChange={() => {}} 
+                multiple
+                disabled={true}
+              />
+              <p className="text-xs text-gray-500 mt-1">Property filters coming soon</p>
+            </div>
           </div>
         );
       case 'Vendors':
@@ -87,7 +112,14 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChange, tab
 
       <div className="pt-4 flex justify-end space-x-2">
         <button
-          onClick={() => onFiltersChange({ ...filters, hasLease: [] })}
+          onClick={() => {
+            const resetFilters = {
+              ...filters, 
+              hasLease: [],
+              ownerTypes: []
+            };
+            onFiltersChange(resetFilters);
+          }}
           className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
         >
           Clear All

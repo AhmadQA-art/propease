@@ -63,4 +63,41 @@ export const propertyApi = {
     
     if (error) throw error;
   },
+
+  async searchProperties(query: string) {
+    const { data, error } = await supabase
+      .from('properties')
+      .select('*')
+      .ilike('name', `%${query}%`)
+      .limit(10);
+    
+    if (error) throw error;
+    return data as Property[];
+  },
+
+  async linkPropertyToOwner(propertyId: string, ownerId: string) {
+    const { data, error } = await supabase
+      .from('properties')
+      .update({ owner_id: ownerId })
+      .eq('id', propertyId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    
+    try {
+      await supabase
+        .from('owner_properties')
+        .upsert({ 
+          owner_id: ownerId, 
+          property_id: propertyId 
+        }, { 
+          onConflict: 'owner_id,property_id' 
+        });
+    } catch (error) {
+      console.log('Note: owner_properties table might not exist or is not needed');
+    }
+    
+    return data as Property;
+  }
 };

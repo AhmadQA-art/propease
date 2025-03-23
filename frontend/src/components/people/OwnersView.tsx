@@ -17,6 +17,16 @@ export default function OwnersView({ owners }: OwnersViewProps) {
     owner.company_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Helper function to format owner type for display
+  const formatOwnerType = (type?: string) => {
+    if (!type) return 'Individual';
+    
+    // Convert snake_case to Title Case and replace underscores with spaces
+    return type.split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Actions */}
@@ -63,13 +73,13 @@ export default function OwnersView({ owners }: OwnersViewProps) {
                 Company
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Owner Type
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Contact
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Properties
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
               </th>
               <th className="relative px-6 py-3">
                 <span className="sr-only">Actions</span>
@@ -106,19 +116,25 @@ export default function OwnersView({ owners }: OwnersViewProps) {
                   <div className="text-sm text-gray-900">{owner.company_name || '-'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{formatOwnerType(owner.owner_type)}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">{owner.phone}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{owner.properties?.length || 0} properties</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    owner.status === 'active' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {owner.status}
-                  </span>
+                  {owner.properties && owner.properties.length > 0 ? (
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {owner.properties.length} {owner.properties.length === 1 ? 'property' : 'properties'}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {owner.properties.slice(0, 2).map(prop => prop.name).join(', ')}
+                        {owner.properties.length > 2 ? ', ...' : ''}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">No properties</div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button className="text-gray-400 hover:text-gray-600">

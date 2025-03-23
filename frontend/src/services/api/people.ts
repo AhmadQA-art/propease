@@ -23,7 +23,7 @@ export const peopleApi = {
         // Get owners
         supabase
           .from('owners')
-          .select('id, first_name, last_name, phone, email, company_name, created_at')
+          .select('id, first_name, last_name, phone, email, company_name, owner_type, created_at')
           .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' }),
         
         // Get tenants  
@@ -54,6 +54,7 @@ export const peopleApi = {
         status: 'active', // Default status since we're not using filters by status
         createdAt: owner.created_at,
         company_name: owner.company_name,
+        owner_type: owner.owner_type,
         properties: []
       }));
 
@@ -118,7 +119,7 @@ export const peopleApi = {
     try {
       let query = supabase
         .from('owners')
-        .select('id, first_name, last_name, phone, email, company_name, created_at')
+        .select('id, first_name, last_name, phone, email, company_name, owner_type, created_at')
         .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' });
 
       // Apply search if provided
@@ -148,6 +149,7 @@ export const peopleApi = {
         status: 'active', // Default status since actual schema has status
         createdAt: owner.created_at,
         company_name: owner.company_name,
+        owner_type: owner.owner_type,
         properties: [] // Empty array since properties are in a separate table
       }));
 
@@ -905,6 +907,119 @@ export const peopleApi = {
       if (error) throw error;
     } catch (error) {
       console.error(`Error bulk deleting ${personType}:`, error);
+      throw error;
+    }
+  },
+
+  // Get owners with their properties
+  getOwnersWithProperties: async (params: PaginationParams = {}): Promise<any> => {
+    try {
+      // First get all owners
+      let ownersQuery = supabase
+        .from('owners')
+        .select('id, first_name, last_name, phone, email, company_name, owner_type, created_at')
+        .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' });
+
+      // Apply search if provided
+      if (params.searchQuery) {
+        const searchQuery = params.searchQuery.toLowerCase();
+        ownersQuery = ownersQuery.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+      }
+      
+      // Apply owner type filters if provided
+      if (params.filters?.ownerTypes && params.filters.ownerTypes.length > 0) {
+        ownersQuery = ownersQuery.in('owner_type', params.filters.ownerTypes);
+      }
+
+      // Apply pagination
+      if (params.page !== undefined && params.pageSize !== undefined) {
+        const from = (params.page - 1) * params.pageSize;
+        const to = from + params.pageSize - 1;
+        ownersQuery = ownersQuery.range(from, to);
+      }
+
+      const { data: ownersData, error: ownersError, count } = await ownersQuery;
+
+      if (ownersError) throw ownersError;
+      
+      // Now get the properties for each owner
+      const ownerIds = ownersData.map(owner => owner.id);
+      
+      // Query owner_properties join with properties to get property data
+      const { data: propertiesData, error: propertiesError } = await supabase
+        .from('owner_properties')
+        .select(`
+          owner_id,
+          property_id,
+          properties(id, name)
+        `)
+        .in('owner_id', ownerIds);
+      
+      if (propertiesError) throw propertiesError;
+      
+      // Debug the first item to understand the structure
+      if (propertiesData && propertiesData.length > 0) {
+        console.log('Example property data item:', propertiesData[0]);
+      }
+      
+      // Create a map of owner ID to properties
+      const ownerPropertiesMap: Record<string, Array<{id: string, name: string}>> = {};
+      
+      // Initialize empty arrays for each owner
+      ownerIds.forEach(id => {
+        ownerPropertiesMap[id] = [];
+      });
+      
+      // Add properties to each owner when available
+      if (propertiesData) {
+        for (const item of propertiesData) {
+          const ownerId = item.owner_id;
+          const propertyId = item.property_id;
+          
+          // Skip if owner ID is missing
+          if (!ownerId || !ownerPropertiesMap[ownerId]) continue;
+          
+          // Use the property_id as fallback
+          let propertyName = 'Unknown Property';
+          
+          // Try to access property data - handle as a record with any structure
+          if (item.properties) {
+            // Using type assertion to handle various possible structures
+            const propData = item.properties as any;
+            if (typeof propData === 'object' && propData.name) {
+              propertyName = propData.name;
+            }
+          }
+          
+          // Create a property entry
+          ownerPropertiesMap[ownerId].push({
+            id: propertyId || '',
+            name: propertyName
+          });
+        }
+      }
+      
+      // Transform data to match the Owner interface
+      const owners = ownersData.map((owner): Owner => ({
+        id: owner.id,
+        type: 'owner',
+        name: `${owner.first_name} ${owner.last_name}`,
+        email: owner.email,
+        phone: owner.phone,
+        status: 'active', // Default status
+        createdAt: owner.created_at,
+        company_name: owner.company_name,
+        owner_type: owner.owner_type,
+        properties: ownerPropertiesMap[owner.id] || [] // Add the properties for this owner
+      }));
+
+      return {
+        data: owners,
+        total: count || 0,
+        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0
+      };
+    } catch (error) {
+      console.error('Error fetching owners with properties:', error);
       throw error;
     }
   }

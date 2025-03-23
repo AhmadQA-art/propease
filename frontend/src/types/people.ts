@@ -37,6 +37,7 @@ export interface Tenant extends BasePerson {
 export interface Owner extends BasePerson {
   type: 'owner';
   company_name?: string;
+  owner_type?: string;
   properties?: Array<{
     id: string;
     name: string;

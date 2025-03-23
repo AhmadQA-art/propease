@@ -18,6 +18,7 @@ export interface UiOwner {
   address?: string;
   tax_id?: string;
   property_count?: number;
+  name?: string;
 }
 
 /**
@@ -45,6 +46,36 @@ export const apiToUiOwner = (apiOwner: any): UiOwner => {
       status: 'inactive',
       created_at: new Date().toISOString(),
     };
+  }
+  
+  // NEW CASE: Handle direct name property format as seen in console log 
+  if (apiOwner.name && typeof apiOwner.name === 'string') {
+    console.log('Found direct name property format', apiOwner.name);
+    // Split name into first and last
+    const nameParts = apiOwner.name.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    return {
+      id: apiOwner.id || `temp-${Date.now()}`,
+      // Store the original name too for direct access
+      name: apiOwner.name,
+      user_profiles: {
+        first_name: firstName,
+        last_name: lastName,
+        email: apiOwner.email || '',
+        phone: apiOwner.phone || '',
+      },
+      company_name: apiOwner.company_name || '',
+      owner_type: apiOwner.owner_type || apiOwner.business_type || '',
+      business_type: apiOwner.business_type, // Keep for backward compatibility
+      status: apiOwner.status || 'active',
+      created_at: apiOwner.createdAt || apiOwner.created_at || new Date().toISOString(),
+      notes: apiOwner.notes,
+      address: apiOwner.address,
+      tax_id: apiOwner.tax_id,
+      property_count: apiOwner.property_count || 0,
+    } as UiOwner;
   }
   
   // Check if this is coming from the manual API or auto API by inspecting properties

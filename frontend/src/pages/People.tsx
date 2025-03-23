@@ -109,7 +109,45 @@ const getColumns = (tab: string): Column[] => {
   const columnsMap = {
     'All People': [...baseColumns],
     'Team': [...baseColumns, { key: 'role', label: 'Role' }],
-    'Owners': [...baseColumns, { key: 'company', label: 'Company' }],
+    'Owners': [
+      { key: 'name', label: 'Name' },
+      { key: 'company_name', label: 'Company' },
+      { key: 'owner_type', label: 'Owner Type', 
+        render: (row: Person) => {
+          if (row.type !== 'owner') return null;
+          const owner = row as Owner;
+          if (!owner.owner_type) return 'Individual';
+          
+          // Convert snake_case to Title Case
+          return owner.owner_type.split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        }
+      },
+      { key: 'phone', label: 'Contact' },
+      { key: 'properties', label: 'Properties',
+        render: (row: Person) => {
+          if (row.type !== 'owner') return null;
+          const owner = row as Owner;
+          
+          if (!owner.properties || owner.properties.length === 0) {
+            return <div className="text-sm text-gray-500">No properties</div>;
+          }
+          
+          return (
+            <div>
+              <div className="text-sm font-medium text-gray-900">
+                {owner.properties.length} {owner.properties.length === 1 ? 'property' : 'properties'}
+              </div>
+              <div className="text-sm text-gray-500">
+                {owner.properties.slice(0, 2).map(prop => prop.name).join(', ')}
+                {owner.properties.length > 2 ? ', ...' : ''}
+              </div>
+            </div>
+          );
+        }
+      }
+    ],
     'Tenants': [
       { key: 'name', label: 'Name' },
       { key: 'phone', label: 'Phone' },
@@ -183,10 +221,12 @@ export default function People() {
     types: PersonType[];
     status: string[];
     hasLease: string[];
+    ownerTypes?: string[];
   }>({
     types: [],
     status: [],
     hasLease: [],
+    ownerTypes: [],
   });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedPersonType, setSelectedPersonType] = useState<PersonType | 'team'>('owner');
@@ -271,7 +311,8 @@ export default function People() {
         filters: {
           types: filters.types,
           status: filters.status,
-          hasLease: filters.hasLease
+          hasLease: filters.hasLease,
+          ownerTypes: filters.ownerTypes
         }
       };
 
@@ -282,7 +323,7 @@ export default function People() {
           setTotalPages(result.totalPages || 1);
           break;
         case 'Owners':
-          result = await peopleApi.getOwners(params);
+          result = await peopleApi.getOwnersWithProperties(params);
           setOwners(result.data || []);
           setData(result.data || []);
           setTotalPages(result.totalPages || 1);
@@ -349,6 +390,28 @@ export default function People() {
 
       // If we get here, this tenant doesn't match the filter criteria
       return false;
+    });
+  };
+
+  // Apply owner type filters to owner data after it's fetched
+  const applyOwnerTypeFilter = (people: Person[]) => {
+    // Skip filtering if no owner type filters are applied
+    if (!filters.ownerTypes || filters.ownerTypes.length === 0) {
+      return people;
+    }
+
+    return people.filter(person => {
+      // Only apply owner type filter to owners
+      if (person.type !== 'owner') {
+        return true;
+      }
+
+      const owner = person as Owner;
+      // Default to individual if not specified
+      const ownerType = owner.owner_type || 'individual';
+
+      // Include this owner if its type is in the selected filter types
+      return filters.ownerTypes.includes(ownerType);
     });
   };
 
@@ -553,12 +616,19 @@ export default function People() {
         />
       );
     } else {
+      // Apply the appropriate filters based on the active tab
+      let filteredData = data;
+      
+      if (activeTab === 'Tenants') {
+        filteredData = applyLeaseFilter(filteredData);
+      } else if (activeTab === 'Owners') {
+        filteredData = applyOwnerTypeFilter(filteredData);
+      }
+      
       // All other tabs use the same table structure but with different columns and data
-      // The data filtering happens in fetchData() where we update the main data state
-      // based on which tab is selected, so we're reusing the same table component
       return (
         <PeopleTable
-          data={applyLeaseFilter(data)}
+          data={filteredData}
           columns={getColumns(activeTab)}
           onSort={handleSort}
           onAction={handleAction}
