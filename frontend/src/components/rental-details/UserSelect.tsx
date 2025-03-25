@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { User, Search, X } from 'lucide-react';
 
 interface UserOption {
@@ -18,6 +18,7 @@ interface UserSelectProps {
 export default function UserSelect({ users, value, onChange, placeholder, label }: UserSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -33,11 +34,53 @@ export default function UserSelect({ users, value, onChange, placeholder, label 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Reset highlighted index when filtered results change
+  useEffect(() => {
+    setHighlightedIndex(0);
+  }, [searchQuery]);
+
   const selectedUser = users.find(user => user.id === value);
   
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlightedIndex(prev => 
+        prev < filteredUsers.length - 1 ? prev + 1 : prev
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlightedIndex(prev => prev > 0 ? prev - 1 : 0);
+    } else if (e.key === 'Enter' && filteredUsers.length > 0) {
+      e.preventDefault();
+      const selectedUser = filteredUsers[highlightedIndex];
+      if (selectedUser) {
+        onChange(selectedUser.id);
+        setSearchQuery('');
+        setIsOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  const handleFocus = () => {
+    setIsOpen(true);
+  };
+
+  const handleInputClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsOpen(true);
+  };
+
+  const selectUser = (userId: string) => {
+    onChange(userId);
+    setSearchQuery('');
+    setIsOpen(false);
+  };
 
   return (
     <div className="space-y-2">
@@ -89,25 +132,26 @@ export default function UserSelect({ users, value, onChange, placeholder, label 
                 placeholder={value ? selectedUser?.name : placeholder}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onClick={(e) => e.stopPropagation()}
+                onKeyDown={handleKeyDown}
+                onFocus={handleFocus}
+                onClick={handleInputClick}
               />
             </div>
           )}
         </div>
 
-        {/* Dropdown */}
+        {/* Dropdown - Always shows when input is focused */}
         {isOpen && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
             {filteredUsers.length > 0 ? (
-              filteredUsers.map(user => (
+              filteredUsers.map((user, index) => (
                 <div
                   key={user.id}
-                  className="flex items-center space-x-2 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                  onClick={() => {
-                    onChange(user.id);
-                    setSearchQuery('');
-                    setIsOpen(false);
-                  }}
+                  className={`flex items-center space-x-2 px-3 py-2 cursor-pointer ${
+                    index === highlightedIndex ? 'bg-gray-100' : 'hover:bg-gray-50'
+                  }`}
+                  onClick={() => selectUser(user.id)}
+                  onMouseEnter={() => setHighlightedIndex(index)}
                 >
                   {user.imageUrl ? (
                     <img

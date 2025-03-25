@@ -91,49 +91,47 @@ export default function OwnersView({ owners }: OwnersViewProps) {
               <tr key={owner.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="h-10 w-10 flex-shrink-0">
-                      {owner.imageUrl ? (
-                        <img
-                          className="h-10 w-10 rounded-full"
-                          src={owner.imageUrl}
-                          alt={owner.name}
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-[#2C3539] bg-opacity-10 flex items-center justify-center">
-                          <span className="text-[#2C3539] font-medium text-sm">
-                            {owner.name.split(' ').map(n => n[0]).join('')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    {owner.imageUrl ? (
+                      <img
+                        src={owner.imageUrl}
+                        alt={owner.name}
+                        className="w-10 h-10 rounded-full"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-[#2C3539] bg-opacity-10 flex items-center justify-center">
+                        <span className="text-[#2C3539] font-medium text-xs">
+                          {owner.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                    )}
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">{owner.name}</div>
-                      <div className="text-sm text-gray-500">{owner.email}</div>
+                      <div className="text-[11px] font-medium text-gray-900">{owner.name}</div>
+                      <div className="text-[10px] text-gray-500">{owner.email}</div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{owner.company_name || '-'}</div>
+                  <div className="text-[10px] text-gray-900">{owner.company_name || '-'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{formatOwnerType(owner.owner_type)}</div>
+                  <div className="text-[10px] text-gray-900">{formatOwnerType(owner.owner_type)}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{owner.phone}</div>
+                  <div className="text-[10px] text-gray-900">{owner.phone}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {owner.properties && owner.properties.length > 0 ? (
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-[10px] font-medium text-gray-900">
                         {owner.properties.length} {owner.properties.length === 1 ? 'property' : 'properties'}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-[10px] text-gray-500">
                         {owner.properties.slice(0, 2).map(prop => prop.name).join(', ')}
                         {owner.properties.length > 2 ? ', ...' : ''}
                       </div>
                     </div>
                   ) : (
-                    <div className="text-sm text-gray-500">No properties</div>
+                    <div className="text-[10px] text-gray-500">No properties</div>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

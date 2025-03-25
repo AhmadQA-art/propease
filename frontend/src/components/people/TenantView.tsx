@@ -75,9 +75,10 @@ const mockTenants = [
 
 interface TenantViewProps {
   tenants: Tenant[];
+  onRefresh?: () => void;
 }
 
-export default function TenantView({ tenants }: TenantViewProps) {
+export default function TenantView({ tenants, onRefresh }: TenantViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
@@ -190,10 +191,10 @@ export default function TenantView({ tenants }: TenantViewProps) {
                   </div>
                 )}
                 <div>
-                  <h3 className="text-lg font-semibold text-[#2C3539]">{tenant.name}</h3>
+                  <h3 className="text-[11px] font-normal text-[#2C3539]">{tenant.name}</h3>
                   <div className="flex items-center gap-4 mt-1">
-                    <div className="flex items-center text-sm text-[#6B7280]">
-                      <Home className="w-4 h-4 mr-1" />
+                    <div className="flex items-center text-[10px] font-normal text-[#6B7280]">
+                      <Home className="w-3 h-3 mr-1" />
                       {tenant.property} - Unit {tenant.unit}
                     </div>
                   </div>
@@ -202,11 +203,11 @@ export default function TenantView({ tenants }: TenantViewProps) {
 
               <div className="flex items-center gap-6">
                 <div className="text-right">
-                  <div className="flex items-center text-sm text-[#6B7280] mb-1">
-                    <Calendar className="w-4 h-4 mr-1" />
+                  <div className="flex items-center text-[10px] font-normal text-[#6B7280] mb-1">
+                    <Calendar className="w-3 h-3 mr-1" />
                     Lease ends {new Date(tenant.leaseEnd).toLocaleDateString()}
                   </div>
-                  <span className={`text-sm ${
+                  <span className={`text-[10px] font-normal ${
                     tenant.rentStatus === 'overdue' ? 'text-red-600' : 
                     tenant.rentStatus === 'paid' ? 'text-green-600' : 
                     'text-[#6B7280]'
@@ -214,7 +215,7 @@ export default function TenantView({ tenants }: TenantViewProps) {
                     {tenant.rentStatus.charAt(0).toUpperCase() + tenant.rentStatus.slice(1)}
                   </span>
                 </div>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-normal ${
                   tenant.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                 }`}>
                   {tenant.status}
@@ -238,27 +239,51 @@ export default function TenantView({ tenants }: TenantViewProps) {
       />
 
       <TenantDetailsDrawer
-        tenant={selectedTenant}
+        tenant={{
+          id: selectedTenant?.id || '',
+          name: selectedTenant?.name || '',
+          email: selectedTenant?.email || '',
+          phone: selectedTenant?.phone || '',
+          imageUrl: selectedTenant?.imageUrl,
+          property: selectedTenant?.property,
+          unit: selectedTenant?.unit,
+          leaseStart: selectedTenant?.leaseStart,
+          leaseEnd: selectedTenant?.leaseEnd,
+          rentAmount: selectedTenant?.rentAmount,
+          rentStatus: selectedTenant?.rentStatus
+        }}
         isOpen={isDetailsDrawerOpen}
         onClose={() => {
           setIsDetailsDrawerOpen(false);
           setSelectedTenant(null);
         }}
+        onUpdate={onRefresh}
       />
 
       {/* Backdrop for drawer */}
       {isDetailsDrawerOpen && (
-  <TenantDetailsDrawer
-    tenant={selectedTenant}
-    isOpen={isDetailsDrawerOpen}
-    onClose={() => {
-      setIsDetailsDrawerOpen(false);
-      setSelectedTenant(null);
-    }}
-  />
-)}
-
-
+        <TenantDetailsDrawer
+          tenant={{
+            id: selectedTenant?.id || '',
+            name: selectedTenant?.name || '',
+            email: selectedTenant?.email || '',
+            phone: selectedTenant?.phone || '',
+            imageUrl: selectedTenant?.imageUrl,
+            property: selectedTenant?.property,
+            unit: selectedTenant?.unit,
+            leaseStart: selectedTenant?.leaseStart,
+            leaseEnd: selectedTenant?.leaseEnd,
+            rentAmount: selectedTenant?.rentAmount,
+            rentStatus: selectedTenant?.rentStatus
+          }}
+          isOpen={isDetailsDrawerOpen}
+          onClose={() => {
+            setIsDetailsDrawerOpen(false);
+            setSelectedTenant(null);
+          }}
+          onUpdate={onRefresh}
+        />
+      )}
     </div>
   );
 }

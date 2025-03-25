@@ -6,9 +6,10 @@ import VendorDetailsDrawer from './VendorDetailsDrawer';
 
 interface VendorViewProps {
   vendors: Vendor[];
+  onRefresh?: () => void;
 }
 
-export default function VendorView({ vendors }: VendorViewProps) {
+export default function VendorView({ vendors, onRefresh }: VendorViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
@@ -121,25 +122,25 @@ export default function VendorView({ vendors }: VendorViewProps) {
               )}
               <div className="ml-4">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-lg font-semibold text-[#2C3539]">{vendor.company}</h3>
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                  <h3 className="text-[11px] font-normal text-[#2C3539]">{vendor.company}</h3>
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-normal ${
                     vendor.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                   }`}>
                     {vendor.status}
                   </span>
                 </div>
                 <div className="flex items-center gap-4 mt-1">
-                  <p className="text-[#6B7280]">{vendor.service}</p>
-                  <p className="text-[#6B7280]">{vendor.name}</p>
+                  <p className="text-[10px] font-normal text-[#6B7280]">{vendor.service}</p>
+                  <p className="text-[10px] font-normal text-[#6B7280]">{vendor.name}</p>
                   <div className="flex items-center">
-                    <Star className="w-4 h-4 text-yellow-400" />
-                    <span className="ml-1 text-sm">{vendor.rating}/5</span>
+                    <Star className="w-3 h-3 text-yellow-400" />
+                    <span className="ml-1 text-[10px] font-normal">{vendor.rating}/5</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="flex items-center text-sm text-[#6B7280]">
-              <Activity className="w-4 h-4 mr-1" />
+            <div className="flex items-center text-[10px] font-normal text-[#6B7280]">
+              <Activity className="w-3 h-3 mr-1" />
               {vendor.totalServices} Services
             </div>
           </div>
@@ -153,12 +154,10 @@ export default function VendorView({ vendors }: VendorViewProps) {
       />
 
       <VendorDetailsDrawer
-        isOpen={isVendorDetailsOpen}
-        onClose={() => {
-          setIsVendorDetailsOpen(false);
-          setSelectedVendor(null);
-        }}
         vendor={selectedVendor}
+        isOpen={isVendorDetailsOpen}
+        onClose={() => setIsVendorDetailsOpen(false)}
+        onUpdate={onRefresh}
       />
     </div>
   );

@@ -3,7 +3,7 @@ const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage() });
 const { supabase } = require('../config/supabase');
 
-class PeopleController {
+const peopleController = {
   /**
    * Create a team member
    * @param {Object} req - Request object
@@ -41,7 +41,7 @@ class PeopleController {
       console.error('Controller error:', error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 
   /**
    * Create a tenant
@@ -80,7 +80,7 @@ class PeopleController {
       console.error('Controller error:', error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 
   /**
    * Create a vendor
@@ -119,7 +119,7 @@ class PeopleController {
       console.error('Controller error:', error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 
   /**
    * Create an owner
@@ -158,7 +158,7 @@ class PeopleController {
       console.error('Controller error:', error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 
   /**
    * Upload documents for a tenant
@@ -184,7 +184,7 @@ class PeopleController {
       console.error('Controller error:', error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 
   /**
    * Send invitations to a person
@@ -211,7 +211,7 @@ class PeopleController {
       console.error('Controller error:', error);
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 
   /**
    * Create a tenant record without authentication
@@ -277,12 +277,43 @@ class PeopleController {
         error: 'Internal server error' 
       });
     }
-  }
+  },
 
   // Middleware for handling file uploads
   uploadMiddleware() {
     return upload.array('documents', 10);
-  }
-}
+  },
 
-module.exports = new PeopleController(); 
+  deleteTeamMember: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { user } = req; // Get the authenticated user
+
+      // TODO: Add permission check (e.g., ensure the requester is an admin or team owner)
+      // For now, we'll just check if the user is authenticated
+
+      // Step 1: Call the database function to delete related records
+      const { error: dbError } = await supabase.rpc('delete_team_member', { team_member_id: id });
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        return res.status(500).json({ error: 'Failed to delete team member records' });
+      }
+
+      // Step 2: Delete the user from auth.users using Supabase admin API
+      const { error: authError } = await supabase.auth.admin.deleteUser(id);
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        return res.status(500).json({ error: 'Failed to delete user account' });
+      }
+
+      return res.status(200).json({ message: 'Team member and associated user account deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting team member:', error);
+      return res.status(500).json({ error: 'Internal server error: ' + error.message });
+    }
+  }
+};
+
+module.exports = peopleController; 

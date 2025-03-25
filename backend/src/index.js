@@ -23,6 +23,7 @@ const inviteRoutes = require('./routes/invite.routes');
 const ownersRoutes = require('./routes/owners.routes');
 const autoApiRoutes = require('./routes/auto-api.routes');
 const propertyImageRoutes = require('./routes/property-image.routes');
+const departmentRoutes = require('./routes/department.routes');
 
 const app = express();
 
@@ -57,7 +58,8 @@ const directApiAccess = [
   'rental', 
   'people',
   'invite',
-  'owners'
+  'owners',
+  'departments'
 ];
 
 // Add direct access to other API routes (for compatibility)
@@ -84,6 +86,7 @@ app.use('/api/invite', inviteRoutes);
 app.use('/api/owners', ownersRoutes);
 app.use('/api/auto', autoApiRoutes);
 app.use('/api/property-images', propertyImageRoutes);
+app.use('/api/departments', departmentRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

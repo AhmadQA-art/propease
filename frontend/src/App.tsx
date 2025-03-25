@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate, RouteProps } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
@@ -7,6 +7,7 @@ import RequestAccess from './pages/auth/RequestAccess';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import UpdatePassword from './pages/auth/UpdatePassword';
 import AcceptInvitation from './pages/auth/AcceptInvitation';
+import AuthRedirect from './pages/auth/AuthRedirect';
 import Dashboard from './pages/Dashboard';
 import Properties from './pages/Properties';
 import Rentals from './pages/Rentals';
@@ -49,7 +50,6 @@ function MainRoutes() {
 
   return (
     <Routes>      
-
       {/* Public Routes */}
       <Route path="/login" element={
         !isAuthenticated ? <Login /> : <Navigate to="/" replace />
@@ -82,6 +82,9 @@ function MainRoutes() {
       
       {/* Handle both auth/confirm and direct token links */}
       <Route path="/auth/confirm" element={<UpdatePassword />} />
+      
+      {/* Handle Supabase redirect for auth verification */}
+      <Route path="/verify" element={<AuthRedirect />} />
 
       {/* Protected Routes - Wrap all dashboard routes */}
       <Route
@@ -109,7 +112,6 @@ function MainRoutes() {
         <Route path="team" element={<Team />} />
         <Route path="people" element={<People />} />
         <Route path="auto-api-test" element={<AutoApiTest />} />
-
       </Route>
 
       {/* Catch all route */}
@@ -118,7 +120,7 @@ function MainRoutes() {
   );
 }
 
-function App(): JSX.Element {
+function App() {
   return (
     <ErrorBoundary>
       {/* Use ReactHotToast.Toaster to fix the type issue */}

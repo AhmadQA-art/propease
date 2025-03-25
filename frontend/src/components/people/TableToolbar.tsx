@@ -12,6 +12,7 @@ interface TableToolbarProps {
   onExport?: () => void;
   customAddButton?: React.ReactNode;
   tabType?: string;
+  hasActiveFilters?: boolean;
 }
 
 const TableToolbar: React.FC<TableToolbarProps> = ({
@@ -24,7 +25,8 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
   onBulkDelete,
   onExport,
   customAddButton,
-  tabType = ''
+  tabType = '',
+  hasActiveFilters = false
 }) => {
   return (
     <div className="w-full flex items-center justify-between gap-4">
@@ -33,7 +35,13 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
         <input
           type="text"
-          placeholder="Search..."
+          placeholder={tabType === 'Owners' 
+            ? "Search by owner name..." 
+            : tabType === 'Tenants'
+              ? "Search by tenant name..."
+              : tabType === 'Vendors'
+                ? "Search by vendor name..."
+                : "Search..."}
           className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#2C3539] text-sm"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -42,13 +50,20 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
       
       {/* Filter Button - only show if onFilter is provided */}
       {onFilter && (
-        <button 
-          onClick={onFilter}
-          className="h-10 w-10 flex-shrink-0 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          title={`Filter ${tabType}`}
-        >
-          <Filter className="w-5 h-5 text-[#2C3539]" />
-        </button>
+        <div className="relative">
+          <button 
+            onClick={onFilter}
+            className="h-10 w-10 flex-shrink-0 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            title={`Filter ${tabType}`}
+          >
+            <Filter className="w-5 h-5 text-[#2C3539]" />
+          </button>
+          {hasActiveFilters && (
+            <span className="absolute -top-1 -right-1 h-4 w-4 bg-[#2C3539] text-white text-xs rounded-full flex items-center justify-center">
+              <span className="sr-only">Active filters</span>
+            </span>
+          )}
+        </div>
       )}
 
       {/* Bulk Actions */}

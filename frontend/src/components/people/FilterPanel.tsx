@@ -8,12 +8,14 @@ interface FilterPanelProps {
     status: string[];
     hasLease: string[];
     ownerTypes?: string[];
+    serviceTypes?: string[];
   };
   onFiltersChange: (filters: { 
     types: PersonType[]; 
     status: string[]; 
     hasLease: string[];
     ownerTypes?: string[];
+    serviceTypes?: string[];
   }) => void;
   tabType?: 'Tenants' | 'Owners' | 'Vendors' | string;
 }
@@ -38,10 +40,18 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChange, tab
     { value: 'no_properties', label: 'No Properties' },
   ];
 
-  // Vendor-specific filter options could be added here
-  const vendorOptions = [
-    { value: 'active_service', label: 'Active Services' },
-    { value: 'no_service', label: 'No Active Services' },
+  // Service type filter options for vendors - matching the AddVendorDialog and VendorDetailsDrawer
+  const serviceTypeOptions = [
+    { value: 'maintenance', label: 'Maintenance' },
+    { value: 'cleaning', label: 'Cleaning' },
+    { value: 'landscaping', label: 'Landscaping' },
+    { value: 'security', label: 'Security' },
+    { value: 'hvac', label: 'HVAC' },
+    { value: 'plumbing', label: 'Plumbing' },
+    { value: 'electrical', label: 'Electrical' },
+    { value: 'renovation', label: 'Renovation' },
+    { value: 'pest_control', label: 'Pest Control' },
+    { value: 'other', label: 'Other' },
   ];
 
   const renderFilterContent = () => {
@@ -70,31 +80,18 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChange, tab
                 multiple
               />
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-1">Property Status</p>
-              <SearchableDropdown
-                options={ownerPropertyOptions}
-                selectedValues={[]} 
-                onChange={() => {}} 
-                multiple
-                disabled={true}
-              />
-              <p className="text-xs text-gray-500 mt-1">Property filters coming soon</p>
-            </div>
           </div>
         );
       case 'Vendors':
         return (
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">Service Status</p>
+            <p className="text-sm font-medium text-gray-700 mb-1">Service Type</p>
             <SearchableDropdown
-              options={vendorOptions}
-              selectedValues={[]} // Currently not tracking vendor filters
-              onChange={() => {}} // Placeholder - would need to implement vendor filtering
+              options={serviceTypeOptions}
+              selectedValues={filters.serviceTypes || []}
+              onChange={(values) => onFiltersChange({ ...filters, serviceTypes: values })}
               multiple
-              disabled={true}
             />
-            <p className="text-xs text-gray-500 mt-1">Vendor filters coming soon</p>
           </div>
         );
       default:
@@ -116,7 +113,8 @@ const FilterPanel: React.FC<FilterPanelProps> = ({ filters, onFiltersChange, tab
             const resetFilters = {
               ...filters, 
               hasLease: [],
-              ownerTypes: []
+              ownerTypes: [],
+              serviceTypes: []
             };
             onFiltersChange(resetFilters);
           }}

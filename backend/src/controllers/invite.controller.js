@@ -11,10 +11,10 @@ const crypto = require('crypto');
  */
 const inviteUser = async (req, res, role) => {
   try {
-    const { email, jobTitle, department } = req.body;
+    const { email, jobTitle, departmentId } = req.body;
     const { id: inviterId, organization_id } = req.user;
 
-    console.log(`[INVITE] Inviting ${role} with email: ${email}, job title: ${jobTitle}, department: ${department}`);
+    console.log(`[INVITE] Inviting ${role} with email: ${email}, job title: ${jobTitle}, departmentId: ${departmentId}`);
 
     if (!email) {
       console.log('[INVITE] Error: Email is required');
@@ -108,16 +108,19 @@ const inviteUser = async (req, res, role) => {
 
     // Add job title and department to metadata for team members
     if (role === 'team_member') {
-      console.log('[INVITE] Adding job title and department to metadata for team member');
+      console.log('[INVITE] Adding job title and departmentId to metadata for team member');
       invitationMetadata.job_title = jobTitle || null;
-      invitationMetadata.department = department || null;
+      invitationMetadata.department_id = departmentId || null;
     }
 
     console.log('[INVITE] Sending invitation email with metadata:', JSON.stringify(invitationMetadata));
-    // Send invitation email using Supabase with redirectTo
-    const redirectUrl = `${process.env.FRONTEND_URL}/auth/accept-invitation?token=${invitation.token}`;
     
-    console.log(`[INVITE] Redirect URL: ${redirectUrl}`);
+    // Use the Supabase verification endpoint directly, we'll handle the final redirect in our app
+    // The redirectTo should point to our AuthRedirect component that will handle the verification
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const redirectUrl = `${frontendUrl}/verify`;
+    
+    console.log(`[INVITE] Using Supabase redirect URL: ${redirectUrl}`);
     
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
       redirectTo: redirectUrl,
@@ -187,8 +190,16 @@ const verifyInvitation = async (req, res) => {
       .eq('status', 'pending')
       .single();
 
-    if (invitationError || !invitation) {
+    if (invitationError) {
       console.error('[VERIFY] Error getting invitation:', invitationError);
+      return res.status(404).json({ 
+        error: 'No valid invitation found',
+        details: invitationError.message
+      });
+    }
+
+    if (!invitation) {
+      console.error('[VERIFY] No invitation found for token and email');
       return res.status(404).json({ error: 'No valid invitation found' });
     }
 
@@ -329,30 +340,51 @@ const acceptInvitation = async (req, res) => {
     }
     console.log(`[ACCEPT] Profile updated successfully for ${user.id}`);
 
-    // Update user_roles table
-    console.log(`[ACCEPT] Inserting user role: ${roleData.name} for organization ${invitation.organization_id}`);
-    const { error: roleAssignError } = await supabase
+    // Check if user role already exists
+    console.log(`[ACCEPT] Checking if user role already exists: ${roleData.name} for organization ${invitation.organization_id}`);
+    const { data: existingRole, error: checkRoleError } = await supabase
       .from('user_roles')
-      .insert({
-        user_id: user.id,
-        role_id: invitation.role_id,
-        organization_id: invitation.organization_id
-      });
-
-    if (roleAssignError) {
-      console.error('[ACCEPT] Error assigning role:', roleAssignError);
-      return res.status(500).json({ error: 'Error assigning role' });
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('role_id', invitation.role_id)
+      .eq('organization_id', invitation.organization_id)
+      .maybeSingle();
+    
+    if (checkRoleError) {
+      console.error('[ACCEPT] Error checking for existing role:', checkRoleError);
+      // Continue anyway and try to insert
     }
-    console.log(`[ACCEPT] Role assigned successfully for ${user.id}`);
+    
+    // Only insert if no role exists
+    if (!existingRole) {
+      console.log(`[ACCEPT] Inserting user role: ${roleData.name} for organization ${invitation.organization_id}`);
+      const { error: roleAssignError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: user.id,
+          role_id: invitation.role_id,
+          organization_id: invitation.organization_id
+        });
+  
+      if (roleAssignError) {
+        console.error('[ACCEPT] Error assigning role:', roleAssignError);
+        if (roleAssignError.code !== '23505') { // Skip duplicate key errors
+          return res.status(500).json({ error: 'Error assigning role' });
+        }
+      }
+      console.log(`[ACCEPT] Role assigned successfully for ${user.id}`);
+    } else {
+      console.log(`[ACCEPT] User already has role ${roleData.name} for organization ${invitation.organization_id}`);
+    }
 
     // For team members, create entry in team_members table
     if (roleData.name === 'team_member') {
       // Get job_title and department from user metadata (they were stored here during invitation)
       const metadata = user.user_metadata || {};
       const jobTitle = metadata.job_title || null;
-      const department = metadata.department || null;
+      const departmentId = metadata.department_id || null;
       
-      console.log(`[ACCEPT] User is a team member. Adding to team_members table with job_title: ${jobTitle}, department: ${department}`);
+      console.log(`[ACCEPT] User is a team member. Adding to team_members table with job_title: ${jobTitle}, departmentId: ${departmentId}`);
       
       const { error: teamMemberError } = await supabase
         .from('team_members')
@@ -360,7 +392,7 @@ const acceptInvitation = async (req, res) => {
           user_id: user.id,
           role_id: invitation.role_id,
           job_title: jobTitle,
-          department: department
+          department_id: departmentId
         });
 
       if (teamMemberError) {

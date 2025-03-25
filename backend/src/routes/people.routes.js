@@ -140,4 +140,7 @@ router.post('/:id/documents',
   peopleController.uploadDocuments
 );
 
+// Delete team member
+router.delete('/team-members/:id', authenticateToken, peopleController.deleteTeamMember);
+
 module.exports = router; 

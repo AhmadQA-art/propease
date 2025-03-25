@@ -66,18 +66,61 @@ export interface TeamMember extends BasePerson {
   type: 'team';
   role?: string;
   department?: string;
+  departmentId?: string;
+  jobTitle?: string;
   tasks?: Task[];
   activities?: Activity[];
+  // Add the user_id field from team_members table
+  user_id?: string;
+  // Add the user_profiles field from team_members table
+  user_profiles?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    status?: string;
+  };
 }
 
 export interface Task {
   id: string;
   title: string;
   description?: string;
-  status: 'todo' | 'in_progress' | 'completed';
+  status: 'new' | 'pending' | 'in progress' | 'completed';
   dueDate?: string;
-  assignedTo: string;
-  priority: 'low' | 'normal' | 'high';
+  assignedTo?: string[];  // Changed to string array for multiple assignees
+  priority: 'low' | 'medium' | 'high';  // Changed 'normal' to 'medium'
+  type?: 'team'; // Default and only option for team view
+  relatedToId?: string;
+  propertyId?: string;
+  leaseId?: string;
+  organizationId?: string;
+  updatedAt?: string;
+  createdAt?: string;
+  // Add multi-select fields for the new join tables
+  relatedToIds?: string[];
+  propertyIds?: string[];
+  leaseIds?: string[];
+}
+
+export interface TaskAssignee {
+  id: string;
+  name: string;
+  imageUrl?: string;
+  email?: string;
+}
+
+export interface TaskWithAssignee extends Task {
+  assignee?: TaskAssignee;  // For backward compatibility
+  assignees?: TaskAssignee[]; // New field for multiple assignees
+  owner?: TaskAssignee;
+  propertyId?: string;
+  leaseId?: string;
+  // Added multi-select fields to support the drawer UI
+  relatedToIds?: string[];
+  propertyIds?: string[];
+  leaseIds?: string[];
 }
 
 export interface Activity {
@@ -86,6 +129,12 @@ export interface Activity {
   description: string;
   timestamp: string;
   userId: string;
+  user?: {
+    name: string;
+    imageUrl?: string;
+  };
+  action?: string;
+  target?: string;
 }
 
 export type Person = Tenant | Owner | Vendor | TeamMember;

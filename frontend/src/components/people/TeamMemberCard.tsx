@@ -7,22 +7,9 @@ interface TeamMemberCardProps {
   member: TeamMember;
 }
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'active':
-      return 'bg-green-400';
-    case 'offline':
-      return 'bg-gray-400';
-    case 'busy':
-      return 'bg-red-400';
-    default:
-      return 'bg-gray-400';
-  }
-};
-
 export default function TeamMemberCard({ member }: TeamMemberCardProps) {
   return (
-    <div className="bg-white rounded-lg border border-gray-100 p-4 hover:border-gray-200 transition-colors">
+    <div className="bg-white rounded-lg border border-gray-100 p-4 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer">
       <div className="flex items-center space-x-4">
         <div className="relative">
           {member.imageUrl ? (
@@ -36,14 +23,13 @@ export default function TeamMemberCard({ member }: TeamMemberCardProps) {
               <Icon icon={User} className="w-6 h-6 text-gray-500" />
             </div>
           )}
-          <span className={`absolute bottom-0 right-0 block h-3 w-3 rounded-full ring-2 ring-white ${getStatusColor(member.status)}`} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-[#2C3539] truncate">
             {member.name}
           </p>
           <p className="text-sm text-[#6B7280] truncate">
-            {member.role}
+            {member.jobTitle || member.role}
           </p>
         </div>
       </div>

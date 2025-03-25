@@ -7,10 +7,14 @@ import {
     Calendar,
     FileText,
     User,
-    Loader2
+    Loader2,
+    Edit2,
+    Save,
+    Trash
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { peopleApi } from '../../services/api/people';
+import { toast } from 'react-hot-toast';
 
 interface TenantDetailsDrawerProps {
     tenant: {
@@ -28,6 +32,7 @@ interface TenantDetailsDrawerProps {
     } | null;
     isOpen: boolean;
     onClose: () => void;
+    onUpdate?: () => void;
 }
 
 interface DetailedTenant {
@@ -53,10 +58,20 @@ interface DetailedTenant {
     }[];
 }
 
-export default function TenantDetailsDrawer({ tenant, isOpen, onClose }: TenantDetailsDrawerProps) {
+export default function TenantDetailsDrawer({ tenant, isOpen, onClose, onUpdate }: TenantDetailsDrawerProps) {
     const [detailedTenant, setDetailedTenant] = useState<DetailedTenant | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    
+    // Edit mode state
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    
+    // Form state
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
 
     useEffect(() => {
         if (isOpen && tenant) {
@@ -65,6 +80,26 @@ export default function TenantDetailsDrawer({ tenant, isOpen, onClose }: TenantD
             setDetailedTenant(null);
         }
     }, [isOpen, tenant]);
+    
+    // Initialize form data when tenant changes or edit mode is toggled
+    useEffect(() => {
+        if (detailedTenant) {
+            setName(detailedTenant.name || '');
+            setEmail(detailedTenant.email || '');
+            setPhone(detailedTenant.phone || '');
+        } else if (tenant) {
+            setName(tenant.name || '');
+            setEmail(tenant.email || '');
+            setPhone(tenant.phone || '');
+        }
+    }, [detailedTenant, tenant, isEditing]);
+    
+    // Reset edit state when drawer closes
+    useEffect(() => {
+        if (!isOpen) {
+            setIsEditing(false);
+        }
+    }, [isOpen]);
 
     const fetchTenantDetails = async (tenantId: string) => {
         setLoading(true);
@@ -78,6 +113,84 @@ export default function TenantDetailsDrawer({ tenant, isOpen, onClose }: TenantD
             setError('Failed to load tenant details');
         } finally {
             setLoading(false);
+        }
+    };
+    
+    const handleEditToggle = () => {
+        setIsEditing(!isEditing);
+    };
+    
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        // Reset form values to current tenant values
+        if (detailedTenant) {
+            setName(detailedTenant.name || '');
+            setEmail(detailedTenant.email || '');
+            setPhone(detailedTenant.phone || '');
+        } else if (tenant) {
+            setName(tenant.name || '');
+            setEmail(tenant.email || '');
+            setPhone(tenant.phone || '');
+        }
+    };
+    
+    const handleSave = async () => {
+        if (!tenant) return;
+        
+        setIsSaving(true);
+        
+        try {
+            // Split name into first and last name
+            const nameParts = name.split(' ');
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(' ');
+            
+            // Prepare update data
+            const updateData = {
+                name: name, // Will be split into first_name and last_name by the API
+                email: email,
+                phone: phone
+            };
+            
+            // Update tenant through the people API
+            await peopleApi.updatePerson(tenant.id, 'tenant', updateData);
+            
+            // Exit edit mode
+            setIsEditing(false);
+            
+            // Refresh tenant details
+            fetchTenantDetails(tenant.id);
+            
+            // Show success message
+            toast.success('Tenant updated successfully');
+            
+            // Call onUpdate if provided to refresh the parent list
+            if (onUpdate) onUpdate();
+        } catch (error) {
+            console.error('Error updating tenant:', error);
+            toast.error('Failed to update tenant');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleDelete = async () => {
+        if (!tenant) return;
+        
+        if (window.confirm(`Are you sure you want to delete ${tenant.name}?`)) {
+            setIsDeleting(true);
+            
+            try {
+                await peopleApi.deletePerson(tenant.id, 'tenant');
+                toast.success('Tenant deleted successfully');
+                onClose(); // Close the drawer
+                if (onUpdate) onUpdate(); // Refresh the tenants list
+            } catch (error) {
+                console.error('Error deleting tenant:', error);
+                toast.error('Failed to delete tenant');
+            } finally {
+                setIsDeleting(false);
+            }
         }
     };
 
@@ -100,12 +213,47 @@ export default function TenantDetailsDrawer({ tenant, isOpen, onClose }: TenantD
                         <h2 className="text-lg font-semibold text-[#2C3539]">
                             Tenant Details
                         </h2>
-                        <button
-                            className="p-1 rounded-md text-gray-400 hover:text-gray-500"
-                            onClick={onClose}
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            {isEditing ? (
+                                <>
+                                    <button
+                                        onClick={handleDelete}
+                                        className="flex items-center px-3 py-1.5 border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors text-sm"
+                                        disabled={isDeleting}
+                                    >
+                                        {isDeleting ? 'Deleting...' : 'Delete'}
+                                    </button>
+                                    <button
+                                        onClick={handleCancelEdit}
+                                        className="flex items-center px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSave}
+                                        disabled={isSaving}
+                                        className="flex items-center px-3 py-1.5 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors text-sm disabled:opacity-50"
+                                    >
+                                        <Save size={16} className="mr-1" />
+                                        {isSaving ? 'Saving...' : 'Save'}
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={handleEditToggle}
+                                    className="flex items-center px-3 py-1.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+                                >
+                                    <Edit2 size={16} className="mr-1" />
+                                    Edit
+                                </button>
+                            )}
+                            <button
+                                className="text-[#6B7280] hover:text-[#2C3539]"
+                                onClick={onClose}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -142,17 +290,47 @@ export default function TenantDetailsDrawer({ tenant, isOpen, onClose }: TenantD
                                     </div>
                                 )}
                                 <div>
-                                    <h3 className="text-lg font-semibold text-[#2C3539]">
-                                        {detailedTenant?.name || tenant.name}
-                                    </h3>
+                                    {isEditing ? (
+                                        <input
+                                            type="text"
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] w-full"
+                                            placeholder="Full Name"
+                                        />
+                                    ) : (
+                                        <h3 className="text-lg font-semibold text-[#2C3539]">
+                                            {detailedTenant?.name || tenant.name}
+                                        </h3>
+                                    )}
                                     <div className="space-y-1 mt-1">
                                         <div className="flex items-center text-sm text-[#6B7280]">
                                             <Mail className="w-4 h-4 mr-2"/> 
-                                            {detailedTenant?.email || tenant.email}
+                                            {isEditing ? (
+                                                <input
+                                                    type="email"
+                                                    value={email}
+                                                    onChange={(e) => setEmail(e.target.value)}
+                                                    className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] w-full"
+                                                    placeholder="Email Address"
+                                                />
+                                            ) : (
+                                                detailedTenant?.email || tenant.email
+                                            )}
                                         </div>
                                         <div className="flex items-center text-sm text-[#6B7280]">
                                             <Phone className="w-4 h-4 mr-2"/> 
-                                            {detailedTenant?.phone || tenant.phone}
+                                            {isEditing ? (
+                                                <input
+                                                    type="tel"
+                                                    value={phone}
+                                                    onChange={(e) => setPhone(e.target.value)}
+                                                    className="px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] w-full"
+                                                    placeholder="Phone Number"
+                                                />
+                                            ) : (
+                                                detailedTenant?.phone || tenant.phone
+                                            )}
                                         </div>
                                     </div>
                                 </div>

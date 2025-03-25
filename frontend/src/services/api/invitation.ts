@@ -29,6 +29,7 @@ api.interceptors.request.use(async (config) => {
 export const invitationApi = {
   async verifyInvitation(token: string, email: string) {
     try {
+      console.log(`Verifying invitation for token: ${token} and email: ${email}`);
       const response = await api.get(`/invite/verify/${token}`, {
         params: { email }
       });
@@ -67,7 +68,7 @@ export const invitationApi = {
   async inviteTeamMember(data: {
     email: string;
     jobTitle?: string;
-    department?: string;
+    departmentId?: string;
   }) {
     try {
       const response = await api.post('/invite/team/invite', data);

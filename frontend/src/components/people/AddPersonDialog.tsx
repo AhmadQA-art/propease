@@ -1,20 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PersonType } from '../../types/people';
 import { toast } from 'react-hot-toast';
 import { invitationApi } from '@/services/api/invitation';
 import { supabase } from '@/services/supabase/client';
 import { ownersApi, CreateOwnerData } from '@/services/api/owners';
 import { autoApi } from '@/services/api/autoApi';
+import { api } from '@/services/api/client';
 import { authApi } from '@/services/api/auth';
 import PhoneInput from 'react-phone-number-input';
 import 'react-phone-number-input/style.css';
 import { isPossiblePhoneNumber } from 'react-phone-number-input';
+import { X, Plus } from 'lucide-react';
 
 interface AddPersonDialogProps {
   isOpen: boolean;
   onClose: () => void;
   personType: PersonType | null;
   skipInvitation?: boolean;
+}
+
+interface Department {
+  id: string;
+  name: string;
 }
 
 export default function AddPersonDialog({ isOpen, onClose, personType, skipInvitation = false }: AddPersonDialogProps) {
@@ -29,6 +36,70 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  
+  // Department related states
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [isLoadingDepartments, setIsLoadingDepartments] = useState(false);
+  const [newDepartmentModalOpen, setNewDepartmentModalOpen] = useState(false);
+  const [newDepartmentName, setNewDepartmentName] = useState('');
+  const [isCreatingDepartment, setIsCreatingDepartment] = useState(false);
+
+  // Fetch departments from the database when dialog opens for team members
+  useEffect(() => {
+    if (isOpen && personType === 'team') {
+      fetchDepartments();
+    }
+  }, [isOpen, personType]);
+
+  // Function to fetch departments
+  const fetchDepartments = async () => {
+    try {
+      setIsLoadingDepartments(true);
+      const response = await api.get('/departments');
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        setDepartments(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      toast.error('Failed to load departments');
+    } finally {
+      setIsLoadingDepartments(false);
+    }
+  };
+
+  // Function to create a new department
+  const handleCreateDepartment = async () => {
+    if (!newDepartmentName.trim()) {
+      toast.error('Department name is required');
+      return;
+    }
+
+    try {
+      setIsCreatingDepartment(true);
+      
+      // Create new department using the dedicated departments API
+      const response = await api.post('/departments', {
+        name: newDepartmentName.trim()
+      });
+      
+      // If successful, add to departments list and select it
+      if (response && response.data) {
+        const newDept = { id: response.data.id, name: newDepartmentName.trim() };
+        setDepartments([...departments, newDept]);
+        setDepartment(response.data.id);
+        toast.success(`Department "${newDepartmentName}" created`);
+        
+        // Close the department modal
+        setNewDepartmentModalOpen(false);
+        setNewDepartmentName('');
+      }
+    } catch (error: any) {
+      console.error('Error creating department:', error);
+      toast.error(error.response?.data?.error || error.message || 'Failed to create department');
+    } finally {
+      setIsCreatingDepartment(false);
+    }
+  };
 
   // Map person type to a user-friendly display name
   const getPersonTypeName = (type: PersonType | null) => {
@@ -100,6 +171,19 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
     if ((personType === 'tenant' || personType === 'vendor') && phone && !isPossiblePhoneNumber(phone)) {
       setError('Please enter a valid phone number');
       return;
+    }
+
+    // In the handleSubmit function, add validation for team members
+    if (personType === 'team') {
+      if (!jobTitle) {
+        setError('Job title is required for team members');
+        return;
+      }
+      
+      if (!department) {
+        setError('Department is required for team members');
+        return;
+      }
     }
 
     try {
@@ -202,7 +286,7 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
           await invitationApi.inviteTeamMember({
             email,
             jobTitle,
-            department
+            departmentId: department
           });
           break;
         case 'tenant':
@@ -248,11 +332,8 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
       let errorMessage = error.message || 'An error occurred while sending the invitation';
       
       // Handle specific error cases
-      if (error.message === 'No token provided' || error.message.includes('sign in')) {
-        errorMessage = 'Please sign in to send invitations';
-        // You might want to redirect to login here
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
       }
       
       setError(errorMessage);
@@ -262,217 +343,302 @@ export default function AddPersonDialog({ isOpen, onClose, personType, skipInvit
     }
   };
 
-  // Add this helper function near the top of the component
   const isCompanyNameRequired = (ownerType: string): boolean => {
-    return ['corporation', 'llc', 'partnership'].includes(ownerType.toLowerCase());
+    return ['company', 'llc', 'corporation', 'partnership', 'trust'].includes(ownerType.toLowerCase());
   };
 
+  // Only render the dialog when isOpen is true
   if (!isOpen) return null;
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black bg-opacity-25 z-40" onClick={onClose} />
-      
-      <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl shadow-lg max-w-md w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center p-6 border-b border-gray-200">
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
+      <div className="bg-white rounded-xl shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-[#2C3539]">
               Add {getPersonTypeName(personType)}
             </h2>
             <button
               onClick={onClose}
-              className="text-[#6B7280] hover:text-[#2C3539] text-xl font-medium"
+              className="text-gray-500 hover:text-gray-800 transition-colors"
             >
-              ×
+              <X size={20} />
             </button>
           </div>
 
-          <div className="overflow-y-auto flex-1 p-6">
-            <form id="personForm" onSubmit={handleSubmit} className="space-y-4">
-              {/* Common fields for all person types */}
-              {(personType === 'owner' || personType === 'tenant' || personType === 'vendor') && (
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                      First Name
-                    </label>
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                      placeholder="Enter first name"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                      placeholder="Enter last name"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                  placeholder="Enter email address"
-                />
-              </div>
-
-              {(personType === 'owner' || personType === 'tenant' || personType === 'vendor') && (
-                <div>
-                  <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                    Phone Number
-                  </label>
-                  <PhoneInput
-                    international
-                    countryCallingCodeEditable={false}
-                    defaultCountry="QA"
-                    value={phone}
-                    onChange={setPhone as (value: string | undefined) => void}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    placeholder="Enter phone number"
-                    required={personType === 'owner'}
-                  />
-                  {phone && !isPossiblePhoneNumber(phone) && (
-                    <p className="mt-1 text-sm text-red-600">Please enter a valid phone number</p>
-                  )}
-                </div>
-              )}
-
-              {/* Team-specific fields */}
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
+              {error}
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit}>
+            <div className="space-y-4">
+              {/* Basic Information Section */}
               {personType === 'team' && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                      Job Title
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address <span className="text-red-500">*</span>
                     </label>
                     <input
-                      type="text"
-                      value={jobTitle}
-                      onChange={(e) => setJobTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                      placeholder="Enter job title"
+                      type="email"
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="email@example.com"
+                      required
                     />
                   </div>
-
+                  
                   <div>
-                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                      Department
+                    <label htmlFor="jobTitle" className="block text-sm font-medium text-gray-700 mb-1">
+                      Job Title <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                      placeholder="Enter department"
+                      id="jobTitle"
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. Property Manager"
+                      required
                     />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">
+                      Department <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        id="department"
+                        value={department}
+                        onChange={(e) => setDepartment(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                        disabled={isLoadingDepartments}
+                        required
+                      >
+                        <option value="">Select Department</option>
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.id}>
+                            {dept.name}
+                          </option>
+                        ))}
+                      </select>
+                      {isLoadingDepartments && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNewDepartmentModalOpen(true)}
+                      className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                    >
+                      <Plus size={16} className="mr-1" />
+                      Add New Department
+                    </button>
                   </div>
                 </>
               )}
 
-              {/* Owner-specific fields */}
               {personType === 'owner' && (
                 <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="firstName"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        id="lastName"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+                  
                   <div>
-                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                      Owner Type
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="email@example.com"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <PhoneInput
+                      international
+                      countryCallingCodeEditable={false}
+                      defaultCountry="QA"
+                      value={phone}
+                      onChange={(value) => setPhone(value || '')}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="businessType" className="block text-sm font-medium text-gray-700 mb-1">
+                      Owner Type <span className="text-red-500">*</span>
                     </label>
                     <select
+                      id="businessType"
                       value={businessType}
                       onChange={(e) => setBusinessType(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                      required={personType === 'owner'}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
                     >
-                      <option value="">Select owner type</option>
+                      <option value="">Select Owner Type</option>
                       <option value="individual">Individual</option>
                       <option value="llc">LLC</option>
                       <option value="corporation">Corporation</option>
                       <option value="partnership">Partnership</option>
+                      <option value="trust">Trust</option>
+                      <option value="company">Company</option>
+                      <option value="other">Other</option>
                     </select>
                   </div>
-
-                  {/* Conditionally show company name field based on owner type */}
-                  {businessType && isCompanyNameRequired(businessType) && (
+                  
+                  {isCompanyNameRequired(businessType) && (
                     <div>
-                      <label className="block text-sm font-medium text-[#6B7280] mb-1">
-                        Company Name
+                      <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
+                        Company Name <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
+                        id="companyName"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                        placeholder="Enter company name"
-                        required={isCompanyNameRequired(businessType)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required
                       />
                     </div>
                   )}
-
+                  
                   <div>
-                    <label className="block text-sm font-medium text-[#6B7280] mb-1">
+                    <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
                       Notes
                     </label>
                     <textarea
+                      id="notes"
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       rows={3}
-                      placeholder="Enter additional notes"
-                    ></textarea>
+                    />
                   </div>
                 </>
               )}
 
-              {error && (
-                <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">
-                  {error}
+              {/* Only Email for Tenant/Vendor in invitation flow */}
+              {(personType === 'tenant' || personType === 'vendor') && (
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    id="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="email@example.com"
+                    required
+                  />
                 </div>
               )}
-              
-              <p className="text-sm text-gray-500">
-                {skipInvitation && personType !== 'team'
-                  ? `This will add a new ${getPersonTypeName(personType).toLowerCase()} to the system.`
-                  : 'An invitation will be sent to this email address.'}
-              </p>
-            </form>
-          </div>
 
-          <div className="border-t border-gray-200 p-6">
-            <div className="flex justify-end space-x-3">
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-2 px-4 bg-[#2C3539] hover:bg-[#1e2427] text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? 'Processing...' : skipInvitation ? `Add ${getPersonTypeName(personType)}` : `Send Invitation`}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      {/* Add New Department Modal */}
+      {newDepartmentModalOpen && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-[#2C3539]">Add New Department</h3>
+              <button
+                onClick={() => setNewDepartmentModalOpen(false)}
+                className="text-gray-500 hover:text-gray-800 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label htmlFor="newDepartmentName" className="block text-sm font-medium text-gray-700 mb-1">
+                Department Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="newDepartmentName"
+                value={newDepartmentName}
+                onChange={(e) => setNewDepartmentName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g. HR, Finance, Operations"
+                required
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-2">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#2C3539]"
+                onClick={() => setNewDepartmentModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
-                type="submit"
-                form="personForm"
-                disabled={isSubmitting}
-                className="px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors text-sm font-medium disabled:opacity-50"
+                type="button"
+                onClick={handleCreateDepartment}
+                disabled={isCreatingDepartment || !newDepartmentName.trim()}
+                className="px-4 py-2 bg-[#2C3539] hover:bg-[#1e2427] text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? 'Sending...' : (skipInvitation && personType !== 'team' ? 'Add' : 'Send Invitation')}
+                {isCreatingDepartment ? 'Creating...' : 'Create Department'}
               </button>
             </div>
           </div>
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 }

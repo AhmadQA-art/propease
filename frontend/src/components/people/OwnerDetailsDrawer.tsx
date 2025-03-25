@@ -6,6 +6,9 @@ import { propertyApi } from '../../services/api/properties';
 import { Property } from '../../services/supabase/types';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import PhoneInput from 'react-phone-number-input';
+import { isPossiblePhoneNumber } from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 interface OwnerDetailsDrawerProps {
   owner: UiOwner | null;
@@ -23,6 +26,11 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
   const [companyName, setCompanyName] = useState('');
   const [ownerType, setOwnerType] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Validation states
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoadingProperties, setIsLoadingProperties] = useState(false);
   const [isAddingProperty, setIsAddingProperty] = useState(false);
@@ -36,9 +44,37 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   
+  // Validate email function
+  const validateEmail = (email: string): boolean => {
+    if (!email) return true; // Empty is valid (not required)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+  
+  // Validation on form change
+  useEffect(() => {
+    if (isEditing) {
+      // Validate email
+      if (email && !validateEmail(email)) {
+        setEmailError('Please enter a valid email address');
+      } else {
+        setEmailError('');
+      }
+      
+      // Validate phone
+      if (phone && !isPossiblePhoneNumber(phone)) {
+        setPhoneError('Please enter a valid phone number');
+      } else {
+        setPhoneError('');
+      }
+    }
+  }, [email, phone, isEditing]);
+  
   // Function to load form data from owner object
   const loadFormData = () => {
     if (!owner) return;
+    
+    console.log('Loading form data from owner:', owner);
     
     // Check if owner has direct name field (new format)
     if ((owner as any).name) {
@@ -58,7 +94,11 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
     }
     
     setCompanyName(owner.company_name || '');
-    setOwnerType(owner.owner_type || owner.business_type || ''); // Support both field names
+    
+    // Get owner type with fallback to business_type for backward compatibility
+    const currentOwnerType = owner.owner_type || owner.business_type || '';
+    console.log('Setting owner type to:', currentOwnerType);
+    setOwnerType(currentOwnerType);
   };
   
   // Effect to handle clicking outside of dropdown to close it
@@ -153,6 +193,7 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
   // Make sure to update the form when entering edit mode to ensure latest values
   React.useEffect(() => {
     if (isEditing && owner) {
+      console.log('Edit mode changed, reloading form data');
       loadFormData();
     }
   }, [isEditing, owner]);
@@ -219,6 +260,12 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
 
   const handleSave = async () => {
     if (!owner) return;
+    
+    // Validate form before saving
+    if (emailError || phoneError) {
+      toast.error('Please fix validation errors before saving');
+      return;
+    }
     
     setIsSaving(true);
     
@@ -287,10 +334,21 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
   // Load owner data and properties when the drawer opens
   useEffect(() => {
     if (isOpen && owner) {
+      console.log('Drawer opened, initializing form data');
       loadFormData();
       loadOwnerProperties();
     }
   }, [isOpen, owner]);
+
+  // Effect to ensure owner type is properly initialized
+  useEffect(() => {
+    if (owner && isOpen) {
+      // Force the owner type to be set correctly when the drawer opens
+      const currentOwnerType = owner.owner_type || owner.business_type || '';
+      console.log('Force-initializing owner type to:', currentOwnerType);
+      setOwnerType(currentOwnerType);
+    }
+  }, [owner, isOpen]);
 
   const handleLinkProperty = async () => {
     if (!owner || !selectedPropertyId) return;
@@ -321,6 +379,11 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
   const handleViewProperty = (propertyId: string) => {
     navigate(`/rentals/${propertyId}`);
   };
+
+  // Log when ownerType changes
+  useEffect(() => {
+    console.log('ownerType state changed to:', ownerType);
+  }, [ownerType]);
 
   if (!isOpen || !owner) return null;
 
@@ -417,13 +480,16 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
               <div className="flex items-center text-[#6B7280]">
                 <Mail size={20} className="mr-3" />
                 {isEditing ? (
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    placeholder="Email Address"
-                  />
+                  <div className="flex-1">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className={`flex-1 px-3 py-2 border ${emailError ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] w-full`}
+                      placeholder="Email Address"
+                    />
+                    {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
+                  </div>
                 ) : (
                   <span>{(owner as any).email || owner.user_profiles?.email || 'No email provided'}</span>
                 )}
@@ -432,13 +498,18 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
               <div className="flex items-center text-[#6B7280]">
                 <Phone size={20} className="mr-3" />
                 {isEditing ? (
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    placeholder="Phone Number"
-                  />
+                  <div className="flex-1">
+                    <PhoneInput
+                      international
+                      countryCallingCodeEditable={false}
+                      defaultCountry="QA"
+                      value={phone}
+                      onChange={(value) => setPhone(value || '')}
+                      className={`w-full px-3 py-2 border ${phoneError ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]`}
+                      placeholder="Phone Number"
+                    />
+                    {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
+                  </div>
                 ) : (
                   <span>{(owner as any).phone || owner.user_profiles?.phone || 'No phone provided'}</span>
                 )}
@@ -474,7 +545,10 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
               {isEditing ? (
                 <select
                   value={ownerType}
-                  onChange={(e) => setOwnerType(e.target.value)}
+                  onChange={(e) => {
+                    console.log('Owner type changed to:', e.target.value);
+                    setOwnerType(e.target.value);
+                  }}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                 >
                   <option value="">Select owner type</option>
@@ -482,6 +556,9 @@ export default function OwnerDetailsDrawer({ owner, isOpen, onClose, onUpdate }:
                   <option value="llc">LLC</option>
                   <option value="corporation">Corporation</option>
                   <option value="partnership">Partnership</option>
+                  <option value="trust">Trust</option>
+                  <option value="company">Company</option>
+                  <option value="other">Other</option>
                 </select>
               ) : (
                 <p className="text-[#2C3539]">{owner.owner_type || owner.business_type || 'Not specified'}</p>

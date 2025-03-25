@@ -167,12 +167,6 @@ export const peopleApi = {
   // Get tenants with pagination
   getTenants: async (params: PaginationParams = {}): Promise<any> => {
     try {
-      console.log('Fetching tenants, params:', {
-        page: params.page,
-        pageSize: params.pageSize,
-        searchQuery: params.searchQuery
-      });
-      
       // First get all tenants
       let query = supabase
         .from('tenants')
@@ -224,15 +218,6 @@ export const peopleApi = {
       }
 
       const { data, error, count } = await query;
-
-      // Log the count and pagination details
-      console.log('Tenants fetch results:', {
-        count,
-        tenantsReturned: data?.length || 0,
-        pageSize: params.pageSize || 10,
-        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0,
-        currentPage: params.page || 1
-      });
 
       if (error) throw error;
 
@@ -399,12 +384,6 @@ export const peopleApi = {
   // Get vendors with pagination
   getVendors: async (params: PaginationParams = {}): Promise<any> => {
     try {
-      console.log('Fetching vendors, params:', {
-        page: params.page,
-        pageSize: params.pageSize,
-        searchQuery: params.searchQuery
-      });
-      
       // First get all vendors
       let query = supabase
         .from('vendors')
@@ -421,6 +400,11 @@ export const peopleApi = {
       if (params.filters?.status && params.filters.status.length > 0) {
         query = query.in('status', params.filters.status);
       }
+      
+      // Apply service type filter
+      if (params.filters?.serviceTypes && params.filters.serviceTypes.length > 0) {
+        query = query.in('service_type', params.filters.serviceTypes);
+      }
 
       // Apply pagination
       if (params.page !== undefined && params.pageSize !== undefined) {
@@ -430,15 +414,6 @@ export const peopleApi = {
       }
 
       const { data, error, count } = await query;
-
-      // Log the count and pagination details
-      console.log('Vendors fetch results:', {
-        count,
-        vendorsReturned: data?.length || 0,
-        pageSize: params.pageSize || 10,
-        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0,
-        currentPage: params.page || 1
-      });
 
       if (error) throw error;
 
@@ -465,9 +440,10 @@ export const peopleApi = {
       let query = supabase
         .from('team_members')
         .select(`
-          id, 
+          id,
+          user_id, 
           job_title, 
-          department, 
+          department_id, 
           created_at, 
           updated_at, 
           user_profiles:user_id (
@@ -479,6 +455,10 @@ export const peopleApi = {
             status
           ),
           roles:role_id (
+            id,
+            name
+          ),
+          departments:department_id (
             id,
             name
           )
@@ -504,19 +484,49 @@ export const peopleApi = {
 
       // Transform data to match the TeamMember interface
       const teamMembers = data.map((member: any): TeamMember => {
-        const userProfile = member.user_profiles;
-        const role = member.roles;
+        // Use proper type assertions to avoid TypeScript linter errors
+        const userProfile = Array.isArray(member.user_profiles) 
+          ? member.user_profiles[0] as { 
+              id: string; 
+              first_name?: string; 
+              last_name?: string; 
+              email?: string; 
+              phone?: string; 
+              status?: string; 
+            }
+          : member.user_profiles as { 
+              id: string; 
+              first_name?: string; 
+              last_name?: string; 
+              email?: string; 
+              phone?: string; 
+              status?: string; 
+            };
+          
+        const roleData = Array.isArray(member.roles)
+          ? member.roles[0] as { id?: string; name?: string }
+          : member.roles as { id?: string; name?: string };
+          
+        const departmentData = Array.isArray(member.departments)
+          ? member.departments[0] as { id?: string; name?: string }
+          : member.departments as { id?: string; name?: string };
         
         return {
           id: member.id,
+          user_id: member.user_id,
           type: 'team',
-          name: userProfile ? `${userProfile.first_name} ${userProfile.last_name}` : '',
+          name: userProfile 
+                ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() 
+                : '',
           email: userProfile?.email,
           phone: userProfile?.phone,
           status: (userProfile?.status as 'active' | 'inactive' | 'pending') || 'active',
           createdAt: member.created_at,
-          role: role?.name || member.job_title,
-          department: member.department,
+          role: roleData?.name || '',
+          jobTitle: member.job_title || '',
+          department: departmentData?.name || '',
+          departmentId: member.department_id || '',
+          user_profiles: userProfile,
           imageUrl: null // Add image URL if available
         };
       });
@@ -586,11 +596,8 @@ export const peopleApi = {
 
       // Check for organization_id
       if (!tenantData.organization_id) {
-        console.error('Organization ID is missing in tenant creation data');
         throw new Error('Organization ID is required. Please make sure you are logged in with proper permissions.');
       }
-
-      console.log('Using organization ID for tenant creation:', tenantData.organization_id);
 
       // Convert to database structure
       const dbData: Record<string, any> = {
@@ -604,7 +611,6 @@ export const peopleApi = {
       };
       
       // NOTE: Removed lease fields as they no longer exist in the schema
-      console.log('Tenant data for database insertion:', dbData);
 
       const { data, error } = await supabase
         .from('tenants')
@@ -646,9 +652,6 @@ export const peopleApi = {
   // Create a new vendor
   createVendor: async (data: any): Promise<any> => {
     try {
-      // Log the data being received
-      console.log('Creating vendor with data:', data);
-
       // Check for required fields
       if (!data.vendor_name) {
         throw new Error('Vendor name is required');
@@ -656,11 +659,8 @@ export const peopleApi = {
 
       // Check for organization_id
       if (!data.organization_id) {
-        console.error('Organization ID is missing in vendor creation data');
         throw new Error('Organization ID is required. Please make sure you are logged in with proper permissions.');
       }
-
-      console.log('Using organization ID for vendor creation:', data.organization_id);
 
       // Create the vendor data object
       const vendorData = {
@@ -672,8 +672,8 @@ export const peopleApi = {
         notes: data.notes || null,
         contact_person_name: data.contact_person_name || null,
         contact_person_email: data.contact_person_email || null,
-        organization_id: data.organization_id, // No default - must be provided
-        user_id: data.user_id || null, // Will be populated from the auth token if available
+        organization_id: data.organization_id,
+        user_id: data.user_id || null,
       };
 
       // Insert the new vendor into the database
@@ -694,7 +694,6 @@ export const peopleApi = {
         }
       }
 
-      console.log('Vendor created successfully:', newVendor);
       return newVendor;
     } catch (error: any) {
       console.error('Error in createVendor:', error);
@@ -705,8 +704,6 @@ export const peopleApi = {
   // Update a person's data
   updatePerson: async (id: string, type: PersonType, data: Partial<Person>): Promise<Person> => {
     try {
-      console.log(`Updating ${type} with ID ${id}:`, data);
-
       // Handle each person type separately due to schema differences
       switch (type) {
         case 'owner': {
@@ -846,28 +843,51 @@ export const peopleApi = {
           
           // Team-specific fields
           if (teamData.role) updateData.role = teamData.role;
-          if (teamData.department) updateData.department = teamData.department;
+          if (teamData.jobTitle) updateData.job_title = teamData.jobTitle;
+          if (teamData.departmentId) updateData.department_id = teamData.departmentId;
           
           // Update team member in database
           const { data: updatedData, error } = await supabase
             .from('team_members')
             .update(updateData)
             .eq('id', id)
-            .select('*')
+            .select(`
+              id,
+              job_title,
+              department_id,
+              created_at,
+              user_profiles:user_id (
+                id,
+                first_name,
+                last_name,
+                email,
+                phone,
+                status
+              ),
+              departments:department_id (
+                id,
+                name
+              )
+            `)
             .single();
             
           if (error) throw error;
           
+          // Access properties directly with safe property access
           return {
             id: updatedData.id,
             type: 'team',
-            name: `${updatedData.first_name} ${updatedData.last_name}`,
-            email: updatedData.email,
-            phone: updatedData.phone,
-            status: (updatedData.status as 'active' | 'inactive' | 'pending') || 'active',
+            name: updatedData.user_profiles ? 
+                  `${updatedData.user_profiles.first_name || ''} ${updatedData.user_profiles.last_name || ''}` : 
+                  '',
+            email: updatedData.user_profiles?.email,
+            phone: updatedData.user_profiles?.phone,
+            status: (updatedData.user_profiles?.status as 'active' | 'inactive' | 'pending') || 'active',
             createdAt: updatedData.created_at,
-            role: updatedData.role,
-            department: updatedData.department
+            role: updatedData.roles?.name || '',
+            jobTitle: updatedData.job_title || '',
+            department: updatedData.departments?.name || '',
+            departmentId: updatedData.department_id || ''
           };
         }
         
@@ -896,11 +916,57 @@ export const peopleApi = {
         case 'vendor':
           table = 'vendors';
           break;
+        case 'team':
+          // For team members, we need to:
+          // 1. Get the user_id from team_members table
+          const { data: teamMember, error: fetchError } = await supabase
+            .from('team_members')
+            .select('user_id')
+            .eq('id', id)
+            .single();
+          
+          if (fetchError) throw fetchError;
+          
+          if (!teamMember || !teamMember.user_id) {
+            throw new Error('Team member not found or missing user ID');
+          }
+          
+          // 2. Delete the team member record
+          const { error: deleteTeamError } = await supabase
+            .from('team_members')
+            .delete()
+            .eq('id', id);
+          
+          if (deleteTeamError) throw deleteTeamError;
+          
+          // 3. Remove user roles for this user
+          const { error: deleteRolesError } = await supabase
+            .from('user_roles')
+            .delete()
+            .eq('user_id', teamMember.user_id);
+          
+          if (deleteRolesError) {
+            console.warn('Error deleting user roles:', deleteRolesError);
+            // Continue even if there's an error with roles
+          }
+          
+          // 4. For safety, we don't delete the user profile, but update its status
+          // This prevents issues with authentication but removes the user from active status
+          const { error: updateUserError } = await supabase
+            .from('user_profiles')
+            .update({ status: 'inactive' })
+            .eq('id', teamMember.user_id);
+          
+          if (updateUserError) throw updateUserError;
+          
+          // No need to continue to the standard deletion below
+          return;
+          
         default:
           throw new Error(`Unsupported person type: ${personType}`);
       }
 
-      // Delete the record
+      // Delete the record for non-team member types
       const { error } = await supabase
         .from(table)
         .delete()
@@ -929,6 +995,13 @@ export const peopleApi = {
         case 'vendor':
           table = 'vendors';
           break;
+        case 'team':
+          // For team members, process each one individually using the single delete method
+          for (const id of ids) {
+            await peopleApi.deletePerson(id, 'team');
+          }
+          // Return early as we've handled all deletions
+          return;
         default:
           throw new Error(`Unsupported person type: ${personType}`);
       }
@@ -949,23 +1022,16 @@ export const peopleApi = {
   // Get owners with their properties
   getOwnersWithProperties: async (params: PaginationParams = {}): Promise<any> => {
     try {
-      console.log('Fetching owners with properties, params:', {
-        page: params.page,
-        pageSize: params.pageSize,
-        searchQuery: params.searchQuery,
-        ownerTypes: params.filters?.ownerTypes
-      });
-
       // First get all owners
       let ownersQuery = supabase
         .from('owners')
         .select('id, first_name, last_name, phone, email, company_name, owner_type, created_at', { count: 'exact' })
         .order(params.sortBy || 'created_at', { ascending: params.sortOrder !== 'desc' });
 
-      // Apply search if provided
+      // Apply search to owner name fields if provided
       if (params.searchQuery) {
         const searchQuery = params.searchQuery.toLowerCase();
-        ownersQuery = ownersQuery.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%,phone.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+        ownersQuery = ownersQuery.or(`first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`);
       }
       
       // Apply owner type filters if provided
@@ -981,15 +1047,6 @@ export const peopleApi = {
       }
 
       const { data: ownersData, error: ownersError, count } = await ownersQuery;
-
-      // Log the count and pagination details
-      console.log('Owners fetch results:', {
-        count,
-        ownersReturned: ownersData?.length || 0,
-        pageSize: params.pageSize || 10,
-        totalPages: count ? Math.ceil(count / (params.pageSize || 10)) : 0,
-        currentPage: params.page || 1
-      });
 
       if (ownersError) throw ownersError;
       
@@ -1007,11 +1064,6 @@ export const peopleApi = {
         .in('owner_id', ownerIds);
       
       if (propertiesError) throw propertiesError;
-      
-      // Debug the first item to understand the structure
-      if (propertiesData && propertiesData.length > 0) {
-        console.log('Example property data item:', propertiesData[0]);
-      }
       
       // Create a map of owner ID to properties
       const ownerPropertiesMap: Record<string, Array<{id: string, name: string}>> = {};
@@ -1072,6 +1124,72 @@ export const peopleApi = {
     } catch (error) {
       console.error('Error fetching owners with properties:', error);
       throw error;
+    }
+  },
+
+  getTeamMemberById: async (id: string): Promise<any> => {
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .select(`
+          *,
+          user_profiles: user_id (*),
+          departments: department_id (*)
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching team member details:', error);
+      throw error;
+    }
+  },
+
+  updateTeamMember: async (id: string, userProfileData: any, teamMemberData: any): Promise<void> => {
+    try {
+      // First get the team member to get the user_id
+      const { data: teamMember, error: teamMemberError } = await supabase
+        .from('team_members')
+        .select('user_id')
+        .eq('id', id)
+        .single();
+
+      if (teamMemberError) throw teamMemberError;
+      
+      // Update user profile data
+      const { error: userProfileError } = await supabase
+        .from('user_profiles')
+        .update(userProfileData)
+        .eq('id', teamMember.user_id);
+
+      if (userProfileError) throw userProfileError;
+      
+      // Update team member data
+      const { error: teamMemberUpdateError } = await supabase
+        .from('team_members')
+        .update(teamMemberData)
+        .eq('id', id);
+
+      if (teamMemberUpdateError) throw teamMemberUpdateError;
+    } catch (error) {
+      console.error('Error updating team member:', error);
+      throw error;
+    }
+  },
+
+  getDepartments: async (): Promise<any[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('*');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching departments:', error);
+      return [];
     }
   }
 }; 

@@ -6,7 +6,7 @@ import TableToolbar from '../components/people/TableToolbar';
 import FilterPanel from '../components/people/FilterPanel';
 import TeamView from '../components/people/TeamView';
 import type { Person, PersonType, TeamMember, Vendor, Tenant, Owner } from '../types/people';
-import { mockTeamMembers, mockTasks, mockActivities } from '../data/mockTeamData';
+import { mockTeamMembers, mockActivities } from '../data/mockTeamData';
 import * as Popover from '@radix-ui/react-popover';
 import AddPersonDialog from '../components/people/AddPersonDialog';
 import AddTenantDialog from '../components/people/AddTenantDialog';
@@ -20,6 +20,7 @@ import TenantDetailsDrawer from '../components/people/TenantDetailsDrawer';
 import OwnerDetailsDrawer from '../components/people/OwnerDetailsDrawer';
 import VendorDetailsDrawer from '../components/people/VendorDetailsDrawer';
 import { apiToUiOwner, UiOwner } from '../services/adapters/ownerAdapter';
+import TeamDetailsDrawer from '../components/people/TeamDetailsDrawer';
 
 const baseTabs = ['All People', 'Team', 'Owners', 'Tenants', 'Vendors'];
 
@@ -260,11 +261,13 @@ export default function People() {
     status: string[];
     hasLease: string[];
     ownerTypes?: string[];
+    serviceTypes?: string[];
   }>({
     types: [],
     status: [],
     hasLease: [],
     ownerTypes: [],
+    serviceTypes: [],
   });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedPersonType, setSelectedPersonType] = useState<PersonType | 'team'>('owner');
@@ -307,17 +310,16 @@ export default function People() {
   const [tenantDialogOpen, setTenantDialogOpen] = useState(false);
   const [vendorDialogOpen, setVendorDialogOpen] = useState(false);
 
-  // Add state for tenant details drawer
+  // State for tenant, owner, vendor details
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [isTenantDetailsOpen, setIsTenantDetailsOpen] = useState(false);
-  
-  // Add state for owner details drawer
   const [selectedOwner, setSelectedOwner] = useState<UiOwner | null>(null);
   const [isOwnerDetailsOpen, setIsOwnerDetailsOpen] = useState(false);
-
-  // Add state for vendor details drawer
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [isVendorDetailsOpen, setIsVendorDetailsOpen] = useState(false);
+  // Add state for team member details
+  const [selectedTeamMember, setSelectedTeamMember] = useState<TeamMember | null>(null);
+  const [isTeamDetailsOpen, setIsTeamDetailsOpen] = useState(false);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -337,7 +339,6 @@ export default function People() {
   const fetchData = async () => {
     setLoading(true);
     setError(null);
-    console.log('Fetching data for tab:', activeTab, 'with page:', currentPage, 'pageSize:', pageSize);
     
     try {
       // Check if user is attempting to access the "All People" tab when they shouldn't
@@ -356,7 +357,8 @@ export default function People() {
           types: filters.types,
           status: filters.status,
           hasLease: filters.hasLease,
-          ownerTypes: filters.ownerTypes
+          ownerTypes: filters.ownerTypes,
+          serviceTypes: filters.serviceTypes
         }
       };
 
@@ -367,7 +369,16 @@ export default function People() {
           setTotalPages(result.totalPages || 1);
           break;
         case 'Owners':
-          result = await peopleApi.getOwnersWithProperties(params);
+          // For Owners tab, only use searchQuery and ownerTypes filter
+          const ownerParams = {
+            page: currentPage,
+            pageSize: pageSize,
+            searchQuery: searchQuery || undefined,
+            filters: {
+              ownerTypes: filters.ownerTypes
+            }
+          };
+          result = await peopleApi.getOwnersWithProperties(ownerParams);
           setOwners(result.data || []);
           setData(result.data || []);
           setTotalPages(result.totalPages || 1);
@@ -379,7 +390,16 @@ export default function People() {
           setTotalPages(result.totalPages || 1);
           break;
         case 'Vendors':
-          result = await peopleApi.getVendors(params);
+          // For Vendors tab, use searchQuery and serviceTypes filter
+          const vendorParams = {
+            page: currentPage,
+            pageSize: pageSize,
+            searchQuery: searchQuery || undefined,
+            filters: {
+              serviceTypes: filters.serviceTypes
+            }
+          };
+          result = await peopleApi.getVendors(vendorParams);
           setVendors(result.data || []);
           setData(result.data || []);
           setTotalPages(result.totalPages || 1);
@@ -395,12 +415,6 @@ export default function People() {
           setTotalPages(1);
       }
 
-      console.log('Data fetch result:', {
-        tab: activeTab,
-        dataLength: result?.data?.length || 0,
-        totalPages: result?.totalPages || 1,
-        total: result?.total || 0
-      });
     } catch (err: any) {
       console.error(`Error fetching ${activeTab} data:`, err);
       setError(`Failed to load ${activeTab} data: ${err.message}`);
@@ -471,7 +485,6 @@ export default function People() {
       switch (action) {
         case 'edit':
           // Handle edit (would open edit dialog)
-          console.log('Edit', person);
           break;
         case 'delete':
           await peopleApi.deletePerson(person.id, person.type);
@@ -521,7 +534,6 @@ export default function People() {
 
   const handleSort = (key: string) => {
     // Handle sorting
-    console.log('Sort by', key);
     // Would update sorting state and trigger API call
   };
 
@@ -566,7 +578,6 @@ export default function People() {
 
   const handleExport = () => {
     // Handle export
-    console.log('Export', selectedIds);
     // In a real implementation, this would generate a CSV/Excel file
   };
 
@@ -643,8 +654,25 @@ export default function People() {
     } else if (person.type === 'vendor') {
       setSelectedVendor(person as Vendor);
       setIsVendorDetailsOpen(true);
+    } else if (person.type === 'team') {
+      setSelectedTeamMember(person as TeamMember);
+      setIsTeamDetailsOpen(true);
     }
   };
+
+  // Check if there are active filters for the current tab
+  const hasActiveFilters = useMemo(() => {
+    switch (activeTab) {
+      case 'Owners':
+        return filters.ownerTypes?.length ? true : false;
+      case 'Tenants':
+        return filters.hasLease?.length ? true : false;
+      case 'Vendors':
+        return filters.serviceTypes?.length ? true : false;
+      default:
+        return false;
+    }
+  }, [activeTab, filters]);
 
   const renderContent = () => {
     // Don't render All People tab content for non-development users
@@ -671,12 +699,12 @@ export default function People() {
     }
 
     if (activeTab === 'Team') {
-      // Use real API data for team members, but keep using mock data for tasks and activities
+      // Use real API data for team members and tasks, but keep using mock data for activities
       // since they match the component's expected structure
       return (
         <TeamView 
           teamMembers={data as TeamMember[]} 
-          tasks={mockTasks} 
+          tasks={[]} 
           activities={mockActivities} 
         />
       );
@@ -689,12 +717,6 @@ export default function People() {
       } else if (activeTab === 'Owners') {
         filteredData = applyOwnerTypeFilter(filteredData);
       }
-
-      console.log(`Rendering ${activeTab} tab:`, {
-        currentPage,
-        totalPages,
-        dataLength: filteredData.length
-      });
       
       // All other tabs use the same table structure but with different columns and data
       return (
@@ -714,7 +736,6 @@ export default function People() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={(page) => {
-              console.log(`Changing page from ${currentPage} to ${page}`);
               setCurrentPage(page);
             }}
           />
@@ -863,7 +884,6 @@ export default function People() {
 
   // Success handlers
   const handleTenantAdded = (newTenant: Tenant) => {
-    console.log('New tenant added:', newTenant);
     // Refresh data based on active tab
     if (activeTab === 'Tenants' || activeTab === 'All People') {
       fetchData();
@@ -871,7 +891,6 @@ export default function People() {
   };
 
   const handleVendorAdded = (newVendor: Vendor) => {
-    console.log('New vendor added:', newVendor);
     // Refresh data based on active tab
     if (activeTab === 'Vendors' || activeTab === 'All People') {
       fetchData();
@@ -906,6 +925,7 @@ export default function People() {
                 onExport={handleExport}
                 customAddButton={renderAddButton()}
                 tabType={activeTab}
+                hasActiveFilters={hasActiveFilters}
               />
 
               {activeTab !== 'Team' && (
@@ -962,13 +982,14 @@ export default function People() {
         <TenantDetailsDrawer
           tenant={{
             id: selectedTenant.id,
-            name: selectedTenant.name,
+            name: selectedTenant.name || '', 
             email: selectedTenant.email || '',
             phone: selectedTenant.phone || '',
             imageUrl: selectedTenant.imageUrl
           }}
           isOpen={isTenantDetailsOpen}
           onClose={() => setIsTenantDetailsOpen(false)}
+          onUpdate={fetchData}
         />
       )}
       
@@ -988,8 +1009,17 @@ export default function People() {
           vendor={selectedVendor}
           isOpen={isVendorDetailsOpen}
           onClose={() => setIsVendorDetailsOpen(false)}
+          onUpdate={fetchData}
         />
       )}
+
+      {/* Add TeamDetailsDrawer */}
+      <TeamDetailsDrawer
+        teamMember={selectedTeamMember}
+        isOpen={isTeamDetailsOpen}
+        onClose={() => setIsTeamDetailsOpen(false)}
+        onUpdate={fetchData}
+      />
     </div>
   );
 }

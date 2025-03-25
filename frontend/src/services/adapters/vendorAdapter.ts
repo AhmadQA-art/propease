@@ -111,6 +111,7 @@ export const uiVendorToPerson = (uiVendor: UiVendor): Vendor => {
     company_name: uiVendor.vendor_name, // Use vendor_name as company_name
     vendor_name: uiVendor.vendor_name, // Add the vendor_name directly
     contact_person_name: uiVendor.contact_person_name, // Add the contact person name
+    contact_person_email: uiVendor.contact_person_email, // Add the contact person email
     service_type: uiVendor.service_type,
     rating: uiVendor.performance_rating || 0,
     lastService: '', // Not in schema, placeholder

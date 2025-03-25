@@ -5,11 +5,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/services/supabase/client';
 import { invitationApi } from '@/services/api/invitation';
 import { toast } from 'react-hot-toast';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+import { isPossiblePhoneNumber } from 'react-phone-number-input';
 
 export default function AcceptInvitation() {
   const [searchParams] = useSearchParams();
   const emailFromUrl = searchParams.get('email'); // Optional, for pre-filling
   const token = searchParams.get('token'); // Get token from URL
+  
+  // Custom styles for the phone input to ensure icons are visible
+  const phoneInputStyle = {
+    '--PhoneInputCountryFlag-height': '20px',
+    '--PhoneInputCountryFlag-width': '28px',
+    '--PhoneInputCountrySelect-marginRight': '0.5em',
+    '--PhoneInputCountrySelect-position': 'relative',
+    '--PhoneInputCountrySelectArrow-margin': '0px 0.35em',
+    '--PhoneInputCountrySelectArrow-width': '0.3em',
+    paddingLeft: '2.5rem',
+  };
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,6 +37,7 @@ export default function AcceptInvitation() {
   const [organizationName, setOrganizationName] = useState('');
   const [role, setRole] = useState('');
   const [invitationData, setInvitationData] = useState(null);
+  const [isNewUser, setIsNewUser] = useState(false);
   
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -30,46 +45,86 @@ export default function AcceptInvitation() {
   useEffect(() => {
     const checkSessionAndInvitation = async () => {
       try {
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session || !session.user) {
-          setError('Please sign in to accept the invitation.');
+        console.log('Checking session and invitation status...');
+        setIsVerifying(true);
+        
+        if (!token) {
+          setError('Missing invitation token. Please check your invitation link.');
           setIsVerifying(false);
-          // Redirect to login with return URL
-          const returnUrl = encodeURIComponent(`/accept-invitation?token=${token}${emailFromUrl ? `&email=${emailFromUrl}` : ''}`);
-          navigate(`/login?returnUrl=${returnUrl}`);
           return;
-      }
+        }
 
-      const userEmail = session.user.email;
+        if (!emailFromUrl) {
+          setError('Missing email parameter. Please check your invitation link.');
+          setIsVerifying(false);
+          return;
+        }
 
-      if (!token) {
-        setError('Missing invitation token. Please check your invitation link.');
-        setIsVerifying(false);
-        return;
-      }
-
-      try {
-          const { invitation } = await invitationApi.verifyInvitation(token, userEmail);
+        // First check if this is a valid invitation
+        try {
+          console.log(`Verifying invitation for token: ${token} and email: ${emailFromUrl}`);
+          const { invitation } = await invitationApi.verifyInvitation(token, emailFromUrl);
           
           if (!invitation) {
             setError('Invalid invitation. Please check your invitation link.');
+            setIsVerifying(false);
+            return;
+          }
+          
+          // Store invitation data regardless of auth status
+          setInvitationData(invitation);
+          setOrganizationName(invitation.organization_name);
+          setRole(invitation.role);
+        } catch (invitationError: any) {
+          console.error('Error verifying invitation:', invitationError);
+          setError(invitationError.message || 'Error verifying invitation. Please try again or contact support.');
+          setInvitationValid(false);
           setIsVerifying(false);
           return;
         }
 
-          setInvitationData(invitation);
-        setOrganizationName(invitation.organization_name);
-        setRole(invitation.role);
-        setInvitationValid(true);
-        } catch (error: any) {
-        console.error('Error verifying invitation:', error);
-          setError(error.message || 'Error verifying invitation. Please try again or contact support.');
-          setInvitationValid(false);
+        // Check if user is already authenticated
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          console.log('User is already authenticated:', session.user.email);
+          
+          // If authenticated user matches the invitation email
+          if (session.user.email === emailFromUrl) {
+            console.log('Authenticated user matches invitation email');
+            setInvitationValid(true);
+          } else {
+            console.log('Authenticated user does not match invitation email');
+            setError(`This invitation was sent to ${emailFromUrl}, but you're logged in as ${session.user.email}. Please log out and try again.`);
+            setInvitationValid(false);
+          }
+        } else {
+          console.log('No active session, handling as new user');
+          // No session - we need to handle this as a new user
+          setIsNewUser(true);
+          setInvitationValid(true);
+          
+          // Sign in with the one-time password flow (invitation)
+          try {
+            console.log('Attempting to sign in with OTP...');
+            const { data, error } = await supabase.auth.signInWithOtp({
+              email: emailFromUrl,
+            });
+            
+            if (error) {
+              console.error('Error signing in with OTP:', error);
+              // Don't set an error - we'll handle this as a new user needing to set a password
+            } else {
+              console.log('OTP sign in successful');
+            }
+          } catch (signInError) {
+            console.error('Exception during OTP sign in:', signInError);
+            // Similarly, don't set an error here
+          }
         }
-      } catch (error: any) {
-        console.error('Session error:', error);
-        setError('Error checking session. Please try signing in again.');
+      } catch (error) {
+        console.error('Session/invitation check error:', error);
+        setError('Error checking invitation status. Please try again or contact support.');
         setInvitationValid(false);
       } finally {
         setIsVerifying(false);
@@ -97,29 +152,53 @@ export default function AcceptInvitation() {
       return;
     }
 
+    // Add phone validation
+    if (phone && !isPossiblePhoneNumber(phone)) {
+      setError('Please enter a valid phone number.');
+      return;
+    }
+
     setIsSubmitting(true);
     setError('');
 
     try {
-      // First update the user's password
-      const { error: updateError } = await supabase.auth.updateUser({ password });
-      if (updateError) throw updateError;
-
-      // Get a fresh session with the new credentials
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-
+      let session = null;
+      
+      // Step 1: Handle authentication based on whether user is new or existing
+      if (isNewUser) {
+        // For new users, sign up with Supabase
+        console.log('Setting up new user with password');
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: emailFromUrl,
+          password: password,
+        });
+        
+        if (signUpError) throw signUpError;
+        session = data.session;
+      } else {
+        // For existing users, update password
+        console.log('Updating existing user password');
+        const { error: updateError } = await supabase.auth.updateUser({ password });
+        if (updateError) throw updateError;
+        
+        // Get a fresh session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        session = sessionData.session;
+      }
+      
       if (!session) {
-        throw new Error('Failed to get session after password update');
+        throw new Error('Failed to get session');
       }
 
-      // Now accept the invitation with the fresh session token
+      // Step 2: Accept the invitation with user's details
+      console.log('Accepting invitation with user details');
       const response = await invitationApi.acceptInvitation(token, {
         password,
         firstName,
         lastName,
         phone,
-        accessToken: session.access_token // Pass the access token explicitly
+        accessToken: session.access_token
       });
 
       toast.success('Account created successfully!');
@@ -189,7 +268,7 @@ export default function AcceptInvitation() {
                       <input
                         type="email"
                         disabled
-                        value={user?.email || emailFromUrl || ''}
+                        value={emailFromUrl || ''}
                         className="w-full pl-10 pr-4 py-2 border border-gray-200 bg-gray-50 rounded-lg"
                       />
                     </div>
@@ -233,14 +312,16 @@ export default function AcceptInvitation() {
                     <label className="block text-sm font-medium text-[#2C3539] mb-2">
                       Phone Number
                     </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="tel"
+                    <div className="relative phone-input-container">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+                      <PhoneInput
+                        international
+                        countryCallingCodeEditable={false}
+                        defaultCountry="QA"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                        placeholder="+1 (123) 456-7890"
+                        onChange={(value) => setPhone(value || '')}
+                        className="w-full border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                        style={phoneInputStyle}
                       />
                     </div>
                   </div>

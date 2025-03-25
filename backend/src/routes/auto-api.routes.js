@@ -27,6 +27,7 @@ const autoApiResources = [
   'tenants',
   'vendors',
   'team_members',
+  'departments',
   
   // Document Management
   'documents',
@@ -84,7 +85,8 @@ const tablesWithoutCreatedBy = [
   'owners',
   'tenants',
   'vendors',
-  'users'
+  'users',
+  'departments'
 ];
 
 // Create auto API endpoints for each resource
