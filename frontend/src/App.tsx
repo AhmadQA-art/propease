@@ -13,6 +13,7 @@ import Properties from './pages/Properties';
 import Rentals from './pages/Rentals';
 import RentalDetails from './pages/RentalDetails';
 import Leases from './pages/Leases';
+import AddLease from './pages/AddLease';
 import Finances from './pages/Finances';
 import Payments from './pages/Payments';
 import Documents from './pages/Documents';
@@ -104,6 +105,7 @@ function MainRoutes() {
         <Route path="rentals/:id" element={<RentalDetails />} />
         <Route path="rentals/:id/edit" element={<RentalDetails mode="edit" />} />
         <Route path="leases" element={<Leases />} />
+        <Route path="leases/add" element={<AddLease />} />
         <Route path="finances" element={<Finances />} />
         <Route path="payments" element={<Payments />} />
         <Route path="documents" element={<Documents />} />
