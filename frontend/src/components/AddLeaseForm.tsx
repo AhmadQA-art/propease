@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Upload, Plus, X, User, Calendar, DollarSign } from 'lucide-react';
+import { ArrowLeft, Upload, Plus, X, User, DollarSign, File } from 'lucide-react';
 import { Property } from '../types/rental';
-import { Tenant, LeaseCharge, LateFee } from '../types/tenant';
+import { Tenant, LeaseCharge } from '../types/tenant';
 import AddTenantDialog from './AddTenantDialog';
 import clsx from 'clsx';
 import { supabase } from '../config/supabase';
+import { toast } from 'react-hot-toast';
 
 interface LeaseIssuer {
   id: string;
   name: string;
   email?: string;
-  role?: string;
 }
 
 interface AddLeaseFormProps {
@@ -19,21 +19,13 @@ interface AddLeaseFormProps {
   onSubmit: (leaseData: any, rentalData: any) => void;
 }
 
-// Mock tenants data
-const mockTenants: Tenant[] = [
-  {
-    id: 'T1',
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '(555) 123-4567'
-  },
-  {
-    id: 'T2',
-    name: 'Jane Smith',
-    email: 'jane@example.com',
-    phone: '(555) 234-5678'
-  }
-];
+interface LeaseDocument {
+  id: string;
+  file: File;
+  name: string;
+  status: 'Signed' | 'Not Signed' | 'No signature required';
+  url?: string;
+}
 
 export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps) {
   const navigate = useNavigate();
@@ -42,43 +34,51 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
   const [selectedTenants, setSelectedTenants] = useState<Tenant[]>([]);
   const [charges, setCharges] = useState<LeaseCharge[]>([]);
   const [issuers, setIssuers] = useState<LeaseIssuer[]>([]);
+  const [currentUser, setCurrentUser] = useState<LeaseIssuer | null>(null);
+  const [loadingCurrentUser, setLoadingCurrentUser] = useState(true);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loadingTenants, setLoadingTenants] = useState(false);
   const [formData, setFormData] = useState({
     propertyId: '',
     unit: '',
-    leaseType: 'fixed' as 'fixed' | 'monthly',
+    leaseType: 'fixed' as 'fixed' | 'month-to-month',
     startDate: '',
     endDate: '',
     firstRentDate: '',
-    rentFrequency: 'monthly' as 'monthly' | 'quarterly' | 'annually',
+    rentFrequency: 'Monthly' as 'Daily' | 'Weekly' | 'Every 2 Weeks' | 'Monthly' | 'Every 2 Months' | 'Quarterly' | 'Every 6 Months' | 'Annually',
     hasDeposit: false,
     depositAmount: '',
-    hasLateFees: false,
-    lateFee: {
-      amount: '',
-      daysAfterDue: '',
-      frequency: 'once' as 'once' | 'daily' | 'weekly'
-    },
-    documentStatus: 'not_signed' as 'signed' | 'pending' | 'not_signed',
+    documentStatus: 'Not Signed' as 'Signed' | 'Not Signed' | 'No signature required',
     documentUrl: '',
     documentType: '',
-    leaseStatus: 'Pending' as 'Active' | 'Pending' | 'Terminated' | 'Ended',
-    leaseIssuerId: '',
-    lastPaymentDate: '',
+    paymentDay: '1',
     nextPaymentDate: '',
     rentAmount: '',
+    rollOverToMonthToMonth: true,
+    securityDepositStatus: 'pending' as 'pending' | 'paid' | 'overdue',
+    rentPaymentStatus: 'pending' as 'pending' | 'paid' | 'overdue',
+    paymentStatus: 'pending' as 'pending' | 'paid' | 'overdue',
+    isAutoRenew: true,
   });
 
-  // Fetch lease issuers (users who can issue leases)
+  const [documents, setDocuments] = useState<LeaseDocument[]>([]);
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     const fetchIssuers = async () => {
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentUserId = session?.user?.id;
+        
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('id, first_name, last_name, email, role')
-          .eq('active', true);
+          .select('id, first_name, last_name, email, status')
+          .eq('status', 'active');
           
         if (error) {
-          console.error('Error fetching lease issuers:', error);
+          console.error('Error fetching users:', error);
           return;
         }
         
@@ -86,38 +86,216 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
           const formattedIssuers = data.map(user => ({
             id: user.id,
             name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-            email: user.email,
-            role: user.role
+            email: user.email
           }));
           
           setIssuers(formattedIssuers);
+          
+          if (currentUserId) {
+            const currentUserData = formattedIssuers.find(user => user.id === currentUserId);
+            if (currentUserData) {
+              setCurrentUser(currentUserData);
+            } else {
+              setCurrentUser(formattedIssuers.length > 0 ? formattedIssuers[0] : null);
+            }
+          } else {
+            setCurrentUser(formattedIssuers.length > 0 ? formattedIssuers[0] : null);
+          }
         }
       } catch (error) {
         console.error('Error:', error);
+        if (issuers.length > 0) {
+          setCurrentUser(issuers[0]);
+        }
+      } finally {
+        setLoadingCurrentUser(false);
       }
     };
     
     fetchIssuers();
   }, []);
 
-  // Calculate payment dates when start date changes
   useEffect(() => {
-    if (formData.startDate) {
+    const fetchTenants = async () => {
+      try {
+        setLoadingTenants(true);
+        const { data, error } = await supabase
+          .from('tenants')
+          .select('id, first_name, last_name, email, phone');
+          
+        if (error) {
+          console.error('Error fetching tenants:', error);
+          return;
+        }
+        
+        if (data) {
+          const formattedTenants: Tenant[] = data.map(tenant => ({
+            id: tenant.id,
+            name: `${tenant.first_name || ''} ${tenant.last_name || ''}`.trim(),
+            email: tenant.email || '',
+            phone: tenant.phone || '',
+            imageUrl: null
+          }));
+          
+          setTenants(formattedTenants);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoadingTenants(false);
+      }
+    };
+    
+    fetchTenants();
+  }, []);
+
+  useEffect(() => {
+    if (formData.startDate && formData.paymentDay) {
+      calculateNextPaymentDate();
+    }
+  }, [formData.startDate, formData.paymentDay, formData.rentFrequency]);
+
+  useEffect(() => {
+    if (formData.startDate || formData.endDate) {
+      validateDateRange(formData.startDate, formData.endDate);
+    }
+  }, [formData.startDate, formData.endDate, formData.leaseType]);
+
+  const calculateNextPaymentDate = () => {
+    try {
       const startDate = new Date(formData.startDate);
+      const paymentDay = parseInt(formData.paymentDay);
       
-      // Next payment date is 1 month after start date
-      const nextPaymentDate = new Date(startDate);
-      nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+      if (isNaN(paymentDay) || paymentDay < 1 || paymentDay > 31) {
+        console.error('Invalid payment day');
+        return;
+      }
       
-      // Last payment date is the start date (assuming first payment is on start date)
+      // Create a new date based on the start date
+      let nextPaymentDate = new Date(startDate);
+      
+      // First set the payment day
+      // If payment day is greater than days in the month, set to last day of month
+      const lastDayOfMonth = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
+      const adjustedPaymentDay = Math.min(paymentDay, lastDayOfMonth);
+      nextPaymentDate.setDate(adjustedPaymentDay);
+      
+      // If the payment date is before the start date, advance it based on the frequency
+      if (nextPaymentDate < startDate) {
+        // Handle different payment frequencies
+        switch (formData.rentFrequency) {
+          case 'Daily':
+            // For daily, simply set to the next day from start date
+            nextPaymentDate = new Date(startDate);
+            nextPaymentDate.setDate(startDate.getDate() + 1);
+            break;
+            
+          case 'Weekly':
+            // For weekly, add 7 days
+            nextPaymentDate = new Date(startDate);
+            nextPaymentDate.setDate(startDate.getDate() + 7);
+            break;
+            
+          case 'Every 2 Weeks':
+            // For bi-weekly, add 14 days
+            nextPaymentDate = new Date(startDate);
+            nextPaymentDate.setDate(startDate.getDate() + 14);
+            break;
+            
+          case 'Monthly':
+            // For monthly, add one month and adjust for payment day
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+            // Handle month rollover and ensure payment day is respected
+            const newLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
+            nextPaymentDate.setDate(Math.min(paymentDay, newLastDay));
+            break;
+            
+          case 'Every 2 Months':
+            // Add two months and adjust for payment day
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 2);
+            // Handle month rollover and ensure payment day is respected
+            const twoMonthLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
+            nextPaymentDate.setDate(Math.min(paymentDay, twoMonthLastDay));
+            break;
+            
+          case 'Quarterly':
+            // Add three months and adjust for payment day
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 3);
+            // Handle month rollover and ensure payment day is respected
+            const quarterlyLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
+            nextPaymentDate.setDate(Math.min(paymentDay, quarterlyLastDay));
+            break;
+            
+          case 'Every 6 Months':
+            // Add six months and adjust for payment day
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 6);
+            // Handle month rollover and ensure payment day is respected
+            const sixMonthLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
+            nextPaymentDate.setDate(Math.min(paymentDay, sixMonthLastDay));
+            break;
+            
+          case 'Annually':
+            // Add one year and adjust for payment day
+            nextPaymentDate.setFullYear(nextPaymentDate.getFullYear() + 1);
+            // Handle month rollover and ensure payment day is respected
+            const yearlyLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
+            nextPaymentDate.setDate(Math.min(paymentDay, yearlyLastDay));
+            break;
+            
+          default:
+            // Default to monthly if unknown frequency
+            console.warn(`Unknown payment frequency: ${formData.rentFrequency}, defaulting to monthly`);
+            nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+            break;
+        }
+      }
+      
+      // Format the date as YYYY-MM-DD for the input field
+      const nextPaymentDateStr = nextPaymentDate.toISOString().split('T')[0];
+      
+      // Update the form state
       setFormData(prev => ({
         ...prev,
-        lastPaymentDate: formData.startDate,
-        nextPaymentDate: nextPaymentDate.toISOString().split('T')[0],
-        firstRentDate: formData.startDate
+        nextPaymentDate: nextPaymentDateStr
       }));
+      
+    } catch (error) {
+      console.error('Error calculating next payment date:', error);
     }
-  }, [formData.startDate]);
+  };
+
+  const validateDateRange = (startDate: string, endDate: string | null) => {
+    const newErrors = {...errors};
+    
+    if (!startDate) {
+      newErrors.startDate = "Start date is required";
+    } else {
+      delete newErrors.startDate;
+      
+      // Validate start date is not in the past
+      const start = new Date(startDate);
+      
+      // For Fixed Term leases, validate end date
+      if (formData.leaseType === 'fixed') {
+        if (!endDate) {
+          newErrors.endDate = "End date is required for fixed-term leases";
+        } else {
+          const end = new Date(endDate);
+          
+          if (end <= start) {
+            newErrors.endDate = "End date must be after start date";
+          } else {
+            delete newErrors.endDate;
+          }
+        }
+      } else {
+        // For month-to-month, we don't need an end date
+        delete newErrors.endDate;
+      }
+    }
+    
+    setErrors(newErrors);
+  };
 
   const handleAddCharge = () => {
     setCharges([
@@ -125,7 +303,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
       {
         id: `C${Date.now()}`,
         amount: 0,
-        type: 'rent',
+        type: 'Utility - Electricity',
         description: ''
       }
     ]);
@@ -142,81 +320,224 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
   };
 
   const handleAddTenant = (tenant: Tenant) => {
-    if (!selectedTenants.find(t => t.id === tenant.id)) {
-      setSelectedTenants([...selectedTenants, tenant]);
-    }
+    setSelectedTenants([tenant]);
     setIsAddTenantOpen(false);
   };
 
   const handleRemoveTenant = (tenantId: string) => {
-    setSelectedTenants(selectedTenants.filter(t => t.id !== tenantId));
+    setSelectedTenants([]);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleNextPaymentDateChange = (date: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      nextPaymentDate: date,
+    }));
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.propertyId) newErrors.propertyId = "Property is required";
+    if (!formData.unit) newErrors.unit = "Unit is required";
+    if (!formData.leaseType) newErrors.leaseType = "Lease type is required";
+    if (!formData.startDate) newErrors.startDate = "Start date is required";
+    if (formData.leaseType === 'fixed' && !formData.endDate) newErrors.endDate = "End date is required";
+    if (!formData.rentAmount) newErrors.rentAmount = "Rent amount is required";
+    if (!formData.rentFrequency) newErrors.rentFrequency = "Payment frequency is required";
+    if (!formData.paymentDay) newErrors.paymentDay = "Payment day is required";
+    if (!formData.nextPaymentDate) newErrors.nextPaymentDate = "Next payment date is required";
+    
+    if (selectedTenants.length === 0) newErrors.tenants = "At least one tenant is required";
+    
+    const paymentDay = parseInt(formData.paymentDay);
+    if (isNaN(paymentDay) || paymentDay < 1 || paymentDay > 31) {
+      newErrors.paymentDay = "Payment day must be between 1 and 31";
+    }
+    
+    const rentAmount = parseFloat(formData.rentAmount);
+    if (isNaN(rentAmount) || rentAmount <= 0) {
+      newErrors.rentAmount = "Rent amount must be greater than 0";
+    }
+
+    if (formData.hasDeposit) {
+      const depositAmount = parseFloat(formData.depositAmount);
+      if (isNaN(depositAmount) || depositAmount < 0) {
+        newErrors.depositAmount = "Deposit amount cannot be negative";
+      }
+    }
+
+    if (formData.startDate && formData.endDate) {
+      const startDate = new Date(formData.startDate);
+      const endDate = new Date(formData.endDate);
+      
+      if (endDate <= startDate) {
+        newErrors.endDate = "End date must be after start date";
+      }
+    }
+
+    const allowedFrequencies = ['Daily', 'Weekly', 'Every 2 Weeks', 'Monthly', 'Every 2 Months', 'Quarterly', 'Every 6 Months', 'Annually'];
+    if (!allowedFrequencies.includes(formData.rentFrequency)) {
+      newErrors.rentFrequency = "Invalid payment frequency";
+    }
+
+    if (documents.length === 0) {
+      newErrors.documents = "At least one lease document must be uploaded";
+    }
+
+    charges.forEach((charge, index) => {
+      if (!charge.type) {
+        newErrors[`charge_type_${index}`] = "Charge type is required";
+      }
+      if (!charge.description) {
+        newErrors[`charge_description_${index}`] = "Charge description is required";
+      }
+      if (isNaN(charge.amount) || charge.amount <= 0) {
+        newErrors[`charge_amount_${index}`] = "Charge amount must be greater than 0";
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const determineLeaseTriggerStatus = (startDate: string, endDate: string | null): 'Active' | 'Pending' | 'Ended' => {
+    const currentDate = new Date();
+    const start = new Date(startDate);
+    
+    // For future start dates, status should be 'Pending'
+    if (start > currentDate) {
+      return 'Pending';
+    }
+    
+    // If there's an end date and we've passed it, status should be 'Ended'
+    if (endDate) {
+      const end = new Date(endDate);
+      if (currentDate > end) {
+        return 'Ended';
+      }
+    }
+    
+    // Current date is within lease period, status should be 'Active'
+    return 'Active';
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Create lease data object that matches structure expected by LeaseDetailsDrawer
-    const leaseData = {
-      propertyName: selectedProperty?.name || '',
-      unit: formData.unit,
-      resident: {
-        name: selectedTenants.length > 0 ? selectedTenants[0].name : '',
-        imageUrl: null,
-        email: selectedTenants.length > 0 ? selectedTenants[0].email : '',
-      },
-      startDate: formData.startDate,
-      endDate: formData.endDate || formData.startDate, // For month-to-month, use start date
-      rentAmount: parseFloat(formData.rentAmount),
-      securityDeposit: formData.hasDeposit ? parseFloat(formData.depositAmount) : 0,
-      status: formData.leaseType === 'fixed' ? 'active' : 'pending',
-      lastPaymentDate: formData.lastPaymentDate,
-      nextPaymentDate: formData.nextPaymentDate,
-      documentStatus: formData.documentStatus,
-      signedDate: formData.documentStatus === 'signed' ? new Date().toISOString() : null,
-      leaseStatus: formData.leaseStatus,
-      paymentFrequency: formData.rentFrequency,
-      charges: charges,
-      documents: formData.documentUrl 
-        ? [{
-            id: `doc-${Date.now()}`,
-            document_url: formData.documentUrl,
-            document_status: formData.documentStatus,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            document_name: 'Lease Agreement.pdf'
-          }] 
-        : [],
-      leaseIssuer: {
-        id: formData.leaseIssuerId,
-        name: issuers.find(i => i.id === formData.leaseIssuerId)?.name || '',
-        email: issuers.find(i => i.id === formData.leaseIssuerId)?.email,
-        role: issuers.find(i => i.id === formData.leaseIssuerId)?.role,
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form before submitting");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      if (!currentUser) {
+        toast.error("Lease issuer information is missing");
+        return;
       }
-    };
-    
-    // Create database-compatible lease data
-    const databaseLeaseData = {
-      unit_id: formData.unit,
-      tenant_id: selectedTenants.length > 0 ? selectedTenants[0].id : null,
-      start_date: formData.startDate,
-      end_date: formData.endDate || null,
-      rent_amount: formData.rentAmount,
-      security_deposit: formData.hasDeposit ? formData.depositAmount : null,
-      status: formData.leaseStatus,
-      last_payment_date: formData.lastPaymentDate,
-      next_payment_date: formData.nextPaymentDate,
-      payment_frequency: formData.rentFrequency,
-      lease_issuer_id: formData.leaseIssuerId,
-      document_status: formData.documentStatus,
-      signed_date: formData.documentStatus === 'signed' ? new Date().toISOString() : null,
-    };
-    
-    onSubmit(leaseData, databaseLeaseData);
+      
+      const leaseTerms = formData.leaseType === 'fixed' ? 'Fixed Term' : 'Month-to-Month';
+      
+      const leaseStatus = determineLeaseTriggerStatus(
+        formData.startDate, 
+        formData.leaseType === 'fixed' ? formData.endDate : null
+      );
+      
+      const databaseLeaseData = {
+        unit_id: formData.unit,
+        tenant_id: selectedTenants.length > 0 ? selectedTenants[0].id : null,
+        start_date: formData.startDate,
+        end_date: formData.leaseType === 'fixed' ? formData.endDate : null,
+        rent_amount: formData.rentAmount,
+        security_deposit: formData.hasDeposit ? formData.depositAmount : 0,
+        status: leaseStatus,
+        payment_date: parseInt(formData.paymentDay),
+        next_payment_date: formData.nextPaymentDate,
+        payment_frequency: formData.rentFrequency,
+        lease_issuer_id: currentUser.id,
+        signed_date: null,
+        roll_over_to_month_to_month: true,
+        lease_issuer: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email
+        },
+        lease_terms: leaseTerms,
+        document_status: formData.documentStatus,
+        security_deposit_status: formData.securityDepositStatus,
+        rent_payment_status: formData.rentPaymentStatus,
+        payment_status: formData.paymentStatus,
+        documents: documents.map(doc => ({
+          file: doc.file,
+          document_status: doc.status,
+          document_name: doc.name
+        })),
+        is_auto_renew: true,
+        charges: charges.map(charge => ({
+          amount: parseFloat(charge.amount.toString()),
+          type: charge.type,
+          description: charge.description
+        }))
+      };
+      
+      const leaseData = {
+        propertyName: selectedProperty?.name || '',
+        unit: formData.unit,
+        resident: {
+          name: selectedTenants.length > 0 ? selectedTenants[0].name : '',
+          imageUrl: null,
+          email: selectedTenants.length > 0 ? selectedTenants[0].email : '',
+        },
+        startDate: formData.startDate,
+        endDate: formData.endDate || formData.startDate,
+        rentAmount: parseFloat(formData.rentAmount),
+        securityDeposit: formData.hasDeposit ? parseFloat(formData.depositAmount) : 0,
+        status: leaseStatus,
+        nextPaymentDate: formData.nextPaymentDate,
+        leaseStatus: leaseStatus,
+        paymentFrequency: formData.rentFrequency,
+        paymentDay: parseInt(formData.paymentDay),
+        charges: charges,
+        documents: documents.map(doc => ({
+          id: doc.id,
+          document_url: doc.url || '',
+          document_status: doc.status,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          document_name: doc.name
+        })),
+        leaseIssuer: {
+          id: currentUser.id,
+          name: currentUser.name,
+          email: currentUser.email
+        }
+      };
+      
+      await onSubmit(leaseData, databaseLeaseData);
+      toast.success("Lease created successfully!");
+    } catch (error: any) {
+      console.error("Error creating lease:", error);
+      
+      if (error.message && error.message.includes('no_overlapping_leases')) {
+        toast.error("This unit already has an active lease for the selected date range");
+      } else if (error.message && error.message.includes('valid_lease_dates')) {
+        toast.error("Lease end date must be after the start date");
+      } else if (error.message && error.message.includes('document_status_check')) {
+        toast.error("Invalid document status");
+      } else if (error.message && error.message.includes('payment_frequency_check')) {
+        toast.error("Invalid payment frequency");
+      } else {
+        toast.error("Failed to create lease. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-8">
-      {/* Header */}
       <div className="flex items-center space-x-4">
         <button
           onClick={() => navigate('/leases')}
@@ -231,7 +552,6 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Property Selection */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Property Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -256,6 +576,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                   </option>
                 ))}
               </select>
+              {errors.propertyId && <p className="text-xs text-red-500 mt-1">{errors.propertyId}</p>}
             </div>
 
             <div>
@@ -271,18 +592,18 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
               >
                 <option value="">Select a unit</option>
                 {selectedProperty?.units
-                  .filter(unit => unit.isAvailable)
+                  ?.filter(unit => unit.isAvailable)
                   .map((unit) => (
-                    <option key={unit.id} value={unit.number}>
+                    <option key={unit.id} value={unit.id}>
                       Unit {unit.number}
                     </option>
                   ))}
               </select>
+              {errors.unit && <p className="text-xs text-red-500 mt-1">{errors.unit}</p>}
             </div>
           </div>
         </div>
 
-        {/* Lease Term */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Lease Term</h2>
           <div className="space-y-6">
@@ -303,11 +624,11 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                 type="button"
                 className={clsx(
                   'flex-1 py-2 px-4 rounded-lg font-medium',
-                  formData.leaseType === 'monthly'
+                  formData.leaseType === 'month-to-month'
                     ? 'bg-[#2C3539] text-white'
                     : 'bg-gray-100 text-[#2C3539]'
                 )}
-                onClick={() => setFormData(prev => ({ ...prev, leaseType: 'monthly' }))}
+                onClick={() => setFormData(prev => ({ ...prev, leaseType: 'month-to-month' }))}
               >
                 Month-to-Month
               </button>
@@ -320,11 +641,12 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                 </label>
                 <input
                   type="date"
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                  className={`w-full px-4 py-2 border ${errors.startDate ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]`}
                   value={formData.startDate}
                   onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
                   required
                 />
+                {errors.startDate && <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>}
               </div>
 
               {formData.leaseType === 'fixed' && (
@@ -334,35 +656,34 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                   </label>
                   <input
                     type="date"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                    className={`w-full px-4 py-2 border ${errors.endDate ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]`}
                     value={formData.endDate}
                     onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
                     required
                   />
+                  {errors.endDate && <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>}
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        {/* Tenants */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-[#2C3539]">Tenants</h2>
+            <h2 className="text-lg font-semibold text-[#2C3539]">Tenant</h2>
             <button
               type="button"
               onClick={() => setIsAddTenantOpen(true)}
               className="flex items-center px-4 py-2 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c]"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Add Tenant
+              {selectedTenants.length > 0 ? 'Change Tenant' : 'Add Tenant'}
             </button>
           </div>
 
-          <div className="space-y-3">
-            {selectedTenants.map((tenant) => (
+          <div>
+            {selectedTenants.length > 0 ? (
               <div
-                key={tenant.id}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
               >
                 <div className="flex items-center">
@@ -370,82 +691,51 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                     <User className="w-5 h-5 text-gray-500" />
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium text-[#2C3539]">{tenant.name}</p>
-                    <p className="text-xs text-gray-500">{tenant.email}</p>
+                    <p className="text-sm font-medium text-[#2C3539]">{selectedTenants[0].name}</p>
+                    <p className="text-xs text-gray-500">{selectedTenants[0].email}</p>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleRemoveTenant(tenant.id)}
-                  className="p-1 text-gray-400 hover:text-gray-500"
+                  onClick={() => handleRemoveTenant(selectedTenants[0].id)}
+                  className="p-2 text-gray-400 hover:text-gray-500"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
-            ))}
+            ) : (
+              <div className="p-4 border border-dashed border-gray-200 rounded-lg text-center">
+                <p className="text-sm text-gray-500">No tenant selected. Please add a tenant to continue.</p>
+              </div>
+            )}
+            {errors.tenants && <p className="text-xs text-red-500 mt-1">{errors.tenants}</p>}
           </div>
         </div>
 
-        {/* Lease Status */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Lease Status</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Initial Status
-              </label>
-              <select
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                value={formData.leaseStatus}
-                onChange={(e) => setFormData(prev => ({ ...prev, leaseStatus: e.target.value as 'Active' | 'Pending' | 'Terminated' | 'Ended' }))}
-                required
-              >
-                <option value="Active">Active</option>
-                <option value="Pending">Pending</option>
-                <option value="Terminated">Terminated</option>
-                <option value="Ended">Ended</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Lease Issuer */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Lease Issuer</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                Lease Issuer
-              </label>
-              <select
-                className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                value={formData.leaseIssuerId}
-                onChange={(e) => setFormData(prev => ({ ...prev, leaseIssuerId: e.target.value }))}
-                required
-              >
-                <option value="">Select a lease issuer</option>
-                {issuers.map((issuer) => (
-                  <option key={issuer.id} value={issuer.id}>
-                    {issuer.name} {issuer.role ? `(${issuer.role})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div>
+            {currentUser ? (
+              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center">
+                  <User className="w-5 h-5 text-gray-500" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-[#2C3539]">{currentUser.name}</p>
+                  <p className="text-xs text-gray-500">{currentUser.email}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-center p-3">
+                <div className="w-6 h-6 border-2 border-gray-300 border-t-[#2C3539] rounded-full animate-spin"></div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Rent Charges */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-[#2C3539]">Payment Details</h2>
-            <button
-              type="button"
-              onClick={handleAddCharge}
-              className="flex items-center px-4 py-2 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c]"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Charge
-            </button>
           </div>
 
           <div className="space-y-6">
@@ -468,6 +758,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                     step="0.01"
                     placeholder="0.00"
                   />
+                  {errors.rentAmount && <p className="text-xs text-red-500 mt-1">{errors.rentAmount}</p>}
                 </div>
               </div>
 
@@ -478,58 +769,121 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                 <select
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                   value={formData.rentFrequency}
-                  onChange={(e) => setFormData(prev => ({ ...prev, rentFrequency: e.target.value as any }))}
+                  onChange={(e) => {
+                    const newFrequency = e.target.value as any;
+                    setFormData(prev => ({ ...prev, rentFrequency: newFrequency }));
+                    
+                    // Immediately recalculate the next payment date when payment cycle changes
+                    if (formData.startDate && formData.paymentDay) {
+                      setTimeout(() => calculateNextPaymentDate(), 0);
+                    }
+                  }}
                   required
                 >
-                  <option value="monthly">Monthly</option>
-                  <option value="quarterly">Quarterly</option>
-                  <option value="annually">Annually</option>
+                  <option value="Monthly">Monthly</option>
+                  <option value="Quarterly">Quarterly</option>
+                  <option value="Every 6 Months">Every 6 Months</option>
+                  <option value="Annually">Annually</option>
+                  <option value="Weekly">Weekly</option>
+                  <option value="Every 2 Weeks">Every 2 Weeks</option>
+                  <option value="Daily">Daily</option>
+                  <option value="Every 2 Months">Every 2 Months</option>
                 </select>
+                {errors.rentFrequency && <p className="text-xs text-red-500 mt-1">{errors.rentFrequency}</p>}
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                  Last Payment Date
+                  Payment Day <span className="text-xs text-gray-500">(of each month)</span>
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                    <Calendar className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="date"
-                    className="w-full pl-10 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    value={formData.lastPaymentDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, lastPaymentDate: e.target.value }))}
-                    required
-                  />
-                </div>
+                <input
+                  type="number"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                  value={formData.paymentDay}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const day = parseInt(value);
+                    if (!isNaN(day) && day >= 1 && day <= 31) {
+                      setFormData(prev => ({ ...prev, paymentDay: value }));
+                      
+                      // Immediately recalculate the next payment date when payment day changes
+                      if (formData.startDate) {
+                        setTimeout(() => calculateNextPaymentDate(), 0);
+                      }
+                    }
+                  }}
+                  min="1"
+                  max="31"
+                  required
+                />
+                {errors.paymentDay && <p className="text-xs text-red-500 mt-1">{errors.paymentDay}</p>}
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter a day between 1-31
+                </p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-[#2C3539] mb-2">
                   Next Payment Date
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                    <Calendar className="w-4 h-4" />
-                  </span>
-                  <input
-                    type="date"
-                    className="w-full pl-10 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    value={formData.nextPaymentDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, nextPaymentDate: e.target.value }))}
-                    required
-                  />
-                </div>
+                <input
+                  type="date"
+                  className="w-full px-4 py-2 border border-gray-200 bg-gray-50 rounded-lg"
+                  value={formData.nextPaymentDate}
+                  readOnly
+                  disabled
+                />
+                {errors.nextPaymentDate && <p className="text-xs text-red-500 mt-1">{errors.nextPaymentDate}</p>}
+                <p className="text-xs text-gray-500 mt-1">
+                  Automatically calculated based on payment day and frequency
+                </p>
               </div>
             </div>
 
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-[#2C3539]">Additional Charges</h2>
+              <button
+                type="button"
+                onClick={handleAddCharge}
+                className="flex items-center px-4 py-2 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c]"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Charge
+              </button>
+            </div>
+
             <div className="space-y-4">
-              {charges.map((charge) => (
+              {charges.length === 0 && (
+                <p className="text-sm text-gray-500 italic mb-4">
+                  Add additional charges like utilities, service fees, or maintenance costs that will be billed along with the rent.
+                </p>
+              )}
+              
+              {charges.map((charge, index) => (
                 <div key={charge.id} className="flex gap-4 items-start">
                   <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <select
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                      value={charge.type}
+                      onChange={(e) => handleChargeChange(charge.id, 'type', e.target.value)}
+                      required
+                    >
+                      <option value="Utility - Electricity">Utility - Electricity</option>
+                      <option value="Utility - Water">Utility - Water</option>
+                      <option value="Utility - Gas">Utility - Gas</option>
+                      <option value="Utility - Internet">Utility - Internet</option>
+                      <option value="Service Fee - Property Management">Service Fee - Property Management</option>
+                      <option value="Service Fee - Cleaning">Service Fee - Cleaning</option>
+                      <option value="Service Fee - Security">Service Fee - Security</option>
+                      <option value="Maintenance - Plumbing">Maintenance - Plumbing</option>
+                      <option value="Maintenance - Electrical">Maintenance - Electrical</option>
+                      <option value="Maintenance - HVAC">Maintenance - HVAC</option>
+                      <option value="Maintenance - General Repairs">Maintenance - General Repairs</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    {errors[`charge_type_${index}`] && <p className="text-xs text-red-500 mt-1">{errors[`charge_type_${index}`]}</p>}
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
                         <DollarSign className="w-4 h-4" />
@@ -544,19 +898,8 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                         min="0"
                         step="0.01"
                       />
+                      {errors[`charge_amount_${index}`] && <p className="text-xs text-red-500 mt-1">{errors[`charge_amount_${index}`]}</p>}
                     </div>
-                    <select
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                      value={charge.type}
-                      onChange={(e) => handleChargeChange(charge.id, 'type', e.target.value)}
-                      required
-                    >
-                      <option value="rent">Rent</option>
-                      <option value="utility">Utility</option>
-                      <option value="parking">Parking</option>
-                      <option value="maintenance">Maintenance</option>
-                      <option value="other">Other</option>
-                    </select>
                     <input
                       type="text"
                       placeholder="Description"
@@ -565,6 +908,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                       onChange={(e) => handleChargeChange(charge.id, 'description', e.target.value)}
                       required
                     />
+                    {errors[`charge_description_${index}`] && <p className="text-xs text-red-500 mt-1">{errors[`charge_description_${index}`]}</p>}
                   </div>
                   <button
                     type="button"
@@ -579,7 +923,6 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
           </div>
         </div>
 
-        {/* Security Deposit */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Security Deposit</h2>
           <div className="space-y-4">
@@ -625,219 +968,149 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                   onChange={(e) => setFormData(prev => ({ ...prev, depositAmount: e.target.value }))}
                   required={formData.hasDeposit}
                 />
+                {errors.depositAmount && <p className="text-xs text-red-500 mt-1">{errors.depositAmount}</p>}
               </div>
             )}
           </div>
         </div>
 
-        {/* Late Fees */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Late Fees</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-[#2C3539]">Apply late fees?</span>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  className={clsx(
-                    'px-4 py-2 rounded-lg text-sm font-medium',
-                    formData.hasLateFees
-                      ? 'bg-[#2C3539] text-white'
-                      : 'bg-gray-100 text-[#2C3539]'
-                  )}
-                  onClick={() => setFormData(prev => ({ ...prev, hasLateFees: true }))}
-                >
-                  Yes
-                </button>
-                <button
-                  type="button"
-                  className={clsx(
-                    'px-4 py-2 rounded-lg text-sm font-medium',
-                    !formData.hasLateFees
-                      ? 'bg-[#2C3539] text-white'
-                      : 'bg-gray-100 text-[#2C3539]'
-                  )}
-                  onClick={() => setFormData(prev => ({
-                    ...prev,
-                    hasLateFees: false,
-                    lateFee: { amount: '', daysAfterDue: '', frequency: 'once' }
-                  }))}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-
-            {formData.hasLateFees && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                    Late Fee Amount
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    value={formData.lateFee.amount}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      lateFee: { ...prev.lateFee, amount: e.target.value }
-                    }))}
-                    required={formData.hasLateFees}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                    Days After Due Date
-                  </label>
-                  <input
-                    type="number"
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    value={formData.lateFee.daysAfterDue}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      lateFee: { ...prev.lateFee, daysAfterDue: e.target.value }
-                    }))}
-                    required={formData.hasLateFees}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                     Frequency
-                  </label>
-                  <select
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
-                    value={formData.lateFee.frequency}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      lateFee: { ...prev.lateFee, frequency: e.target.value as 'once' | 'daily' | 'weekly' }
-                    }))}
-                    required={formData.hasLateFees}
-                  >
-                    <option value="once">Once</option>
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                  </select>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Document Upload and Signature */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-[#2C3539] mb-4">Lease Documents</h2>
           
-          {/* Document Type Selection */}
-          <div className="mb-6">
-            <span className="text-sm text-[#2C3539] mb-3 block">Document Status:</span>
-            <div className="flex gap-4">
-              <button
-                type="button"
-                className={clsx(
-                  'flex-1 py-2 px-4 rounded-lg font-medium',
-                  formData.documentStatus === 'signed'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-[#2C3539]'
+          <div className="space-y-4">
+            {documents.length > 0 ? (
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between items-center">
+                  <p className="text-sm text-gray-500">Uploaded Documents:</p>
+                  <span className="text-xs bg-green-100 text-green-800 py-1 px-2 rounded-full">
+                    {documents.length} document{documents.length !== 1 ? 's' : ''} uploaded
+                  </span>
+                </div>
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center">
+                      <File className="w-5 h-5 text-[#2C3539] mr-3" />
+                      <div>
+                        <p className="text-sm font-medium text-[#2C3539]">{doc.name}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <select
+                            className={`text-xs rounded px-2 py-1 border ${
+                              doc.status === 'Signed' 
+                                ? 'bg-green-50 text-green-800 border-green-200' 
+                                : doc.status === 'No signature required'
+                                ? 'bg-blue-50 text-blue-800 border-blue-200'
+                                : 'bg-gray-50 text-gray-800 border-gray-200'
+                            }`}
+                            value={doc.status}
+                            onChange={(e) => {
+                              const newStatus = e.target.value as 'Signed' | 'Not Signed' | 'No signature required';
+                              setDocuments(documents.map(d => 
+                                d.id === doc.id ? { ...d, status: newStatus } : d
+                              ));
+                            }}
+                          >
+                            <option value="Signed">Signed</option>
+                            <option value="Not Signed">Not Signed</option>
+                            <option value="No signature required">No signature required</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDocuments(documents.filter(d => d.id !== doc.id))}
+                      className="p-1 text-gray-400 hover:text-gray-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={`p-4 rounded-lg ${errors.documents ? 'bg-red-50' : 'bg-gray-50'} flex flex-col items-center justify-center text-center`}>
+                <File className={`w-8 h-8 mb-2 ${errors.documents ? 'text-red-400' : 'text-gray-400'}`} />
+                <p className={`text-sm ${errors.documents ? 'text-red-800' : 'text-gray-500'}`}>
+                  No documents uploaded yet
+                </p>
+                {errors.documents && (
+                  <p className="text-xs text-red-600 mt-1 font-medium">
+                    {errors.documents}
+                  </p>
                 )}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  documentStatus: 'signed',
-                  documentType: 'signed',
-                }))}
-              >
-                Signed
-              </button>
-              <button
-                type="button"
-                className={clsx(
-                  'flex-1 py-2 px-4 rounded-lg font-medium',
-                  formData.documentStatus === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-gray-100 text-[#2C3539]'
-                )}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  documentStatus: 'pending',
-                  documentType: 'esign',
-                }))}
-              >
-                Pending Signature
-              </button>
-              <button
-                type="button"
-                className={clsx(
-                  'flex-1 py-2 px-4 rounded-lg font-medium',
-                  formData.documentStatus === 'not_signed'
-                    ? 'bg-gray-100 text-gray-800'
-                    : 'bg-gray-100 text-[#2C3539]'
-                )}
-                onClick={() => setFormData(prev => ({ 
-                  ...prev, 
-                  documentStatus: 'not_signed',
-                  documentType: '',
-                }))}
-              >
-                No Document
-              </button>
-            </div>
-          </div>
+              </div>
+            )}
 
-          {/* Document Actions */}
-          <div className="flex justify-center">
-            {formData.documentStatus !== 'not_signed' && (
+            <div className="flex justify-center">
               <button
                 type="button"
-                className="flex items-center px-6 py-3 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors"
+                className={`flex items-center px-6 py-3 text-sm ${errors.documents ? 'bg-red-600 hover:bg-red-700' : 'bg-[#2C3539] hover:bg-[#3d474c]'} text-white rounded-lg transition-colors`}
                 onClick={() => {
                   const input = document.createElement('input');
                   input.type = 'file';
+                  input.multiple = true;
                   input.accept = '.pdf,.doc,.docx';
                   input.onchange = (e) => {
-                    const file = (e.target as HTMLInputElement).files?.[0];
-                    if (file) {
-                      setFormData(prev => ({
-                        ...prev,
-                        documentUrl: URL.createObjectURL(file),
-                      }));
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files && files.length > 0) {
+                      const newDocs: LeaseDocument[] = [];
+                      
+                      Array.from(files).forEach(file => {
+                        newDocs.push({
+                          id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                          file: file,
+                          name: file.name,
+                          status: 'Not Signed',
+                          url: URL.createObjectURL(file)
+                        });
+                      });
+                      
+                      setDocuments([...documents, ...newDocs]);
+                      
+                      // Clear document error when documents are added
+                      if (errors.documents) {
+                        const newErrors = {...errors};
+                        delete newErrors.documents;
+                        setErrors(newErrors);
+                      }
                     }
                   };
                   input.click();
                 }}
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {formData.documentStatus === 'signed' ? 'Upload Signed Document' : 'Upload Document for Signature'}
+                {documents.length > 0 ? 'Add More Documents' : 'Upload Required Documents'}
               </button>
-            )}
-          </div>
-
-          {/* Success Messages */}
-          {formData.documentUrl && (
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-[#2C3539]">
-                {formData.documentStatus === 'signed' 
-                  ? 'Signed document uploaded successfully' 
-                  : 'Document uploaded and ready for signature'}
-              </p>
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex justify-end space-x-4">
+        <div className="flex justify-between pt-8">
           <button
             type="button"
-            onClick={() => navigate('/leases')}
-            className="px-6 py-2 text-[#2C3539] bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            onClick={() => navigate(-1)}
+            className="flex items-center px-6 py-3 text-sm text-[#2C3539] border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
           </button>
           <button
             type="submit"
-            className="px-6 py-2 text-white bg-[#2C3539] rounded-lg hover:bg-[#3d474c] transition-colors"
+            disabled={isSubmitting}
+            className={`flex items-center px-8 py-3 text-sm bg-[#2C3539] text-white rounded-lg hover:bg-[#3d474c] transition-colors ${
+              isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+            }`}
           >
-            Create Lease
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Creating Lease...
+              </>
+            ) : (
+              'Create Lease'
+            )}
           </button>
         </div>
       </form>
@@ -846,7 +1119,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
         isOpen={isAddTenantOpen}
         onClose={() => setIsAddTenantOpen(false)}
         onAddTenant={handleAddTenant}
-        existingTenants={mockTenants}
+        existingTenants={tenants}
         onSelectExisting={handleAddTenant}
       />
     </div>

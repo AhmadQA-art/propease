@@ -253,6 +253,7 @@ export default function Leases() {
   );
 
   const handleCreateLease = () => {
+    console.log('Navigate to /leases/add');
     navigate('/leases/add');
   };
 

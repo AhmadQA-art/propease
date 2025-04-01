@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Edit2, Trash2, User, Building2, Calendar, DollarSign, FileText, Download, File, Plus, CheckCircle, AlertCircle, UserCheck } from 'lucide-react';
 import { format } from 'date-fns';
+import { supabase } from '../config/supabase';
 
 interface LeaseDocument {
   id: string;
@@ -19,6 +20,15 @@ interface LeaseCharge {
   type: string;
   created_at: string;
   updated_at: string;
+}
+
+interface LeasePaymentPeriod {
+  id: string;
+  lease_id: string;
+  period_start_date: string;
+  due_date: string;
+  payment_status: string;
+  total_amount: number;
 }
 
 interface LeaseDetailsDrawerProps {
@@ -66,6 +76,46 @@ export default function LeaseDetailsDrawer({
   onDelete,
   onTerminate
 }: LeaseDetailsDrawerProps) {
+  const [nextPayment, setNextPayment] = useState<LeasePaymentPeriod | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch next payment period when the drawer opens
+  useEffect(() => {
+    if (lease && isOpen) {
+      fetchNextPaymentPeriod();
+    }
+  }, [lease?.id, isOpen]);
+
+  const fetchNextPaymentPeriod = async () => {
+    if (!lease) return;
+    
+    try {
+      setIsLoading(true);
+      const today = new Date().toISOString();
+      
+      const { data, error } = await supabase
+        .from('lease_period_payments')
+        .select('*')
+        .eq('lease_id', lease.id)
+        .gte('due_date', today)
+        .order('due_date', { ascending: true })
+        .limit(1);
+      
+      if (error) {
+        console.error('Error fetching next payment period:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        setNextPayment(data[0]);
+      }
+    } catch (error) {
+      console.error('Error in payment period fetch:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   if (!lease) return null;
 
   const getDocumentStatusColor = (status: string) => {
@@ -97,6 +147,20 @@ export default function LeaseDetailsDrawer({
     } else if (status === 'pending') {
       return 'bg-yellow-100 text-yellow-800';
     } else if (status === 'expired' || status === 'terminated') {
+      return 'bg-red-100 text-red-800';
+    }
+    return 'bg-gray-100 text-gray-800';
+  };
+
+  const getStatusColor = (status: string | undefined) => {
+    if (!status) return 'bg-gray-100 text-gray-800';
+    
+    const statusLower = status.toLowerCase();
+    if (statusLower === 'paid') {
+      return 'bg-green-100 text-green-800';
+    } else if (statusLower === 'pending') {
+      return 'bg-yellow-100 text-yellow-800';
+    } else if (statusLower === 'overdue') {
       return 'bg-red-100 text-red-800';
     }
     return 'bg-gray-100 text-gray-800';
@@ -233,102 +297,112 @@ export default function LeaseDetailsDrawer({
                 </div>
               </div>
             </div>
-            
-            <div className="mt-4 p-3 border border-gray-100 rounded-lg">
-              <div className="mb-3">
-                <p className="text-xs text-gray-500 mb-1">Payment Cycle</p>
-                <p className="text-sm font-medium text-[#2C3539]">{lease.paymentFrequency || 'Monthly'}</p>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-xs text-gray-500">Last Payment</p>
-                  <p className="text-sm text-[#2C3539]">
-                    {format(new Date(lease.lastPaymentDate), 'MMM d, yyyy')}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs text-gray-500">Next Payment</p>
-                  <p className="text-sm text-[#2C3539]">
-                    {format(new Date(lease.nextPaymentDate), 'MMM d, yyyy')}
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Financial Details */}
           <div className="space-y-4">
             <h3 className="text-sm font-medium text-[#2C3539]">Payment Details</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <p className="text-xs text-gray-500">Monthly Rent</p>
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-[#2C3539]">
-                    {lease.rentAmount.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-1">
+            
+            {/* Security Deposit Card */}
+            <div className="p-3 border border-gray-100 rounded-lg">
+              <div className="flex items-center justify-between">
                 <p className="text-xs text-gray-500">Security Deposit</p>
                 <div className="flex items-center space-x-2">
                   <DollarSign className="w-4 h-4 text-gray-400" />
-                  <p className="text-sm text-[#2C3539]">
+                  <p className="text-sm font-medium text-[#2C3539]">
                     {lease.securityDeposit.toLocaleString()}
                   </p>
                 </div>
               </div>
             </div>
-
-            {/* Additional Charges */}
-            {lease.charges && lease.charges.length > 0 ? (
-              <div className="mt-4 border border-gray-100 rounded-lg overflow-hidden">
-                <div className="px-3 py-2 bg-gray-50 border-b border-gray-100">
-                  <h4 className="text-xs font-medium text-[#2C3539]">Additional Lease Charges</h4>
+            
+            {/* Recurring Payments Section */}
+            <div className="mt-4">
+              <h4 className="text-xs font-medium text-gray-500 mb-3">Recurring Payments</h4>
+              
+              <div className="space-y-3">
+                {/* Monthly Rent Card */}
+                <div className="p-3 border border-gray-100 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-500">Monthly Rent</p>
+                    <div className="flex items-center space-x-2">
+                      <DollarSign className="w-4 h-4 text-gray-400" />
+                      <p className="text-sm font-medium text-[#2C3539]">
+                        {lease.rentAmount.toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="divide-y divide-gray-100">
-                  {lease.charges.map(charge => (
-                    <div key={charge.id} className="p-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-[#2C3539]">{charge.description}</p>
-                          <div className="flex items-center mt-1">
-                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{charge.type}</span>
-                            <span className="text-xs text-gray-400 ml-2">
-                              {new Date(charge.created_at).toLocaleDateString()}
+                
+                {/* Additional Charges */}
+                {lease.charges && lease.charges.length > 0 ? (
+                  <>
+                    {lease.charges.map(charge => (
+                      <div key={charge.id} className="p-3 border border-gray-100 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-[#2C3539]">{charge.description}</p>
+                            <span className="text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
+                              {charge.type}
                             </span>
                           </div>
-                        </div>
-                        <div className="flex flex-col items-end">
                           <div className="flex items-center">
                             <DollarSign className="w-3 h-3 text-gray-400 mr-1" />
-                            <p className="text-sm font-medium text-[#2C3539]">{parseFloat(charge.amount.toString()).toLocaleString()}</p>
+                            <p className="text-sm font-medium text-[#2C3539]">
+                              {parseFloat(charge.amount.toString()).toLocaleString()}
+                            </p>
                           </div>
-                          <span
-                            className={`mt-1 text-xs font-medium ${
-                              charge.charge_status.toLowerCase() === 'paid' ? 'bg-green-100 text-green-800' : 
-                              charge.charge_status.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                              'bg-red-100 text-red-800'
-                            }`}
-                            style={{ padding: '2px 8px', lineHeight: '1.2', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px', width: 'fit-content' }}
-                          >
-                            {charge.charge_status}
-                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="p-4 border border-dashed border-gray-200 rounded-lg">
+                    <div className="flex items-center justify-center flex-col">
+                      <DollarSign className="w-6 h-6 text-gray-300 mb-2" />
+                      <p className="text-sm text-gray-500">No additional charges</p>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Next Payment Information */}
+                <div className="mt-2 p-3 border border-gray-100 rounded-lg">
+                  <h5 className="text-xs font-medium text-gray-500 mb-2">Next Payment Due</h5>
+                  {isLoading ? (
+                    <p className="text-sm text-gray-500">Loading payment information...</p>
+                  ) : nextPayment ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-4 h-4 text-gray-500" />
+                          <p className="text-sm text-gray-600">
+                            {nextPayment.due_date ? format(new Date(nextPayment.due_date), 'MMM d, yyyy') : 'Date not available'}
+                          </p>
+                        </div>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(nextPayment.payment_status)}`}>
+                          {nextPayment.payment_status ? 
+                            nextPayment.payment_status.charAt(0).toUpperCase() + nextPayment.payment_status.slice(1) 
+                            : 'Pending'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-500">Total Amount</p>
+                        <div className="flex items-center">
+                          <DollarSign className="w-3 h-3 text-gray-400 mr-1" />
+                          <p className="text-sm font-medium text-[#2C3539]">
+                            {nextPayment.total_amount !== undefined ? 
+                              parseFloat(nextPayment.total_amount.toString()).toLocaleString() 
+                              : '0'}
+                          </p>
                         </div>
                       </div>
                     </div>
-                  ))}
+                  ) : (
+                    <p className="text-sm text-gray-500">No upcoming payments scheduled</p>
+                  )}
                 </div>
               </div>
-            ) : (
-              <div className="mt-4 p-4 border border-dashed border-gray-200 rounded-lg">
-                <div className="flex items-center justify-center flex-col">
-                  <DollarSign className="w-6 h-6 text-gray-300 mb-2" />
-                  <p className="text-sm text-gray-500">No additional charges</p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Document Status */}
