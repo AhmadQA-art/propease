@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Edit2, Trash2, User, Building2, Calendar, DollarSign, FileText, Download, File, Plus, CheckCircle, AlertCircle, UserCheck, ChevronUp, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '../config/supabase';
+import EditLeaseDrawer from './EditLeaseDrawer';
 
 interface LeaseDocument {
   id: string;
@@ -31,67 +32,217 @@ interface LeasePaymentPeriod {
   total_amount: number;
 }
 
-interface LeaseDetailsDrawerProps {
-  lease: {
+interface LeaseWithPaymentDate {
+  id: string;
+  propertyName: string;
+  unit: string;
+  resident: {
+    name: string;
+    imageUrl: string | null;
+  };
+  startDate: string;
+  endDate: string;
+  rentAmount: number;
+  securityDeposit: number;
+  balance: number;
+  status: 'active' | 'pending' | 'past';
+  lastPaymentDate: string;
+  nextPaymentDate: string;
+  documentStatus: 'signed' | 'pending' | 'not_signed';
+  signedDate: string | null;
+  documents?: LeaseDocument[];
+  charges?: LeaseCharge[];
+  paymentFrequency?: string;
+  leaseIssuer?: {
     id: string;
-    propertyName: string;
-    unit: string;
-    resident: {
-      name: string;
-      imageUrl: string | null;
-    };
-    startDate: string;
-    endDate: string;
-    rentAmount: number;
-    securityDeposit: number;
-    balance: number;
-    status: 'active' | 'pending' | 'past';
-    lastPaymentDate: string;
-    nextPaymentDate: string;
-    documentStatus: 'signed' | 'pending' | 'not_signed';
-    signedDate: string | null;
-    documents?: LeaseDocument[];
-    charges?: LeaseCharge[];
-    paymentFrequency?: string;
-    leaseIssuer?: {
-      id: string;
-      name: string;
-      email?: string;
-      role?: string;
-    };
-    leaseStatus?: string;
-    securityDepositStatus?: string;
-  } | null;
+    name: string;
+    email?: string;
+    role?: string;
+  };
+  leaseStatus?: string;
+  securityDepositStatus?: string;
+  paymentDate?: string | null;
+  lease_terms?: string;
+  formattedEndDate?: string;
+}
+
+interface LeaseDetailsDrawerProps {
+  lease: LeaseWithPaymentDate;
   isOpen: boolean;
   onClose: () => void;
-  onEdit: (leaseId: string) => void;
-  onDelete: (leaseId: string) => void;
-  onTerminate: (leaseId: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onTerminate: () => void;
 }
 
 export default function LeaseDetailsDrawer({
-  lease,
+  lease: initialLease,
   isOpen,
   onClose,
   onEdit,
   onDelete,
   onTerminate
 }: LeaseDetailsDrawerProps) {
+  const [lease, setLease] = useState<LeaseWithPaymentDate>(initialLease);
   const [nextPayment, setNextPayment] = useState<LeasePaymentPeriod | null>(null);
   const [overduePayments, setOverduePayments] = useState<LeasePaymentPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const [statusUpdateSuccess, setStatusUpdateSuccess] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [isEditDrawerOpen, setIsEditDrawerOpen] = useState(false);
 
-  // Fetch payment periods when the drawer opens
+  // Update local state when props change or drawer opens
   useEffect(() => {
-    if (lease && isOpen) {
-      fetchPaymentPeriods();
+    if (initialLease) {
+      setLease(initialLease);
+      
+      // When drawer opens, fetch the latest data
+      if (isOpen && initialLease.id) {
+        fetchLeaseData(initialLease.id);
+        fetchPaymentPeriods(initialLease.id);
+      }
     }
-  }, [lease?.id, isOpen]);
+  }, [initialLease, isOpen]);
 
-  const fetchPaymentPeriods = async () => {
-    if (!lease) return;
-    
+  // Fetch the latest lease data
+  const fetchLeaseData = async (leaseId: string) => {
+    try {
+      setIsLoading(true);
+      
+      // Query the complete lease data with all related information
+      const { data: leaseData, error: leaseError } = await supabase
+        .from('leases')
+        .select(`
+          *,
+          units:unit_id (id, unit_number),
+          tenant:tenant_id (id, first_name, last_name, email, phone),
+          issuer:lease_issuer_id (id, first_name, last_name, email)
+        `)
+        .eq('id', leaseId)
+        .single();
+      
+      if (leaseError) {
+        console.error('Error fetching complete lease data:', leaseError);
+        return;
+      }
+      
+      if (leaseData) {
+        console.log('Fetched updated lease data:', leaseData);
+        console.log('📅 [LeaseDetailsDrawer] Lease end date:', leaseData.end_date);
+        console.log('📝 [LeaseDetailsDrawer] Lease terms:', leaseData.lease_terms);
+        
+        // Get property data for the unit
+        let propertyData = null;
+        if (leaseData.units?.id) {
+          const { data: unitWithProperty, error: propertyError } = await supabase
+            .from('units')
+            .select('property_id, properties(id, name)')
+            .eq('id', leaseData.units.id)
+            .single();
+            
+          if (propertyError) {
+            console.error('Error fetching property data:', propertyError);
+          } else if (unitWithProperty) {
+            propertyData = unitWithProperty.properties;
+          }
+        }
+        
+        // Get lease documents
+        const { data: documentsData, error: documentsError } = await supabase
+          .from('lease_documents')
+          .select('*')
+          .eq('lease_id', leaseId);
+          
+        if (documentsError) {
+          console.error('Error fetching lease documents:', documentsError);
+        }
+        
+        // Get lease charges
+        const { data: chargesData, error: chargesError } = await supabase
+          .from('lease_charges')
+          .select('*')
+          .eq('lease_id', leaseId);
+          
+        if (chargesError) {
+          console.error('Error fetching lease charges:', chargesError);
+        }
+        
+        // Format lease data to match the expected LeaseWithPaymentDate format
+        const updatedLease: LeaseWithPaymentDate = {
+          id: leaseData.id,
+          propertyName: propertyData?.name || 'Unknown Property',
+          unit: leaseData.units?.unit_number || 'Unknown Unit',
+          resident: {
+            name: leaseData.tenant ? 
+              `${leaseData.tenant.first_name || ''} ${leaseData.tenant.last_name || ''}`.trim() : 
+              'Unknown Resident',
+            imageUrl: null
+          },
+          startDate: leaseData.start_date || '',
+          endDate: leaseData.end_date || '',
+          lease_terms: leaseData.lease_terms || '',
+          rentAmount: leaseData.rent_amount || 0,
+          securityDeposit: leaseData.security_deposit || 0,
+          balance: 0, // Would need to calculate this based on payments
+          status: (leaseData.status as 'active' | 'pending' | 'past') || 'pending',
+          lastPaymentDate: leaseData.last_payment_date || '',
+          nextPaymentDate: leaseData.next_payment_date || '',
+          documentStatus: (leaseData.document_status as 'signed' | 'pending' | 'not_signed') || 'not_signed',
+          signedDate: null,
+          documents: documentsData || [],
+          charges: chargesData || [],
+          paymentFrequency: leaseData.payment_frequency || 'Monthly',
+          leaseIssuer: leaseData.issuer ? {
+            id: leaseData.issuer.id,
+            name: `${leaseData.issuer.first_name || ''} ${leaseData.issuer.last_name || ''}`.trim(),
+            email: leaseData.issuer.email
+          } : undefined,
+          leaseStatus: leaseData.status || 'pending',
+          securityDepositStatus: leaseData.security_deposit_status || 'pending',
+          paymentDate: leaseData.payment_date ? leaseData.payment_date.toString() : null
+        };
+        
+        // Calculate a projected end date for month-to-month leases (12 months from start date)
+        let displayEndDate = '';
+        if (leaseData.lease_terms?.toLowerCase().includes('month') && leaseData.start_date) {
+          try {
+            const startDate = new Date(leaseData.start_date);
+            if (!isNaN(startDate.getTime())) {
+              const projectedEndDate = new Date(startDate);
+              projectedEndDate.setFullYear(projectedEndDate.getFullYear() + 1);
+              displayEndDate = format(projectedEndDate, 'MMM d, yyyy') + ' (Projected)';
+              console.log("🗓️ [LeaseDetailsDrawer] Calculated projected end date:", displayEndDate);
+            }
+          } catch (error) {
+            console.error("❌ [LeaseDetailsDrawer] Error calculating projected end date:", error);
+          }
+        } else if (leaseData.end_date) {
+          displayEndDate = format(new Date(leaseData.end_date), 'MMM d, yyyy');
+        }
+        
+        console.log("🖥️ [LeaseDetailsDrawer] Formatted display data:", {
+          formattedStartDate: updatedLease.startDate ? format(new Date(updatedLease.startDate), 'MMM d, yyyy') : 'Not specified',
+          formattedEndDate: displayEndDate || 'Not specified',
+          leaseType: leaseData.lease_terms
+        });
+        
+        // Update the lease data in our local state with ALL fields
+        setLease({
+          ...updatedLease,
+          formattedEndDate: displayEndDate || (leaseData.lease_terms?.toLowerCase().includes('month') ? 'Month-to-Month (No End Date)' : 'Not specified')
+        });
+      }
+    } catch (error) {
+      console.error('Error in lease data fetch:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch payment periods for a specific lease
+  const fetchPaymentPeriods = async (leaseId: string) => {
     try {
       setIsLoading(true);
       const today = new Date().toISOString();
@@ -100,7 +251,7 @@ export default function LeaseDetailsDrawer({
       const { data: upcomingData, error: upcomingError } = await supabase
         .from('lease_period_payments')
         .select('*')
-        .eq('lease_id', lease.id)
+        .eq('lease_id', leaseId)
         .eq('status', 'pending')
         .gte('due_date', today)
         .order('due_date', { ascending: true })
@@ -110,13 +261,15 @@ export default function LeaseDetailsDrawer({
         console.error('Error fetching next payment period:', upcomingError);
       } else if (upcomingData && upcomingData.length > 0) {
         setNextPayment(upcomingData[0]);
+      } else {
+        setNextPayment(null);
       }
       
       // Fetch overdue payments
       const { data: overdueData, error: overdueError } = await supabase
         .from('lease_period_payments')
         .select('*')
-        .eq('lease_id', lease.id)
+        .eq('lease_id', leaseId)
         .eq('status', 'overdue')
         .order('due_date', { ascending: true });
       
@@ -124,6 +277,8 @@ export default function LeaseDetailsDrawer({
         console.error('Error fetching overdue payments:', overdueError);
       } else if (overdueData) {
         setOverduePayments(overdueData);
+      } else {
+        setOverduePayments([]);
       }
     } catch (error) {
       console.error('Error in payment period fetch:', error);
@@ -134,16 +289,18 @@ export default function LeaseDetailsDrawer({
 
   if (!lease) return null;
 
-  const getDocumentStatusColor = (status: string) => {
-    status = status.toLowerCase();
-    if (status.includes('signed')) {
-      return 'bg-green-100 text-green-800';
-    } else if (status.includes('not signed')) {
-      return 'bg-yellow-100 text-yellow-800';
-    } else if (status.includes('no signature') || status.includes('no need')) {
-      return 'bg-gray-100 text-gray-500';
+  // Get the color based on document status
+  const getDocumentStatusColor = (status: string | undefined) => {
+    switch (status?.toLowerCase()) {
+      case 'signed':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-blue-100 text-blue-800';
+      case 'not_signed':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
-    return 'bg-gray-100 text-gray-800';
   };
 
   const formatDocumentStatus = (status: string) => {
@@ -207,12 +364,347 @@ export default function LeaseDetailsDrawer({
     window.open(url, '_blank');
   };
 
+  // Show a notification
+  const showNotification = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+    // Auto dismiss after 3 seconds
+    setTimeout(() => {
+      setNotification(null);
+    }, 3000);
+  };
+
+  // Handle status update for security deposit
+  const updateSecurityDepositStatus = async (newStatus: 'pending' | 'paid' | 'overdue') => {
+    if (!lease) return;
+    
+    try {
+      setUpdatingStatus('security_deposit');
+      
+      const { error } = await supabase
+        .from('leases')
+        .update({ security_deposit_status: newStatus })
+        .eq('id', lease.id);
+      
+      if (error) {
+        console.error('Error updating security deposit status:', error);
+        showNotification('Could not update security deposit status.', 'error');
+        return;
+      }
+      
+      // Update the local state to reflect changes
+      setLease(prevLease => {
+        if (!prevLease) return prevLease;
+        return {
+          ...prevLease,
+          securityDepositStatus: newStatus
+        };
+      });
+      
+      // Refresh the lease data to ensure we have the latest state
+      if (lease.id) {
+        fetchLeaseData(lease.id);
+      }
+      
+      setStatusUpdateSuccess('security_deposit');
+      showNotification('Security deposit status updated successfully.', 'success');
+      
+      // Clear success message after a delay
+      setTimeout(() => {
+        setStatusUpdateSuccess(null);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error in security deposit status update:', error);
+      showNotification('An unexpected error occurred.', 'error');
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+  
+  // Handle status update for payment period
+  const updatePaymentPeriodStatus = async (paymentId: string, newStatus: 'pending' | 'paid' | 'overdue') => {
+    try {
+      setUpdatingStatus(`payment_${paymentId}`);
+      
+      const { error } = await supabase
+        .from('lease_period_payments')
+        .update({ status: newStatus })
+        .eq('id', paymentId);
+      
+      if (error) {
+        console.error('Error updating payment status:', error);
+        showNotification('Could not update payment status.', 'error');
+        return;
+      }
+      
+      // Update the local state to reflect changes immediately
+      if (nextPayment && nextPayment.id === paymentId) {
+        setNextPayment({
+          ...nextPayment,
+          status: newStatus
+        });
+      }
+      
+      // Update overdue payments if it's one of them
+      setOverduePayments(prev => 
+        prev.map(payment => 
+          payment.id === paymentId 
+            ? { ...payment, status: newStatus } 
+            : payment
+        )
+      );
+      
+      // If status is changed to paid, we may want to remove it from overdue list
+      if (newStatus === 'paid') {
+        setOverduePayments(prev => prev.filter(payment => payment.id !== paymentId));
+      }
+      
+      // Still fetch all payments to make sure everything is in sync
+      fetchPaymentPeriods(lease.id);
+      
+      setStatusUpdateSuccess(`payment_${paymentId}`);
+      showNotification('Payment status updated successfully.', 'success');
+      
+      // Clear success message after a delay
+      setTimeout(() => {
+        setStatusUpdateSuccess(null);
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Error in payment status update:', error);
+      showNotification('An unexpected error occurred.', 'error');
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
+  // Mark payment as paid
+  const markAsPaid = (type: 'security_deposit' | 'payment', id: string) => {
+    if (type === 'security_deposit') {
+      updateSecurityDepositStatus('paid');
+    } else {
+      updatePaymentPeriodStatus(id, 'paid');
+    }
+  };
+
+  // Payment Status Button component
+  const PaymentStatusButton = ({ 
+    currentStatus, 
+    id, 
+    type,
+    dueDate 
+  }: { 
+    currentStatus: string; 
+    id: string;
+    type: 'security_deposit' | 'payment';
+    dueDate?: string; // Only required for recurring payments
+  }) => {
+    const isUpdating = updatingStatus === (type === 'security_deposit' ? 'security_deposit' : `payment_${id}`);
+    const isSuccess = statusUpdateSuccess === (type === 'security_deposit' ? 'security_deposit' : `payment_${id}`);
+    
+    // Don't show the button if already paid
+    if (currentStatus === 'paid') {
+      return null;
+    }
+    
+    // Check if we can accept payment for this specific payment period
+    const canAcceptPayment = () => {
+      // Security deposits can always be marked as paid
+      if (type === 'security_deposit') return true;
+      
+      // For recurring payments, we need both the payment_date and due_date
+      if (!dueDate) return false;
+      
+      const today = new Date();
+      
+      // Extract the payment day from the paymentDate string
+      // Default to day 1 if paymentDate is missing or invalid
+      let paymentDay = 1;
+      
+      if (lease?.paymentDate && typeof lease.paymentDate === 'string') {
+        // Try to extract the day from the payment date string (format: YYYY-MM-DD)
+        const dayPart = lease.paymentDate.split('-')[2];
+        if (dayPart) {
+          paymentDay = parseInt(dayPart, 10);
+        }
+      }
+      
+      // Get the month and year from the due date (which represents the period being paid for)
+      const dueDateTime = new Date(dueDate);
+      const dueMonth = dueDateTime.getMonth();
+      const dueYear = dueDateTime.getFullYear();
+      
+      // Current month and year
+      const currentMonth = today.getMonth();
+      const currentYear = today.getFullYear();
+      const currentDay = today.getDate();
+      
+      // If the due date is for a future month/year, don't show the button
+      if (dueYear > currentYear || (dueYear === currentYear && dueMonth > currentMonth)) {
+        return false;
+      }
+      
+      // If this is the current month's payment and we're before the payment date, don't show
+      if (dueYear === currentYear && dueMonth === currentMonth && currentDay < paymentDay) {
+        return false;
+      }
+      
+      // In all other cases, show the button (current month after payment date, or past months)
+      return true;
+    };
+    
+    // Don't show button if payment can't be accepted yet
+    if (!canAcceptPayment()) {
+      return null;
+    }
+    
+    const markAsPaid = () => {
+      if (type === 'security_deposit') {
+        updateSecurityDepositStatus('paid');
+      } else {
+        updatePaymentPeriodStatus(id, 'paid');
+      }
+    };
+    
+    return (
+      <button 
+        onClick={markAsPaid}
+        className={`text-xs px-2 py-1 rounded border border-gray-200 
+          ${isUpdating ? 'bg-gray-100 text-gray-400' : 'bg-white text-gray-600 hover:bg-green-50 hover:text-green-600 hover:border-green-200'} 
+          ${isSuccess ? 'bg-green-50 text-green-600 border-green-200' : ''}`}
+        disabled={isUpdating}
+      >
+        {isUpdating ? (
+          <span className="flex items-center">
+            <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Updating...
+          </span>
+        ) : isSuccess ? (
+          <span className="flex items-center">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Marked as Paid
+          </span>
+        ) : (
+          <span className="flex items-center">
+            <DollarSign className="w-3 h-3 mr-1" />
+            Mark as Paid
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  // Function to extract filename from URL
+  const extractFilenameFromUrl = (url: string): string => {
+    if (!url) return 'Document';
+    
+    try {
+      // Extract just the filename part (after the last slash)
+      const urlPath = url.split('/');
+      let filename = urlPath[urlPath.length - 1];
+      
+      // Remove any query parameters
+      if (filename.includes('?')) {
+        filename = filename.split('?')[0];
+      }
+      
+      // URL decode the filename to handle spaces and special characters
+      filename = decodeURIComponent(filename);
+      
+      // Remove timestamp prefix if present (format: 1234567890_actual_filename.ext)
+      const timestampMatch = filename.match(/^\d+_(.+)$/);
+      if (timestampMatch && timestampMatch[1]) {
+        return timestampMatch[1];  // Return the actual filename without the timestamp
+      }
+      
+      // If we get here and the filename is just a hash or doesn't look like a filename, return a generic name
+      if (filename.length < 5 || !filename.includes('.')) {
+        return 'Document';
+      }
+      
+      return filename;
+    } catch (error) {
+      console.error('Error extracting filename from URL:', error);
+      return 'Document';
+    }
+  };
+
+  // Function to handle lease update
+  const handleLeaseUpdated = async () => {
+    if (lease?.id) {
+      // Show loading state
+      setIsLoading(true);
+      
+      try {
+        console.log('Refreshing lease data after edit...');
+        
+        // Get fresh lease data
+        await fetchLeaseData(lease.id);
+        
+        // Get fresh payment periods
+        await fetchPaymentPeriods(lease.id);
+        
+        // Show success notification
+        showNotification('Lease updated successfully', 'success');
+      } catch (error) {
+        console.error('Error refreshing lease data:', error);
+        showNotification('Lease was updated but display may not be current', 'error');
+      } finally {
+        setIsLoading(false);
+      }
+      
+      // Close the edit drawer
+      setIsEditDrawerOpen(false);
+    }
+  };
+
+  // Handle opening the edit drawer
+  const handleEditLease = () => {
+    setIsEditDrawerOpen(true);
+  };
+
   return (
     <div
       className={`fixed inset-y-0 right-0 w-[480px] bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${
         isOpen ? 'translate-x-0' : 'translate-x-full'
-      }`}
+      } z-50`}
     >
+      {/* Edit Lease Drawer */}
+      {isEditDrawerOpen && (
+        <EditLeaseDrawer 
+          isOpen={isEditDrawerOpen}
+          onClose={() => setIsEditDrawerOpen(false)}
+          leaseId={lease.id}
+          onLeaseUpdated={handleLeaseUpdated}
+        />
+      )}
+      
+      {/* Notification */}
+      {notification && (
+        <div className={`fixed top-4 right-4 max-w-sm p-3 rounded-md shadow-md z-50 ${
+          notification.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+        }`}>
+          <div className="flex items-center">
+            {notification.type === 'success' ? (
+              <CheckCircle className="w-5 h-5 text-green-500 mr-2" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+            )}
+            <p className={`text-sm ${notification.type === 'success' ? 'text-green-700' : 'text-red-700'}`}>
+              {notification.message}
+            </p>
+            <button 
+              className="ml-auto text-gray-400 hover:text-gray-500" 
+              onClick={() => setNotification(null)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
       {/* Fixed Header */}
       <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-6 border-b bg-white z-10">
         <div className="flex flex-col">
@@ -299,7 +791,7 @@ export default function LeaseDetailsDrawer({
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
                   <p className="text-sm text-[#2C3539]">
-                    {format(new Date(lease.startDate), 'MMM d, yyyy')}
+                    {lease.startDate ? format(new Date(lease.startDate), 'MMM d, yyyy') : 'Not set'}
                   </p>
                 </div>
               </div>
@@ -308,7 +800,11 @@ export default function LeaseDetailsDrawer({
                 <div className="flex items-center space-x-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
                   <p className="text-sm text-[#2C3539]">
-                    {format(new Date(lease.endDate), 'MMM d, yyyy')}
+                    {lease.lease_terms?.toLowerCase().includes('month') 
+                      ? lease.formattedEndDate
+                      : lease.endDate 
+                        ? format(new Date(lease.endDate), 'MMM d, yyyy') 
+                        : 'Not specified'}
                   </p>
                 </div>
               </div>
@@ -321,15 +817,22 @@ export default function LeaseDetailsDrawer({
             
             {/* Security Deposit Card */}
             <div className="p-3 border border-gray-100 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs text-gray-500">Security Deposit</p>
+                {lease.securityDepositStatus !== 'paid' && (
+                  <PaymentStatusButton 
+                    currentStatus={lease.securityDepositStatus || 'pending'} 
+                    id={lease.id}
+                    type="security_deposit"
+                  />
+                )}
+              </div>
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-gray-500">Security Deposit</p>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <DollarSign className="w-4 h-4 text-gray-400" />
-                    <p className="text-sm font-medium text-[#2C3539]">
-                      {lease.securityDeposit.toLocaleString()}
-                    </p>
-                  </div>
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="w-4 h-4 text-gray-400" />
+                  <p className="text-sm font-medium text-[#2C3539]">
+                    {lease.securityDeposit.toLocaleString()}
+                  </p>
                 </div>
                 <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(lease.securityDepositStatus || 'pending')}`}>
                   {lease.securityDepositStatus ? 
@@ -341,26 +844,40 @@ export default function LeaseDetailsDrawer({
             
             {/* Recurring Payments Section */}
             <div className="mt-4">
-              <h4 className="text-xs font-medium text-gray-500 mb-3">Recurring Payments</h4>
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="text-xs font-medium text-gray-500">Recurring Payments</h4>
+              </div>
               
               <div className="space-y-3">
                 {/* Overdue Payments */}
                 {overduePayments.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-xs font-medium text-red-600 mb-2">Overdue Payments</p>
+                    <div className="flex justify-between items-center mb-2">
+                      <p className="text-xs font-medium text-red-600">Overdue Payments</p>
+                    </div>
                     {overduePayments.map(payment => (
                       <div key={payment.id} className="mt-2 border border-red-100 rounded-lg overflow-hidden">
                         <div className="p-3">
-                          <div className="flex items-center justify-between">
+                          <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center space-x-2">
                               <Calendar className="w-4 h-4 text-red-500" />
                               <p className="text-sm text-red-600">
-                                {payment.due_date ? format(new Date(payment.due_date), 'MMM d, yyyy') : 'Date not available'}
+                                {payment.due_date && payment.due_date !== "null" ? format(new Date(payment.due_date), 'MMM d, yyyy') : 'Date not available'}
                               </p>
                             </div>
-                            <span className="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-800">
-                              Overdue
-                            </span>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs font-medium px-2 py-1 rounded-full bg-red-100 text-red-800">
+                                Overdue
+                              </span>
+                              {payment.status !== 'paid' && (
+                                <PaymentStatusButton 
+                                  currentStatus={payment.status || 'overdue'} 
+                                  id={payment.id}
+                                  type="payment"
+                                  dueDate={payment.due_date}
+                                />
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center justify-between mt-2">
                             <p className="text-xs text-red-500">Total Amount</p>
@@ -382,7 +899,17 @@ export default function LeaseDetailsDrawer({
                 {/* Next Payment Information */}
                 <div className="mt-2 border border-gray-100 rounded-lg overflow-hidden">
                   <div className="p-3">
-                    <h5 className="text-xs font-medium text-gray-500 mb-2">Next Payment Due</h5>
+                    <div className="flex justify-between items-center mb-2">
+                      <h5 className="text-xs font-medium text-gray-500">Next Payment Due</h5>
+                      {nextPayment && nextPayment.status !== 'paid' && (
+                        <PaymentStatusButton 
+                          currentStatus={nextPayment.status || 'pending'} 
+                          id={nextPayment.id}
+                          type="payment"
+                          dueDate={nextPayment.due_date}
+                        />
+                      )}
+                    </div>
                     {isLoading ? (
                       <p className="text-sm text-gray-500">Loading payment information...</p>
                     ) : nextPayment ? (
@@ -391,7 +918,7 @@ export default function LeaseDetailsDrawer({
                           <div className="flex items-center space-x-2">
                             <Calendar className="w-4 h-4 text-gray-500" />
                             <p className="text-sm text-gray-600">
-                              {nextPayment.due_date ? format(new Date(nextPayment.due_date), 'MMM d, yyyy') : 'Date not available'}
+                              {nextPayment && nextPayment.due_date && nextPayment.due_date !== "null" ? format(new Date(nextPayment.due_date), 'MMM d, yyyy') : 'Date not available'}
                             </p>
                           </div>
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(nextPayment.status)}`}>
@@ -483,51 +1010,56 @@ export default function LeaseDetailsDrawer({
             
             {lease.documents && lease.documents.length > 0 ? (
               <div className="space-y-3">
-                {lease.documents.map(doc => (
-                  <div key={doc.id} className="p-3 border border-gray-100 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        <FileText className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-[#2C3539] truncate max-w-[180px]" title={doc.document_name}>
-                          {doc.document_name || 'Document'}
+                {lease.documents.map(doc => {
+                  // Get document name from document_name field, or extract from URL if missing
+                  const documentName = extractFilenameFromUrl(doc.document_url);
+                  
+                  return (
+                    <div key={doc.id} className="p-3 border border-gray-100 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm text-[#2C3539] truncate max-w-[180px]" title={documentName}>
+                            {documentName}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-xs font-medium ${getDocumentStatusColor(doc.document_status)}`}
+                          style={{ padding: '2px 8px', lineHeight: '1.2', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px', width: 'fit-content' }}
+                        >
+                          {formatDocumentStatus(doc.document_status)}
                         </span>
                       </div>
-                      <span
-                        className={`text-xs font-medium ${getDocumentStatusColor(doc.document_status)}`}
-                        style={{ padding: '2px 8px', lineHeight: '1.2', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '9999px', width: 'fit-content' }}
-                      >
-                        {formatDocumentStatus(doc.document_status)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-500">
-                        {format(new Date(doc.created_at), 'MMM d, yyyy')}
-                      </span>
-                      <div className="flex space-x-1">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewDocument(doc.document_url);
-                          }}
-                          className="p-1 text-[#6B7280] hover:text-[#2C3539] rounded-full hover:bg-gray-100 transition-colors"
-                          title="View Document"
-                        >
-                          <FileText className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownloadDocument(doc.document_url, doc.document_name || 'document');
-                          }}
-                          className="p-1 text-[#6B7280] hover:text-[#2C3539] rounded-full hover:bg-gray-100 transition-colors"
-                          title="Download Document"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {doc.created_at ? format(new Date(doc.created_at), 'MMM d, yyyy') : 'Unknown'}
+                        </span>
+                        <div className="flex space-x-1">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDocument(doc.document_url);
+                            }}
+                            className="p-1 text-[#6B7280] hover:text-[#2C3539] rounded-full hover:bg-gray-100 transition-colors"
+                            title="View Document"
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadDocument(doc.document_url, documentName);
+                            }}
+                            className="p-1 text-[#6B7280] hover:text-[#2C3539] rounded-full hover:bg-gray-100 transition-colors"
+                            title="Download Document"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center p-6 border border-dashed border-gray-200 rounded-lg">
@@ -536,6 +1068,20 @@ export default function LeaseDetailsDrawer({
               </div>
             )}
           </div>
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-[#2C3539]">Payment History</h3>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4 text-gray-400" />
+                <div>
+                  <p className="text-sm font-medium text-[#2C3539]">Last payment</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {lease.lastPaymentDate ? format(new Date(lease.lastPaymentDate), 'MMM d, yyyy') : 'No payment recorded'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -543,7 +1089,7 @@ export default function LeaseDetailsDrawer({
       <div className="absolute bottom-0 left-0 right-0 p-6 border-t bg-white z-10">
         <div className="flex space-x-3">
           <button
-            onClick={() => onEdit(lease.id)}
+            onClick={handleEditLease}
             className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-[#2C3539] text-white rounded-lg hover:bg-[#1e2529] transition-colors"
           >
             <Edit2 className="w-4 h-4" />

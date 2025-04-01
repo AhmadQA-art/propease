@@ -153,7 +153,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
     if (formData.startDate && formData.paymentDay) {
       calculateNextPaymentDate();
     }
-  }, [formData.startDate, formData.paymentDay, formData.rentFrequency]);
+  }, [formData.startDate, formData.paymentDay, formData.rentFrequency, formData.leaseType]);
 
   useEffect(() => {
     if (formData.startDate || formData.endDate) {
@@ -161,11 +161,25 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
     }
   }, [formData.startDate, formData.endDate, formData.leaseType]);
 
+  useEffect(() => {
+    if (formData.leaseType === 'month-to-month') {
+      // Month-to-month leases must use monthly payment frequency
+      setFormData(prev => ({
+        ...prev,
+        rentFrequency: 'Monthly'
+      }));
+    }
+  }, [formData.leaseType]);
+
   const calculateNextPaymentDate = () => {
     try {
       const startDate = new Date(formData.startDate);
-      const paymentDay = parseInt(formData.paymentDay);
+      if (isNaN(startDate.getTime())) {
+        console.error('Invalid start date');
+        return;
+      }
       
+      const paymentDay = parseInt(formData.paymentDay);
       if (isNaN(paymentDay) || paymentDay < 1 || paymentDay > 31) {
         console.error('Invalid payment day');
         return;
@@ -174,79 +188,83 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
       // Create a new date based on the start date
       let nextPaymentDate = new Date(startDate);
       
-      // First set the payment day
-      // If payment day is greater than days in the month, set to last day of month
-      const lastDayOfMonth = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
+      // Set the payment day in the month
+      const currentMonth = nextPaymentDate.getMonth();
+      const currentYear = nextPaymentDate.getFullYear();
+      
+      // Get the last day of the current month
+      const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      
+      // Adjust payment day if it exceeds days in the month
       const adjustedPaymentDay = Math.min(paymentDay, lastDayOfMonth);
+      
+      // Set the day to the adjusted payment day
       nextPaymentDate.setDate(adjustedPaymentDay);
       
-      // If the payment date is before the start date, advance it based on the frequency
+      // If the calculated next payment date is before the start date,
+      // we need to advance to the next payment period
       if (nextPaymentDate < startDate) {
-        // Handle different payment frequencies
         switch (formData.rentFrequency) {
           case 'Daily':
-            // For daily, simply set to the next day from start date
             nextPaymentDate = new Date(startDate);
             nextPaymentDate.setDate(startDate.getDate() + 1);
             break;
             
           case 'Weekly':
-            // For weekly, add 7 days
             nextPaymentDate = new Date(startDate);
             nextPaymentDate.setDate(startDate.getDate() + 7);
             break;
             
           case 'Every 2 Weeks':
-            // For bi-weekly, add 14 days
             nextPaymentDate = new Date(startDate);
             nextPaymentDate.setDate(startDate.getDate() + 14);
             break;
             
           case 'Monthly':
-            // For monthly, add one month and adjust for payment day
+            // Move to the next month
             nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
-            // Handle month rollover and ensure payment day is respected
+            // Handle month rollover and adjust for payment day
             const newLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
             nextPaymentDate.setDate(Math.min(paymentDay, newLastDay));
             break;
             
           case 'Every 2 Months':
-            // Add two months and adjust for payment day
             nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 2);
-            // Handle month rollover and ensure payment day is respected
             const twoMonthLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
             nextPaymentDate.setDate(Math.min(paymentDay, twoMonthLastDay));
             break;
             
           case 'Quarterly':
-            // Add three months and adjust for payment day
             nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 3);
-            // Handle month rollover and ensure payment day is respected
             const quarterlyLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
             nextPaymentDate.setDate(Math.min(paymentDay, quarterlyLastDay));
             break;
             
           case 'Every 6 Months':
-            // Add six months and adjust for payment day
             nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 6);
-            // Handle month rollover and ensure payment day is respected
             const sixMonthLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
             nextPaymentDate.setDate(Math.min(paymentDay, sixMonthLastDay));
             break;
             
           case 'Annually':
-            // Add one year and adjust for payment day
             nextPaymentDate.setFullYear(nextPaymentDate.getFullYear() + 1);
-            // Handle month rollover and ensure payment day is respected
             const yearlyLastDay = new Date(nextPaymentDate.getFullYear(), nextPaymentDate.getMonth() + 1, 0).getDate();
             nextPaymentDate.setDate(Math.min(paymentDay, yearlyLastDay));
             break;
             
           default:
-            // Default to monthly if unknown frequency
             console.warn(`Unknown payment frequency: ${formData.rentFrequency}, defaulting to monthly`);
             nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
             break;
+        }
+      }
+      
+      // For fixed-term leases, ensure the next payment date doesn't exceed the end date
+      if (formData.leaseType === 'fixed' && formData.endDate) {
+        const endDate = new Date(formData.endDate);
+        if (!isNaN(endDate.getTime()) && nextPaymentDate > endDate) {
+          // If next payment would be after the lease ends, set it to the end date
+          nextPaymentDate = new Date(endDate);
         }
       }
       
@@ -422,6 +440,50 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
     return 'Active';
   };
 
+  const calculatePaymentPeriodsEndDate = (startDateStr: string): string => {
+    if (!startDateStr) return '';
+    
+    try {
+      const startDate = new Date(startDateStr);
+      if (isNaN(startDate.getTime())) return '';
+      
+      // Get date one year after start date (e.g., 4/1/2025 -> 3/31/2026)
+      const endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1);
+      endDate.setDate(endDate.getDate() - 1); // Last day of the year period
+      
+      // Format as readable date (e.g., "March 31, 2026")
+      return endDate.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (error) {
+      console.error('Error calculating payment periods end date:', error);
+      return '';
+    }
+  };
+
+  const getPaymentPeriodsEndDateForDB = (startDateStr: string): string => {
+    if (!startDateStr) return '';
+    
+    try {
+      const startDate = new Date(startDateStr);
+      if (isNaN(startDate.getTime())) return '';
+      
+      // Get date one year after start date (for 12 monthly payments)
+      const endDate = new Date(startDate);
+      endDate.setFullYear(endDate.getFullYear() + 1);
+      endDate.setDate(endDate.getDate() - 1); // Last day of the year period
+      
+      // Format as YYYY-MM-DD for database
+      return endDate.toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Error calculating DB payment periods end date:', error);
+      return '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -445,17 +507,26 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
         formData.leaseType === 'fixed' ? formData.endDate : null
       );
       
+      // For month-to-month leases, calculate an end date for payment periods
+      // (for backend purposes only, the actual lease end date will be null)
+      let paymentPeriodsEndDate = null;
+      
+      if (formData.leaseType === 'month-to-month') {
+        // Calculate date one year from start date (for 12 monthly payments)
+        paymentPeriodsEndDate = getPaymentPeriodsEndDateForDB(formData.startDate);
+      }
+      
       const databaseLeaseData = {
         unit_id: formData.unit,
         tenant_id: selectedTenants.length > 0 ? selectedTenants[0].id : null,
         start_date: formData.startDate,
-        end_date: formData.leaseType === 'fixed' ? formData.endDate : null,
+        end_date: formData.leaseType === 'fixed' ? formData.endDate : null, // null for month-to-month
         rent_amount: formData.rentAmount,
         security_deposit: formData.hasDeposit ? formData.depositAmount : 0,
         status: leaseStatus,
         payment_date: parseInt(formData.paymentDay),
         next_payment_date: formData.nextPaymentDate,
-        payment_frequency: formData.rentFrequency,
+        payment_frequency: formData.leaseType === 'month-to-month' ? 'Monthly' : formData.rentFrequency, // Always Monthly for month-to-month
         lease_issuer_id: currentUser.id,
         signed_date: null,
         roll_over_to_month_to_month: true,
@@ -469,6 +540,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
         security_deposit_status: formData.securityDepositStatus,
         rent_payment_status: formData.rentPaymentStatus,
         payment_status: formData.paymentStatus,
+        payment_periods_end_date: paymentPeriodsEndDate, // For backend calculations only
         documents: documents.map(doc => ({
           file: doc.file,
           document_status: doc.status,
@@ -628,7 +700,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                     ? 'bg-[#2C3539] text-white'
                     : 'bg-gray-100 text-[#2C3539]'
                 )}
-                onClick={() => setFormData(prev => ({ ...prev, leaseType: 'month-to-month' }))}
+                onClick={() => setFormData(prev => ({ ...prev, leaseType: 'month-to-month', rentFrequency: 'Monthly' }))}
               >
                 Month-to-Month
               </button>
@@ -647,6 +719,15 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                   required
                 />
                 {errors.startDate && <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>}
+                
+                {/* Display calculated end period message for month-to-month leases */}
+                {formData.leaseType === 'month-to-month' && formData.startDate && (
+                  <div className="mt-2 text-gray-600">
+                    <span className="text-xs">
+                      <strong>Note:</strong> Payment periods will be calculated through <strong>{calculatePaymentPeriodsEndDate(formData.startDate)}</strong>. The lease will need to be renewed at that time.
+                    </span>
+                  </div>
+                )}
               </div>
 
               {formData.leaseType === 'fixed' && (
@@ -767,17 +848,18 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                   Payment Cycle
                 </label>
                 <select
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
+                  className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539] ${
+                    formData.leaseType === 'month-to-month' ? 'bg-gray-100' : ''
+                  }`}
                   value={formData.rentFrequency}
                   onChange={(e) => {
-                    const newFrequency = e.target.value as any;
-                    setFormData(prev => ({ ...prev, rentFrequency: newFrequency }));
-                    
-                    // Immediately recalculate the next payment date when payment cycle changes
-                    if (formData.startDate && formData.paymentDay) {
-                      setTimeout(() => calculateNextPaymentDate(), 0);
+                    // Only allow changing frequency for fixed-term leases
+                    if (formData.leaseType === 'fixed') {
+                      const newFrequency = e.target.value as any;
+                      setFormData(prev => ({ ...prev, rentFrequency: newFrequency }));
                     }
                   }}
+                  disabled={formData.leaseType === 'month-to-month'}
                   required
                 >
                   <option value="Monthly">Monthly</option>
@@ -789,6 +871,9 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                   <option value="Daily">Daily</option>
                   <option value="Every 2 Months">Every 2 Months</option>
                 </select>
+                {formData.leaseType === 'month-to-month' && (
+                  <p className="text-xs text-gray-500 mt-1">Month-to-month leases must use Monthly payment cycle</p>
+                )}
                 {errors.rentFrequency && <p className="text-xs text-red-500 mt-1">{errors.rentFrequency}</p>}
               </div>
             </div>
@@ -803,15 +888,19 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                   className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]"
                   value={formData.paymentDay}
                   onChange={(e) => {
+                    // Always update the form data with the typed value
+                    setFormData(prev => ({ ...prev, paymentDay: e.target.value }));
+                    
+                    // No need for setTimeout here - useEffect will handle recalculation
+                    // when the formData.paymentDay state is updated
+                  }}
+                  onBlur={(e) => {
+                    // On blur, ensure the value is within valid range
                     const value = e.target.value;
                     const day = parseInt(value);
-                    if (!isNaN(day) && day >= 1 && day <= 31) {
-                      setFormData(prev => ({ ...prev, paymentDay: value }));
-                      
-                      // Immediately recalculate the next payment date when payment day changes
-                      if (formData.startDate) {
-                        setTimeout(() => calculateNextPaymentDate(), 0);
-                      }
+                    if (isNaN(day) || day < 1 || day > 31) {
+                      // If invalid, reset to a default value
+                      setFormData(prev => ({ ...prev, paymentDay: '1' }));
                     }
                   }}
                   min="1"

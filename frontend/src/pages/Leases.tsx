@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, DollarSign, Bell, CreditCard, Calendar, Building2, User } from 'lucide-react';
+import { Search, Filter, Plus, DollarSign, Bell, CreditCard, Calendar, Building2, User, X, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import LeaseDetailsDrawer from '../components/LeaseDetailsDrawer';
 import { supabase } from '../config/supabase';
+import { useRef } from 'react';
 
 // Match the interface expected by LeaseDetailsDrawer
 interface Lease {
@@ -142,11 +143,52 @@ const formatStatusForDisplay = (status: string): string => {
 
 export default function Leases() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLease, setSelectedLease] = useState<Lease | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [leases, setLeases] = useState<Lease[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedLease, setSelectedLease] = useState<Lease | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Add filter state
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const filterRef = useRef<HTMLDivElement>(null);
+  
+  // Available status options
+  const statusOptions = [
+    'Active', 
+    'Pending', 
+    'Terminated', 
+    'Past'
+  ];
+
+  // Close filter dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setShowFilterDropdown(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Toggle status filter
+  const toggleStatusFilter = (status: string) => {
+    if (statusFilter.includes(status)) {
+      setStatusFilter(statusFilter.filter(s => s !== status));
+    } else {
+      setStatusFilter([...statusFilter, status]);
+    }
+  };
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setStatusFilter([]);
+  };
 
   useEffect(() => {
     fetchLeases();
@@ -246,11 +288,22 @@ export default function Leases() {
     }
   };
 
-  const filteredLeases = leases.filter(lease =>
-    lease.property?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lease.resident.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    lease.unit.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLeases = leases.filter(lease => {
+    // First apply text search
+    const matchesSearch = 
+      lease.property?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lease.resident.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lease.unit.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Then apply status filter if any are selected
+    const matchesStatus = statusFilter.length === 0 || 
+      statusFilter.some(status => 
+        lease.status.toLowerCase() === status.toLowerCase() ||
+        lease.leaseStatus?.toLowerCase() === status.toLowerCase()
+      );
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const handleCreateLease = () => {
     console.log('Navigate to /leases/add');
@@ -410,9 +463,63 @@ export default function Leases() {
           />
         </div>
         
-        <button className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-          <Filter className="w-5 h-5 text-[#2C3539]" />
-        </button>
+        <div className="relative" ref={filterRef}>
+          <button 
+            className={`h-10 w-10 flex items-center justify-center border ${statusFilter.length > 0 ? 'border-[#2C3539] bg-[#2C3539] text-white' : 'border-gray-200 text-[#2C3539]'} rounded-lg hover:bg-gray-50 hover:text-[#2C3539] transition-colors`}
+            onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+          >
+            <Filter className="w-5 h-5" />
+            {statusFilter.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {statusFilter.length}
+              </span>
+            )}
+          </button>
+          
+          {showFilterDropdown && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-50 border border-gray-100">
+              <div className="p-3 border-b border-gray-100">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-gray-700">Filter Leases</h3>
+                  {statusFilter.length > 0 && (
+                    <button 
+                      onClick={clearAllFilters}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div className="p-3">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Status</h4>
+                <div className="space-y-2">
+                  {statusOptions.map(status => (
+                    <label key={status} className="flex items-center space-x-2 cursor-pointer">
+                      <div 
+                        className={`w-5 h-5 rounded border flex items-center justify-center ${statusFilter.includes(status) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}
+                        onClick={() => toggleStatusFilter(status)}
+                      >
+                        {statusFilter.includes(status) && <Check className="w-3 h-3 text-white" />}
+                      </div>
+                      <span className="text-sm text-gray-700">{status}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="p-3 bg-gray-50 flex justify-end rounded-b-md">
+                <button 
+                  onClick={() => setShowFilterDropdown(false)}
+                  className="text-sm bg-[#2C3539] text-white px-3 py-1 rounded"
+                >
+                  Apply Filters
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         <button 
           onClick={handleCreateLease}
