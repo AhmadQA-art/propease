@@ -23,6 +23,7 @@ import Team from './pages/Team';
 import People from './pages/People';
 import AutoApiTest from './components/AutoApiTest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 // Import the entire module to avoid type issues
 import * as ReactHotToast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -128,9 +129,11 @@ function App() {
       {/* Use ReactHotToast.Toaster to fix the type issue */}
       <ReactHotToast.Toaster position="top-right" />
       <AuthProvider>
-        <Router>
-          <MainRoutes />
-        </Router>
+        <NotificationProvider>
+          <Router>
+            <MainRoutes />
+          </Router>
+        </NotificationProvider>
       </AuthProvider>
     </ErrorBoundary>
   );
