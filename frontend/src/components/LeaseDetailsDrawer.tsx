@@ -88,6 +88,7 @@ export default function LeaseDetailsDrawer({
   const [overduePayments, setOverduePayments] = useState<LeasePaymentPeriod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [expandedPaymentDetails, setExpandedPaymentDetails] = useState<string | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
   const [statusUpdateSuccess, setStatusUpdateSuccess] = useState<string | null>(null);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
@@ -204,22 +205,26 @@ export default function LeaseDetailsDrawer({
           paymentDate: leaseData.payment_date ? leaseData.payment_date.toString() : null
         };
         
-        // Calculate a projected end date for month-to-month leases (12 months from start date)
+        // Display the actual end date from database if available, only calculate projected date if not
         let displayEndDate = '';
-        if (leaseData.lease_terms?.toLowerCase().includes('month') && leaseData.start_date) {
+        if (leaseData.end_date) {
+          // Use the actual end date from the database
+          const endDate = new Date(leaseData.end_date);
+          displayEndDate = format(endDate, 'MMM d, yyyy');
+          console.log("🗓️ [LeaseDetailsDrawer] Using database end date:", displayEndDate);
+        } else if (leaseData.lease_terms?.toLowerCase().includes('month') && leaseData.start_date) {
+          // Only calculate projected date if no end_date exists in database
           try {
             const startDate = new Date(leaseData.start_date);
             if (!isNaN(startDate.getTime())) {
               const projectedEndDate = new Date(startDate);
               projectedEndDate.setFullYear(projectedEndDate.getFullYear() + 1);
-              displayEndDate = format(projectedEndDate, 'MMM d, yyyy') + ' (Projected)';
+              displayEndDate = format(projectedEndDate, 'MMM d, yyyy');
               console.log("🗓️ [LeaseDetailsDrawer] Calculated projected end date:", displayEndDate);
             }
           } catch (error) {
             console.error("❌ [LeaseDetailsDrawer] Error calculating projected end date:", error);
           }
-        } else if (leaseData.end_date) {
-          displayEndDate = format(new Date(leaseData.end_date), 'MMM d, yyyy');
         }
         
         console.log("🖥️ [LeaseDetailsDrawer] Formatted display data:", {
@@ -231,7 +236,7 @@ export default function LeaseDetailsDrawer({
         // Update the lease data in our local state with ALL fields
         setLease({
           ...updatedLease,
-          formattedEndDate: displayEndDate || (leaseData.lease_terms?.toLowerCase().includes('month') ? 'Month-to-Month (No End Date)' : 'Not specified')
+          formattedEndDate: displayEndDate || (leaseData.lease_terms?.toLowerCase().includes('month') ? 'Month-to-Month' : 'Not specified')
         });
       }
     } catch (error) {
@@ -245,49 +250,97 @@ export default function LeaseDetailsDrawer({
   const fetchPaymentPeriods = async (leaseId: string) => {
     try {
       setIsLoading(true);
-      const today = new Date().toISOString();
       
-      // Fetch the next upcoming payment
-      const { data: upcomingData, error: upcomingError } = await supabase
+      // Get the current date information
+      const today = new Date();
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth();
+      
+      // Format as ISO string for database queries
+      const todayISO = today.toISOString();
+      
+      // Create first day of current month for filtering
+      const firstDayCurrentMonth = new Date(currentYear, currentMonth, 1).toISOString();
+      
+      // Create first day of next month for filtering
+      const firstDayNextMonth = new Date(currentYear, currentMonth + 1, 1).toISOString();
+      
+      // First, get all payments to check for duplicates
+      const { data: allPayments, error: allPaymentsError } = await supabase
         .from('lease_period_payments')
         .select('*')
         .eq('lease_id', leaseId)
-        .eq('status', 'pending')
-        .gte('due_date', today)
-        .order('due_date', { ascending: true })
-        .limit(1);
-      
-      if (upcomingError) {
-        console.error('Error fetching next payment period:', upcomingError);
-      } else if (upcomingData && upcomingData.length > 0) {
-        setNextPayment(upcomingData[0]);
-      } else {
-        setNextPayment(null);
-      }
-      
-      // Fetch overdue payments
-      const { data: overdueData, error: overdueError } = await supabase
-        .from('lease_period_payments')
-        .select('*')
-        .eq('lease_id', leaseId)
-        .eq('status', 'overdue')
         .order('due_date', { ascending: true });
-      
-      if (overdueError) {
-        console.error('Error fetching overdue payments:', overdueError);
-      } else if (overdueData) {
-        setOverduePayments(overdueData);
-      } else {
-        setOverduePayments([]);
+        
+      if (allPaymentsError) {
+        console.error('Error fetching all payments:', allPaymentsError);
+        return;
       }
+      
+      // Create a map to deduplicate payment records by due date
+      // Keep the records with period_start_date that matches the due_date (preferred) or latest ID
+      const paymentsByDueDate = new Map();
+      
+      if (allPayments) {
+        allPayments.forEach(payment => {
+          const dueDate = payment.due_date;
+          const existingPayment = paymentsByDueDate.get(dueDate);
+          
+          // Prefer payments where period_start_date matches due_date (more likely to be correct)
+          // Or pick the one with the highest ID (likely most recent)
+          if (!existingPayment || 
+              (payment.period_start_date === payment.due_date) || 
+              (parseInt(payment.id) > parseInt(existingPayment.id))) {
+            paymentsByDueDate.set(dueDate, payment);
+          }
+        });
+      }
+      
+      // Convert back to array
+      const deduplicatedPayments = Array.from(paymentsByDueDate.values());
+      
+      // Filter for current month payment
+      const currentMonthPayments = deduplicatedPayments.filter(payment => {
+        const paymentDate = new Date(payment.due_date);
+        return payment.status !== 'paid' && 
+               paymentDate.getMonth() === currentMonth && 
+               paymentDate.getFullYear() === currentYear;
+      });
+      
+      // Set as next payment if exists
+      if (currentMonthPayments.length > 0) {
+        setNextPayment(currentMonthPayments[0]);
+      } else {
+        // If no current month payment, get the next upcoming payment
+        const upcomingPayments = deduplicatedPayments.filter(payment => {
+          const paymentDate = new Date(payment.due_date);
+          return payment.status === 'pending' && 
+                 paymentDate >= today;
+        }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+        
+        if (upcomingPayments.length > 0) {
+          setNextPayment(upcomingPayments[0]);
+        } else {
+          setNextPayment(null);
+        }
+      }
+      
+      // Filter for overdue payments
+      const overduePayments = deduplicatedPayments.filter(payment => {
+        const paymentDate = new Date(payment.due_date);
+        return (payment.status === 'overdue' || 
+               (payment.status === 'pending' && 
+                (paymentDate < new Date(firstDayCurrentMonth))));
+      }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+      
+      setOverduePayments(overduePayments);
+      
     } catch (error) {
       console.error('Error in payment period fetch:', error);
     } finally {
       setIsLoading(false);
     }
   };
-
-  if (!lease) return null;
 
   // Get the color based on document status
   const getDocumentStatusColor = (status: string | undefined) => {
@@ -512,22 +565,10 @@ export default function LeaseDetailsDrawer({
       // Security deposits can always be marked as paid
       if (type === 'security_deposit') return true;
       
-      // For recurring payments, we need both the payment_date and due_date
+      // For recurring payments, we need the due_date
       if (!dueDate) return false;
       
       const today = new Date();
-      
-      // Extract the payment day from the paymentDate string
-      // Default to day 1 if paymentDate is missing or invalid
-      let paymentDay = 1;
-      
-      if (lease?.paymentDate && typeof lease.paymentDate === 'string') {
-        // Try to extract the day from the payment date string (format: YYYY-MM-DD)
-        const dayPart = lease.paymentDate.split('-')[2];
-        if (dayPart) {
-          paymentDay = parseInt(dayPart, 10);
-        }
-      }
       
       // Get the month and year from the due date (which represents the period being paid for)
       const dueDateTime = new Date(dueDate);
@@ -537,20 +578,24 @@ export default function LeaseDetailsDrawer({
       // Current month and year
       const currentMonth = today.getMonth();
       const currentYear = today.getFullYear();
-      const currentDay = today.getDate();
       
-      // If the due date is for a future month/year, don't show the button
-      if (dueYear > currentYear || (dueYear === currentYear && dueMonth > currentMonth)) {
-        return false;
+      // If the payment is overdue, always show the button
+      if (currentStatus === 'overdue') {
+        return true;
       }
       
-      // If this is the current month's payment and we're before the payment date, don't show
-      if (dueYear === currentYear && dueMonth === currentMonth && currentDay < paymentDay) {
-        return false;
+      // Current month payments can be marked as paid any time during the month
+      if (dueYear === currentYear && dueMonth === currentMonth) {
+        return true;
       }
       
-      // In all other cases, show the button (current month after payment date, or past months)
-      return true;
+      // Past months payments can be marked as paid
+      if ((dueYear < currentYear) || (dueYear === currentYear && dueMonth < currentMonth)) {
+        return true;
+      }
+      
+      // Future months payments cannot be marked as paid yet
+      return false;
     };
     
     // Don't show button if payment can't be accepted yet
@@ -665,6 +710,16 @@ export default function LeaseDetailsDrawer({
   const handleEditLease = () => {
     setIsEditDrawerOpen(true);
   };
+
+  const togglePaymentDetails = (paymentId: string) => {
+    if (expandedPaymentDetails === paymentId) {
+      setExpandedPaymentDetails(null);
+    } else {
+      setExpandedPaymentDetails(paymentId);
+    }
+  };
+
+  if (!lease) return null;
 
   return (
     <div
@@ -852,16 +907,13 @@ export default function LeaseDetailsDrawer({
                 {/* Overdue Payments */}
                 {overduePayments.length > 0 && (
                   <div className="mb-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <p className="text-xs font-medium text-red-600">Overdue Payments</p>
-                    </div>
                     {overduePayments.map(payment => (
-                      <div key={payment.id} className="mt-2 border border-red-100 rounded-lg overflow-hidden">
+                      <div key={payment.id} className="mt-2 border border-gray-200 rounded-lg overflow-hidden">
                         <div className="p-3">
                           <div className="flex justify-between items-center mb-1">
                             <div className="flex items-center space-x-2">
-                              <Calendar className="w-4 h-4 text-red-500" />
-                              <p className="text-sm text-red-600">
+                              <Calendar className="w-4 h-4 text-gray-500" />
+                              <p className="text-sm text-gray-600">
                                 {payment.due_date && payment.due_date !== "null" ? format(new Date(payment.due_date), 'MMM d, yyyy') : 'Date not available'}
                               </p>
                             </div>
@@ -880,16 +932,86 @@ export default function LeaseDetailsDrawer({
                             </div>
                           </div>
                           <div className="flex items-center justify-between mt-2">
-                            <p className="text-xs text-red-500">Total Amount</p>
+                            <p className="text-xs text-gray-500">Total Amount</p>
                             <div className="flex items-center">
-                              <DollarSign className="w-3 h-3 text-red-400 mr-1" />
-                              <p className="text-sm font-medium text-red-600">
+                              <DollarSign className="w-3 h-3 text-gray-400 mr-1" />
+                              <p className="text-sm font-medium text-gray-600">
                                 {payment.total_amount !== undefined ? 
-                                  parseFloat(payment.total_amount.toString()).toLocaleString() 
-                                  : '0'}
+                                  parseFloat(payment.total_amount.toString()).toLocaleString('en-US', {
+                                    style: 'currency',
+                                    currency: 'USD',
+                                    minimumFractionDigits: 2
+                                  }) 
+                                  : '$0.00'}
                               </p>
                             </div>
                           </div>
+                          
+                          {/* Payment Details Expansion */}
+                          {expandedPaymentDetails === payment.id && (
+                            <div className="mt-3 pt-3 border-t border-gray-200">
+                              <h6 className="text-xs font-medium text-gray-600 mb-2">Payment Breakdown</h6>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-xs text-gray-500">Rent</span>
+                                  <span className="text-xs font-medium text-gray-600">
+                                    {lease.rentAmount ? 
+                                      parseFloat(lease.rentAmount.toString()).toLocaleString('en-US', {
+                                        style: 'currency',
+                                        currency: 'USD',
+                                        minimumFractionDigits: 2
+                                      }) 
+                                      : '$0.00'}
+                                  </span>
+                                </div>
+                                
+                                {/* Additional charges if any */}
+                                {lease.charges && lease.charges.length > 0 && lease.charges.map(charge => (
+                                  <div key={charge.id} className="flex justify-between items-center">
+                                    <span className="text-xs text-gray-500">{charge.type}</span>
+                                    <span className="text-xs font-medium text-gray-600">
+                                      {parseFloat(charge.amount.toString()).toLocaleString('en-US', {
+                                        style: 'currency',
+                                        currency: 'USD',
+                                        minimumFractionDigits: 2
+                                      })}
+                                    </span>
+                                  </div>
+                                ))}
+                                
+                                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                  <span className="text-xs font-medium text-gray-600">Total</span>
+                                  <span className="text-xs font-medium text-gray-600">
+                                    {payment.total_amount !== undefined ? 
+                                      parseFloat(payment.total_amount.toString()).toLocaleString('en-US', {
+                                        style: 'currency',
+                                        currency: 'USD',
+                                        minimumFractionDigits: 2
+                                      }) 
+                                      : '$0.00'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Toggle Details Button */}
+                          <button
+                            onClick={() => togglePaymentDetails(payment.id)}
+                            className="w-full mt-2 pt-2 text-xs text-gray-500 hover:text-gray-600 flex items-center justify-center border-t border-gray-200"
+                          >
+                            {expandedPaymentDetails === payment.id ? (
+                              <>
+                                <ChevronUp className="w-3 h-3 mr-1" />
+                                Hide details
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-3 h-3 mr-1" />
+                                Show details
+                              </>
+                            )}
+                          </button>
                         </div>
                       </div>
                     ))}
@@ -933,15 +1055,19 @@ export default function LeaseDetailsDrawer({
                             <DollarSign className="w-3 h-3 text-gray-400 mr-1" />
                             <p className="text-sm font-medium text-[#2C3539]">
                               {nextPayment.total_amount !== undefined ? 
-                                parseFloat(nextPayment.total_amount.toString()).toLocaleString() 
-                                : '0'}
+                                parseFloat(nextPayment.total_amount.toString()).toLocaleString('en-US', {
+                                  style: 'currency',
+                                  currency: 'USD',
+                                  minimumFractionDigits: 2
+                                }) 
+                                : '$0.00'}
                             </p>
                           </div>
                         </div>
                         
                         <button 
                           onClick={() => setShowPaymentDetails(!showPaymentDetails)}
-                          className="mt-2 text-xs text-gray-500 hover:text-gray-700 flex items-center"
+                          className="mt-2 text-xs text-gray-500 hover:text-gray-600 flex items-center"
                         >
                           {showPaymentDetails ? 'Hide details' : 'Show details'}
                           {showPaymentDetails ? 
@@ -960,26 +1086,36 @@ export default function LeaseDetailsDrawer({
                     <div className="border-t border-gray-100 bg-gray-50 p-4 transition-all duration-300 ease-in-out">
                       <div className="space-y-3">
                         {/* Base Rent */}
-                        <div className="flex items-center justify-between py-2 border-b border-gray-200">
+                        <div className="flex justify-between items-center py-2 border-b border-gray-200">
                           <div>
                             <p className="text-sm font-medium text-[#2C3539]">Rent amount</p>
                             <p className="text-xs text-gray-500">Monthly rent payment</p>
                           </div>
                           <p className="text-sm font-medium text-[#2C3539]">
-                            ${lease.rentAmount.toLocaleString()}
+                            {lease.rentAmount ? 
+                              parseFloat(lease.rentAmount.toString()).toLocaleString('en-US', {
+                                style: 'currency',
+                                currency: 'USD',
+                                minimumFractionDigits: 2
+                              }) 
+                              : '$0.00'}
                           </p>
                         </div>
                         
                         {/* Additional Charges */}
                         {lease.charges && lease.charges.length > 0 ? (
                           lease.charges.map(charge => (
-                            <div key={charge.id} className="flex items-center justify-between py-2 border-b border-gray-200">
+                            <div key={charge.id} className="flex justify-between items-center py-2 border-b border-gray-200">
                               <div>
                                 <p className="text-sm font-medium text-[#2C3539]">{charge.description}</p>
                                 <p className="text-xs text-gray-500">{charge.type}</p>
                               </div>
                               <p className="text-sm font-medium text-[#2C3539]">
-                                ${parseFloat(charge.amount.toString()).toLocaleString()}
+                                {parseFloat(charge.amount.toString()).toLocaleString('en-US', {
+                                  style: 'currency',
+                                  currency: 'USD',
+                                  minimumFractionDigits: 2
+                                })}
                               </p>
                             </div>
                           ))
@@ -988,12 +1124,16 @@ export default function LeaseDetailsDrawer({
                         )}
                         
                         {/* Total Amount */}
-                        <div className="flex items-center justify-between pt-3 border-t border-gray-300">
+                        <div className="flex justify-between items-center pt-3 border-t border-gray-300">
                           <p className="text-sm font-bold text-[#2C3539]">Total Amount Due</p>
                           <p className="text-sm font-bold text-[#2C3539]">
-                            ${nextPayment.total_amount !== undefined ? 
-                              parseFloat(nextPayment.total_amount.toString()).toLocaleString() 
-                              : '0'}
+                            {nextPayment.total_amount !== undefined ? 
+                              parseFloat(nextPayment.total_amount.toString()).toLocaleString('en-US', {
+                                style: 'currency',
+                                currency: 'USD',
+                                minimumFractionDigits: 2
+                              }) 
+                              : '$0.00'}
                           </p>
                         </div>
                       </div>
@@ -1067,20 +1207,6 @@ export default function LeaseDetailsDrawer({
                 <p className="text-sm text-gray-500">No documents available</p>
               </div>
             )}
-          </div>
-          <div className="space-y-4">
-            <h3 className="text-sm font-medium text-[#2C3539]">Payment History</h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Calendar className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-sm font-medium text-[#2C3539]">Last payment</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {lease.lastPaymentDate ? format(new Date(lease.lastPaymentDate), 'MMM d, yyyy') : 'No payment recorded'}
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>

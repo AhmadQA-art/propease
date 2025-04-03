@@ -12,7 +12,6 @@ import {
   HelpCircle,
   FileSignature
 } from 'lucide-react';
-import UserProfile from './UserProfile';
 
 const menuItems = [
   { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
@@ -78,8 +77,6 @@ export default function Sidebar() {
           <HelpCircle className="h-5 w-5 mr-3" />
           <span>Help Center</span>
         </Link>
-
-        <UserProfile />
       </div>
     </div>
   );

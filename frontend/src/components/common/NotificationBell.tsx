@@ -83,19 +83,19 @@ const NotificationBell: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       <button 
         onClick={toggleNotifications}
-        className="h-10 w-10 flex items-center justify-center border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors relative"
+        className="h-8 w-8 flex items-center justify-center rounded-full bg-white hover:bg-gray-50 transition-colors relative shadow-sm"
         aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
       >
-        <Bell className="w-5 h-5 text-[#2C3539]" />
+        <Bell className="w-4 h-4 text-[#2C3539]" />
         {unreadCount > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
       
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50 border border-gray-100 max-h-[calc(100vh-150px)] overflow-auto">
+        <div className="absolute right-full mr-2 mt-0 w-80 bg-white rounded-md shadow-lg z-50 border border-gray-100 max-h-[calc(100vh-150px)] overflow-auto">
           <div className="p-3 border-b border-gray-100 flex justify-between items-center sticky top-0 bg-white">
             <h3 className="font-medium text-gray-700">Notifications</h3>
             {unreadCount > 0 && (

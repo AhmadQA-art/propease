@@ -171,6 +171,17 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
     }
   }, [formData.leaseType]);
 
+  useEffect(() => {
+    // When switching to month-to-month, clear any end date errors
+    if (formData.leaseType === 'month-to-month') {
+      setErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors.endDate;
+        return newErrors;
+      });
+    }
+  }, [formData.leaseType]);
+
   const calculateNextPaymentDate = () => {
     try {
       const startDate = new Date(formData.startDate);
@@ -290,14 +301,12 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
     } else {
       delete newErrors.startDate;
       
-      // Validate start date is not in the past
-      const start = new Date(startDate);
-      
-      // For Fixed Term leases, validate end date
-      if (formData.leaseType === 'fixed') {
+      // Only validate end date for fixed-term leases
+      if (formData.leaseType === 'fixed' && endDate) {
         if (!endDate) {
           newErrors.endDate = "End date is required for fixed-term leases";
         } else {
+          const start = new Date(startDate);
           const end = new Date(endDate);
           
           if (end <= start) {
@@ -307,7 +316,8 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
           }
         }
       } else {
-        // For month-to-month, we don't need an end date
+        // For month-to-month, we don't need to validate the end date
+        // since it's automatically calculated and not user-editable
         delete newErrors.endDate;
       }
     }
@@ -389,7 +399,8 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
       
-      if (endDate <= startDate) {
+      // Only validate end date relationship for fixed-term leases
+      if (formData.leaseType === 'fixed' && endDate <= startDate) {
         newErrors.endDate = "End date must be after start date";
       }
     }
@@ -464,22 +475,22 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
     }
   };
 
-  const getPaymentPeriodsEndDateForDB = (startDateStr: string): string => {
+  const calculateOneYearFromStartDate = (startDateStr: string): string => {
     if (!startDateStr) return '';
     
     try {
       const startDate = new Date(startDateStr);
       if (isNaN(startDate.getTime())) return '';
       
-      // Get date one year after start date (for 12 monthly payments)
+      // Get date one year after start date (e.g., 4/1/2025 -> 3/31/2026)
       const endDate = new Date(startDate);
       endDate.setFullYear(endDate.getFullYear() + 1);
       endDate.setDate(endDate.getDate() - 1); // Last day of the year period
       
-      // Format as YYYY-MM-DD for database
+      // Format as YYYY-MM-DD
       return endDate.toISOString().split('T')[0];
     } catch (error) {
-      console.error('Error calculating DB payment periods end date:', error);
+      console.error('Error calculating one year from start date:', error);
       return '';
     }
   };
@@ -488,7 +499,40 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
     e.preventDefault();
     
     if (!validateForm()) {
-      toast.error("Please fix the errors in the form before submitting");
+      // Create a more detailed error message that summarizes the validation issues
+      const errorSummary = Object.entries(errors)
+        .filter(([key, value]) => value) // Only include fields with error messages
+        .map(([key, value]) => {
+          // Format the error field names for better readability
+          let fieldName = key
+            .replace(/([A-Z])/g, ' $1') // Add space before capital letters (camelCase to words)
+            .replace(/_/g, ' ') // Replace underscores with spaces
+            .replace(/^./, str => str.toUpperCase()); // Capitalize first letter
+          
+          // Handle special cases for better readability
+          if (key.startsWith('charge_')) {
+            const parts = key.split('_');
+            if (parts.length >= 3) {
+              const index = parseInt(parts[2]) + 1; // Add 1 to make it 1-based for user readability
+              fieldName = `Additional Charge #${index} ${parts[1]}`;
+            }
+          }
+          
+          return `• ${fieldName}: ${value}`;
+        })
+        .join('\n');
+
+      if (errorSummary) {
+        toast.error(
+          <div>
+            <p><strong>Please fix the following errors:</strong></p>
+            <div style={{ marginTop: '8px', textAlign: 'left' }}>{errorSummary}</div>
+          </div>,
+          { duration: 6000 } // Increase duration so user has time to read all errors
+        );
+      } else {
+        toast.error("Please fix the errors in the form before submitting");
+      }
       return;
     }
     
@@ -504,23 +548,19 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
       
       const leaseStatus = determineLeaseTriggerStatus(
         formData.startDate, 
-        formData.leaseType === 'fixed' ? formData.endDate : null
+        formData.leaseType === 'fixed' ? formData.endDate : calculateOneYearFromStartDate(formData.startDate)
       );
       
-      // For month-to-month leases, calculate an end date for payment periods
-      // (for backend purposes only, the actual lease end date will be null)
-      let paymentPeriodsEndDate = null;
-      
-      if (formData.leaseType === 'month-to-month') {
-        // Calculate date one year from start date (for 12 monthly payments)
-        paymentPeriodsEndDate = getPaymentPeriodsEndDateForDB(formData.startDate);
-      }
-      
+      // Calculate one year from start date for month-to-month leases
+      const calculatedEndDate = formData.leaseType === 'fixed' 
+        ? formData.endDate 
+        : calculateOneYearFromStartDate(formData.startDate);
+
       const databaseLeaseData = {
         unit_id: formData.unit,
         tenant_id: selectedTenants.length > 0 ? selectedTenants[0].id : null,
         start_date: formData.startDate,
-        end_date: formData.leaseType === 'fixed' ? formData.endDate : null, // null for month-to-month
+        end_date: calculatedEndDate, // Use calculated end date for month-to-month
         rent_amount: formData.rentAmount,
         security_deposit: formData.hasDeposit ? formData.depositAmount : 0,
         status: leaseStatus,
@@ -540,7 +580,6 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
         security_deposit_status: formData.securityDepositStatus,
         rent_payment_status: formData.rentPaymentStatus,
         payment_status: formData.paymentStatus,
-        payment_periods_end_date: paymentPeriodsEndDate, // For backend calculations only
         documents: documents.map(doc => ({
           file: doc.file,
           document_status: doc.status,
@@ -719,32 +758,41 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                   required
                 />
                 {errors.startDate && <p className="text-xs text-red-500 mt-1">{errors.startDate}</p>}
-                
-                {/* Display calculated end period message for month-to-month leases */}
-                {formData.leaseType === 'month-to-month' && formData.startDate && (
-                  <div className="mt-2 text-gray-600">
-                    <span className="text-xs">
-                      <strong>Note:</strong> Payment periods will be calculated through <strong>{calculatePaymentPeriodsEndDate(formData.startDate)}</strong>. The lease will need to be renewed at that time.
-                    </span>
-                  </div>
-                )}
               </div>
 
-              {formData.leaseType === 'fixed' && (
-                <div>
-                  <label className="block text-sm font-medium text-[#2C3539] mb-2">
-                    End Date
-                  </label>
-                  <input
-                    type="date"
-                    className={`w-full px-4 py-2 border ${errors.endDate ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]`}
-                    value={formData.endDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                    required
-                  />
-                  {errors.endDate && <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>}
-                </div>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-[#2C3539] mb-2">
+                  End Date
+                </label>
+                {formData.leaseType === 'fixed' ? (
+                  <>
+                    <input
+                      type="date"
+                      className={`w-full px-4 py-2 border ${errors.endDate ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-[#2C3539]`}
+                      value={formData.endDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                      required
+                    />
+                    {errors.endDate && <p className="text-xs text-red-500 mt-1">{errors.endDate}</p>}
+                  </>
+                ) : (
+                  <>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50"
+                      value={formData.startDate ? new Date(new Date(formData.startDate).setFullYear(new Date(formData.startDate).getFullYear() + 1)).toISOString().split('T')[0] : ''}
+                      disabled
+                    />
+                    {formData.startDate && (
+                      <div className="mt-2 text-gray-600">
+                        <span className="text-xs">
+                          <strong>Note:</strong> Payment periods will be calculated through <strong>{calculatePaymentPeriodsEndDate(formData.startDate)}</strong>. The lease will need to be renewed at that time.
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -919,7 +967,7 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
                 </label>
                 <input
                   type="date"
-                  className="w-full px-4 py-2 border border-gray-200 bg-gray-50 rounded-lg"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50"
                   value={formData.nextPaymentDate}
                   readOnly
                   disabled
