@@ -1,15 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
-import { X, AlertCircle, Calendar, User, Search } from 'lucide-react';
+import { X, AlertCircle, Calendar, User, Search, Building } from 'lucide-react';
 import { Ticket } from '../types/maintenance';
 import { format } from 'date-fns';
+import { supabase } from '../config/supabase';
 
-// Mock vendors for demonstration
-const mockVendors = [
-  { id: '1', name: 'ABC Plumbing Services', specialty: 'Plumbing' },
-  { id: '2', name: 'XYZ Electrical Repairs', specialty: 'Electrical' },
-  { id: '3', name: 'Quick Fix HVAC', specialty: 'HVAC' },
-];
+interface Assignee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  display_name: string;
+  role?: string;
+}
+
+interface Vendor {
+  id: string;
+  vendor_name: string;
+  service_type: string;
+  contact_person_name?: string;
+}
 
 interface AddTicketDrawerProps {
   isOpen: boolean;
@@ -24,28 +33,153 @@ const initialFormData = {
   status: 'new' as const,
   openDate: new Date().toISOString(),
   scheduledDate: '',
-  vendorId: ''
+  assigneeId: '',
+  vendor_id: ''
 };
 
 export default function AddTicketDrawer({ isOpen, onClose, onAddTicket }: AddTicketDrawerProps) {
   const [formData, setFormData] = useState(initialFormData);
-
+  const [assigneeSearch, setAssigneeSearch] = useState('');
+  const [assignees, setAssignees] = useState<Assignee[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  // Vendor state
   const [vendorSearch, setVendorSearch] = useState('');
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [loadingVendors, setLoadingVendors] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
+
+  // Fetch assignees from Supabase
+  useEffect(() => {
+    const fetchAssignees = async () => {
+      if (!isOpen) return;
+      
+      try {
+        setLoading(true);
+        // Query team_members table to get valid assignees
+        const { data: teamMembersData, error: teamMembersError } = await supabase
+          .from('team_members')
+          .select(`
+            id,
+            user_id,
+            user_profiles (
+              id, 
+              first_name, 
+              last_name, 
+              email
+            )
+          `);
+        
+        if (teamMembersError) throw teamMembersError;
+        
+        // Format assignees for display
+        const formattedAssignees: Assignee[] = teamMembersData
+          .map(member => {
+            const user = member.user_profiles;
+            if (!user) return null;
+            
+            const firstName = user.first_name || '';
+            const lastName = user.last_name || '';
+            const fullName = `${firstName} ${lastName}`.trim();
+            
+            // Using email as fallback when name is empty
+            const displayName = fullName || user.email || `User-${user.id.substring(0, 8)}`;
+            
+            return {
+              id: user.id,
+              first_name: firstName,
+              last_name: lastName,
+              display_name: displayName,
+              role: 'Team Member'
+            };
+          })
+          .filter(Boolean) as Assignee[];
+        
+        setAssignees(formattedAssignees);
+      } catch (err) {
+        console.error('Error fetching assignees:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAssignees();
+  }, [isOpen]);
+  
+  // Fetch vendors from Supabase
+  useEffect(() => {
+    const fetchVendors = async () => {
+      if (!isOpen) return;
+      
+      try {
+        setLoadingVendors(true);
+        const { data, error } = await supabase
+          .from('vendors')
+          .select('id, vendor_name, service_type, contact_person_name')
+          .order('vendor_name');
+        
+        if (error) throw error;
+        
+        if (data) {
+          setVendors(data);
+        }
+      } catch (err) {
+        console.error('Error fetching vendors:', err);
+      } finally {
+        setLoadingVendors(false);
+      }
+    };
+    
+    fetchVendors();
+  }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAddTicket && onAddTicket({
-      ...formData,
-      scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate).toISOString() : undefined
-    });
+    
+    // Prepare the ticket data with proper database field mapping
+    const ticketData = {
+      title: formData.title,
+      description: formData.description,
+      priority: formData.priority,
+      status: 'new', // Always set status to 'new' for new tickets
+      openDate: new Date().toISOString(),
+      scheduledDate: formData.scheduledDate ? new Date(formData.scheduledDate).toISOString() : undefined,
+      assigneeId: formData.assigneeId || undefined,
+      vendor_id: formData.vendor_id || undefined
+    };
+    
+    // Let the parent component handle the actual API call to add the ticket
+    onAddTicket && onAddTicket(ticketData);
+    
+    // Reset form and close drawer
     setFormData(initialFormData);
+    setVendorSearch('');
+    setAssigneeSearch('');
+    setSelectedVendor(null);
     onClose();
   };
 
-  const filteredVendors = mockVendors.filter(vendor => 
-    vendor.name.toLowerCase().includes(vendorSearch.toLowerCase()) ||
-    vendor.specialty.toLowerCase().includes(vendorSearch.toLowerCase())
-  );
+  const filteredAssignees = assignees.filter(assignee => {
+    const fullName = `${assignee.first_name} ${assignee.last_name}`.toLowerCase();
+    return fullName.includes(assigneeSearch.toLowerCase()) ||
+      (assignee.role && assignee.role.toLowerCase().includes(assigneeSearch.toLowerCase()));
+  });
+  
+  const filteredVendors = vendors.filter(vendor => {
+    if (!vendorSearch) return true;
+    
+    const vendorNameLower = vendor.vendor_name.toLowerCase();
+    const serviceTypeLower = vendor.service_type?.toLowerCase() || '';
+    const contactPersonLower = vendor.contact_person_name?.toLowerCase() || '';
+    
+    const searchTermLower = vendorSearch.toLowerCase();
+    
+    return (
+      vendorNameLower.includes(searchTermLower) ||
+      serviceTypeLower.includes(searchTermLower) ||
+      contactPersonLower.includes(searchTermLower)
+    );
+  });
 
   return (
     <Dialog
@@ -81,14 +215,6 @@ export default function AddTicketDrawer({ isOpen, onClose, onAddTicket }: AddTic
               {/* Content */}
               <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                 <div className="px-6 py-4 space-y-6">
-                  {/* Note */}
-                  <div className="flex items-start gap-2 p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-blue-700">
-                      New tickets will automatically be assigned a status of "New" and the current date.
-                    </p>
-                  </div>
-
                   {/* Title */}
                   <div>
                     <label htmlFor="title" className="block text-sm font-medium text-[#2C3539] mb-1">
@@ -149,7 +275,7 @@ export default function AddTicketDrawer({ isOpen, onClose, onAddTicket }: AddTic
                   {/* Schedule */}
                   <div>
                     <label htmlFor="scheduledDate" className="block text-sm font-medium text-[#2C3539] mb-1">
-                      Schedule <span className="text-red-500">*</span>
+                      Schedule (Due Date) <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B7280]" />
@@ -164,13 +290,70 @@ export default function AddTicketDrawer({ isOpen, onClose, onAddTicket }: AddTic
                     </div>
                   </div>
 
-                  {/* Assign Vendor */}
+                  {/* Assign User */}
                   <div>
-                    <label htmlFor="vendorSearch" className="block text-sm font-medium text-[#2C3539] mb-1">
-                      Assign Vendor
+                    <label htmlFor="assigneeSearch" className="block text-sm font-medium text-[#2C3539] mb-1">
+                      Assign To
                     </label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B7280]" />
+                      <input
+                        type="text"
+                        id="assigneeSearch"
+                        placeholder="Search users"
+                        className="mt-1 block w-full rounded-lg border border-gray-200 px-3 py-2 pl-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2C3539] text-[#2C3539] placeholder-[#6B7280]"
+                        value={assigneeSearch}
+                        onChange={(e) => setAssigneeSearch(e.target.value)}
+                      />
+                    </div>
+
+                    {loading && (
+                      <div className="mt-2 p-3 text-center text-sm text-gray-500">
+                        Loading users...
+                      </div>
+                    )}
+
+                    {!loading && (assigneeSearch || formData.assigneeId) && (
+                      <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                        {filteredAssignees.length > 0 ? (
+                          filteredAssignees.map((assignee) => (
+                            <div 
+                              key={assignee.id} 
+                              className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${formData.assigneeId === assignee.id ? 'bg-blue-50' : ''}`}
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, assigneeId: assignee.id }));
+                                setAssigneeSearch(`${assignee.first_name} ${assignee.last_name}`);
+                              }}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="text-sm font-medium text-[#2C3539]">
+                                    {assignee.display_name}
+                                  </p>
+                                  <p className="text-xs text-[#6B7280]">{assignee.role}</p>
+                                </div>
+                                {formData.assigneeId === assignee.id && (
+                                  <User className="w-4 h-4 text-blue-500" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-gray-500">
+                            No users found matching "{assigneeSearch}"
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Vendor Selection (Optional) */}
+                  <div>
+                    <label htmlFor="vendorSearch" className="block text-sm font-medium text-[#2C3539] mb-1">
+                      Vendor (Optional)
+                    </label>
+                    <div className="relative">
+                      <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#6B7280]" />
                       <input
                         type="text"
                         id="vendorSearch"
@@ -180,35 +363,64 @@ export default function AddTicketDrawer({ isOpen, onClose, onAddTicket }: AddTic
                         onChange={(e) => setVendorSearch(e.target.value)}
                       />
                     </div>
-
-                    {(vendorSearch || formData.vendorId) && (
-                      <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
-                        {filteredVendors.map((vendor) => (
-                          <div 
-                            key={vendor.id} 
-                            className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${formData.vendorId === vendor.id ? 'bg-blue-50' : ''}`}
-                            onClick={() => {
-                              setFormData(prev => ({ ...prev, vendorId: vendor.id }));
-                              setVendorSearch(vendor.name);
-                            }}
-                          >
-                            <div className="flex justify-between items-center">
-                              <div>
-                                <p className="text-sm font-medium text-[#2C3539]">{vendor.name}</p>
-                                <p className="text-xs text-[#6B7280]">{vendor.specialty}</p>
-                              </div>
-                              {formData.vendorId === vendor.id && (
-                                <User className="w-4 h-4 text-blue-500" />
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                    
+                    {loadingVendors && (
+                      <div className="mt-2 p-3 text-center text-sm text-gray-500">
+                        Loading vendors...
                       </div>
                     )}
-
-                    {formData.vendorId && (
-                      <div className="mt-2 text-sm text-[#2C3539]">
-                        Selected Vendor: {mockVendors.find(v => v.id === formData.vendorId)?.name}
+                    
+                    {/* Selected Vendor Display */}
+                    {formData.vendor_id && selectedVendor && !vendorSearch && (
+                      <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-sm font-medium text-[#2C3539]">{selectedVendor.vendor_name}</p>
+                            <p className="text-xs text-[#6B7280] capitalize">{selectedVendor.service_type}</p>
+                          </div>
+                          <button
+                            type="button"
+                            className="p-1 text-gray-400 hover:text-gray-600"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, vendor_id: '' }));
+                              setSelectedVendor(null);
+                            }}
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!loadingVendors && vendorSearch && (
+                      <div className="mt-2 max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                        {filteredVendors.length > 0 ? (
+                          filteredVendors.map((vendor) => (
+                            <div 
+                              key={vendor.id} 
+                              className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${formData.vendor_id === vendor.id ? 'bg-blue-50' : ''}`}
+                              onClick={() => {
+                                setFormData(prev => ({ ...prev, vendor_id: vendor.id }));
+                                setSelectedVendor(vendor);
+                                setVendorSearch('');
+                              }}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="text-sm font-medium text-[#2C3539]">{vendor.vendor_name}</p>
+                                  <p className="text-xs text-[#6B7280] capitalize">{vendor.service_type}</p>
+                                </div>
+                                {formData.vendor_id === vendor.id && (
+                                  <Building className="w-4 h-4 text-blue-500" />
+                                )}
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-gray-500">
+                            No vendors found matching "{vendorSearch}"
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -220,14 +432,14 @@ export default function AddTicketDrawer({ isOpen, onClose, onAddTicket }: AddTic
                 <div className="flex justify-end space-x-3">
                   <button
                     type="button"
-                    className="px-4 py-2 text-sm font-medium text-[#6B7280] hover:text-[#2C3539] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2C3539]"
+                    className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-[#6B7280] hover:bg-gray-50 transition-colors"
                     onClick={onClose}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#2C3539] hover:bg-[#3d474c] rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#2C3539]"
+                    className="px-4 py-2 bg-[#2C3539] text-white rounded-lg text-sm font-medium hover:bg-[#3d474c] transition-colors"
                   >
                     Create Ticket
                   </button>

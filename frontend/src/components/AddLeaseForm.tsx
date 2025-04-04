@@ -62,9 +62,9 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
   });
 
   const [documents, setDocuments] = useState<LeaseDocument[]>([]);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingLeases, setExistingLeases] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     const fetchIssuers = async () => {
@@ -148,6 +148,34 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
     
     fetchTenants();
   }, []);
+
+  useEffect(() => {
+    const fetchExistingLeases = async () => {
+      if (!formData.unit) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('leases')
+          .select('id, start_date, end_date, status')
+          .eq('unit_id', formData.unit)
+          .in('status', ['Active', 'Pending']); // Only consider active or pending leases for overlap
+        
+        if (error) {
+          console.error('Error fetching existing leases:', error);
+          return;
+        }
+        
+        setExistingLeases({
+          ...existingLeases,
+          [formData.unit]: data || []
+        });
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+    
+    fetchExistingLeases();
+  }, [formData.unit]);
 
   useEffect(() => {
     if (formData.startDate && formData.paymentDay) {
@@ -314,15 +342,89 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
           } else {
             delete newErrors.endDate;
           }
+          
+          // Check for overlapping leases when both start and end dates are valid
+          if (start < end && formData.unit && existingLeases[formData.unit]) {
+            const overlap = checkLeaseOverlap(
+              start,
+              end,
+              existingLeases[formData.unit]
+            );
+            
+            if (overlap) {
+              newErrors.dateOverlap = `This unit already has a lease during this period (${new Date(overlap.start_date).toLocaleDateString()} to ${overlap.end_date ? new Date(overlap.end_date).toLocaleDateString() : 'ongoing'})`;
+            } else {
+              delete newErrors.dateOverlap;
+            }
+          }
         }
-      } else {
-        // For month-to-month, we don't need to validate the end date
-        // since it's automatically calculated and not user-editable
+      } else if (formData.leaseType === 'month-to-month') {
+        // For month-to-month leases, only validate the start date for overlaps
+        const start = new Date(startDate);
+        
+        if (formData.unit && existingLeases[formData.unit]) {
+          // For month-to-month, we consider a one-year period for checking overlap
+          const projectedEnd = new Date(start);
+          projectedEnd.setFullYear(projectedEnd.getFullYear() + 1);
+          
+          const overlap = checkLeaseOverlap(
+            start,
+            projectedEnd,
+            existingLeases[formData.unit]
+          );
+          
+          if (overlap) {
+            newErrors.dateOverlap = `This unit already has a lease during this period (${new Date(overlap.start_date).toLocaleDateString()} to ${overlap.end_date ? new Date(overlap.end_date).toLocaleDateString() : 'ongoing'})`;
+          } else {
+            delete newErrors.dateOverlap;
+          }
+        }
+        
+        // For month-to-month, we don't need to validate end date otherwise
         delete newErrors.endDate;
       }
     }
     
     setErrors(newErrors);
+  };
+
+  const checkLeaseOverlap = (
+    newStart: Date,
+    newEnd: Date,
+    existingLeases: Array<{
+      id: string;
+      start_date: string;
+      end_date: string | null;
+      status: string;
+    }>
+  ) => {
+    for (const lease of existingLeases) {
+      const existingStart = new Date(lease.start_date);
+      const existingEnd = lease.end_date ? new Date(lease.end_date) : null;
+      
+      // Case 1: New lease starts during an existing lease
+      // newStart >= existingStart && (newStart <= existingEnd || existingEnd === null)
+      if (newStart >= existingStart && 
+          (existingEnd === null || newStart <= existingEnd)) {
+        return lease;
+      }
+      
+      // Case 2: New lease ends during an existing lease
+      // newEnd >= existingStart && (newEnd <= existingEnd || existingEnd === null)
+      if (newEnd >= existingStart && 
+          (existingEnd === null || newEnd <= existingEnd)) {
+        return lease;
+      }
+      
+      // Case 3: New lease completely contains an existing lease
+      // newStart <= existingStart && (newEnd >= existingEnd || existingEnd === null)
+      if (newStart <= existingStart && 
+          (existingEnd === null || newEnd >= existingEnd)) {
+        return lease;
+      }
+    }
+    
+    return null; // No overlap found
   };
 
   const handleAddCharge = () => {
@@ -395,6 +497,43 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
       }
     }
 
+    if (formData.startDate) {
+      if (formData.leaseType === 'fixed' && formData.endDate) {
+        // Check for lease overlaps with fixed-term lease
+        const start = new Date(formData.startDate);
+        const end = new Date(formData.endDate);
+        
+        if (start < end && formData.unit && existingLeases[formData.unit]) {
+          const overlap = checkLeaseOverlap(
+            start,
+            end,
+            existingLeases[formData.unit]
+          );
+          
+          if (overlap) {
+            newErrors.dateOverlap = `This unit already has a lease during this period (${new Date(overlap.start_date).toLocaleDateString()} to ${overlap.end_date ? new Date(overlap.end_date).toLocaleDateString() : 'ongoing'})`;
+          }
+        }
+      } else if (formData.leaseType === 'month-to-month') {
+        // Check for lease overlaps with month-to-month lease
+        const start = new Date(formData.startDate);
+        const projectedEnd = new Date(start);
+        projectedEnd.setFullYear(projectedEnd.getFullYear() + 1);
+        
+        if (formData.unit && existingLeases[formData.unit]) {
+          const overlap = checkLeaseOverlap(
+            start,
+            projectedEnd,
+            existingLeases[formData.unit]
+          );
+          
+          if (overlap) {
+            newErrors.dateOverlap = `This unit already has a lease during this period (${new Date(overlap.start_date).toLocaleDateString()} to ${overlap.end_date ? new Date(overlap.end_date).toLocaleDateString() : 'ongoing'})`;
+          }
+        }
+      }
+    }
+
     if (formData.startDate && formData.endDate) {
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
@@ -404,27 +543,6 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
         newErrors.endDate = "End date must be after start date";
       }
     }
-
-    const allowedFrequencies = ['Daily', 'Weekly', 'Every 2 Weeks', 'Monthly', 'Every 2 Months', 'Quarterly', 'Every 6 Months', 'Annually'];
-    if (!allowedFrequencies.includes(formData.rentFrequency)) {
-      newErrors.rentFrequency = "Invalid payment frequency";
-    }
-
-    if (documents.length === 0) {
-      newErrors.documents = "At least one lease document must be uploaded";
-    }
-
-    charges.forEach((charge, index) => {
-      if (!charge.type) {
-        newErrors[`charge_type_${index}`] = "Charge type is required";
-      }
-      if (!charge.description) {
-        newErrors[`charge_description_${index}`] = "Charge description is required";
-      }
-      if (isNaN(charge.amount) || charge.amount <= 0) {
-        newErrors[`charge_amount_${index}`] = "Charge amount must be greater than 0";
-      }
-    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -703,14 +821,14 @@ export default function AddLeaseForm({ properties, onSubmit }: AddLeaseFormProps
               >
                 <option value="">Select a unit</option>
                 {selectedProperty?.units
-                  ?.filter(unit => unit.isAvailable)
                   .map((unit) => (
                     <option key={unit.id} value={unit.id}>
-                      Unit {unit.number}
+                      Unit {unit.number}{!unit.isAvailable ? ' (Has Active Lease)' : ''}
                     </option>
                   ))}
               </select>
               {errors.unit && <p className="text-xs text-red-500 mt-1">{errors.unit}</p>}
+              {errors.dateOverlap && <p className="text-xs text-red-500 mt-1">{errors.dateOverlap}</p>}
             </div>
           </div>
         </div>

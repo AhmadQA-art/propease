@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Building2, User, Bell, Mail, MessageCircle, Smartphone, Calendar } from 'lucide-react';
+import { X, Building2, User, Bell, Mail, MessageCircle, Smartphone, Calendar, Tool, DollarSign } from 'lucide-react';
 
 interface Announcement {
   id: string;
@@ -9,7 +9,7 @@ interface Announcement {
     properties: string[];
     tenants: string[];
   };
-  method: ('email' | 'sms' | 'in-app')[];
+  method: ('email' | 'sms' | 'whatsapp')[];
   createdAt: Date;
   status: 'scheduled' | 'sent' | 'draft';
   author: {
@@ -18,6 +18,7 @@ interface Announcement {
   };
   scheduledDate?: string;
   scheduledTime?: string;
+  type: string;
 }
 
 interface AnnouncementDrawerProps {
@@ -37,14 +38,27 @@ const getStatusColor = (status: Announcement['status']) => {
   }
 };
 
-const getMethodIcon = (method: 'email' | 'sms' | 'in-app') => {
+const getMethodIcon = (method: 'email' | 'sms' | 'whatsapp') => {
   switch (method) {
     case 'email':
       return <Mail className="w-4 h-4 text-blue-500" />;
     case 'sms':
       return <Smartphone className="w-4 h-4 text-green-500" />;
-    case 'in-app':
-      return <MessageCircle className="w-4 h-4 text-purple-500" />;
+    case 'whatsapp':
+      return <MessageCircle className="w-4 h-4 text-green-500" />;
+  }
+};
+
+const getTypeIcon = (type: string) => {
+  switch (type) {
+    case 'maintenance notice':
+      return <Tool className="w-4 h-4 text-orange-500" />;
+    case 'rent payment reminder':
+      return <DollarSign className="w-4 h-4 text-blue-500" />;
+    case 'community event':
+      return <Calendar className="w-4 h-4 text-green-500" />;
+    default:
+      return <Bell className="w-4 h-4 text-gray-500" />;
   }
 };
 
@@ -72,7 +86,8 @@ export default function AnnouncementDrawer({
       <div className="p-6 space-y-6">
         {/* Announcement Header */}
         <div>
-          <h3 className="text-lg font-semibold text-[#2C3539] mb-2">
+          <h3 className="text-lg font-semibold text-[#2C3539] mb-2 flex items-center gap-2">
+            {getTypeIcon(announcement.type)}
             {announcement.title}
           </h3>
           <div className="mb-2">

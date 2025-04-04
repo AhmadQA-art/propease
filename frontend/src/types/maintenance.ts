@@ -3,12 +3,13 @@ export interface Ticket {
   title: string;
   description: string;
   priority: 'low' | 'medium' | 'high';
-  status: 'new' | 'in-progress' | 'resolved';
+  status: 'new' | 'inprogress' | 'paused' | 'completed';
   openDate: string;
   scheduledDate?: string;
-  vendorId: string;
-  createdAt?: string;
-  updatedAt?: string;
+  assigneeId?: string;
+  createdAt: string;
+  updatedAt: string;
+  vendor_id?: string;
 }
 
 export interface TaskActivity {
@@ -24,9 +25,11 @@ export interface TaskActivity {
 
 export interface TicketHistory {
   id: number;
-  action: 'status_change' | 'comment' | 'created';
-  description: string;
-  user: string;
-  timestamp: Date;
-  type: 'update' | 'comment' | 'create';
+  action: 'status_change' | 'comment' | 'assignee_change';
+  timestamp: string;
+  content: string;
+  user?: {
+    name: string;
+    avatar?: string;
+  };
 }

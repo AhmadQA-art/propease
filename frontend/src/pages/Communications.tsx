@@ -3,7 +3,7 @@ import TabHeader from '../components/tabs/TabHeader';
 import Announcements from '../components/communications/Announcements';
 import CommunicationsLog from '../components/communications/CommunicationsLog';
 
-const tabs = ['Announcements', 'Communications Log'];
+const tabs = ['Announcements']; // Removed 'Communications Log' to hide this feature
 
 export default function Communications() {
   const [activeTab, setActiveTab] = useState('Announcements');
@@ -23,7 +23,7 @@ export default function Communications() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-[#2C3539]">Communications</h1>
-        <p className="text-[#6B7280] mt-1">Manage announcements and communication logs</p>
+        <p className="text-sm text-[#6B7280] mt-1">Manage announcements for tenants</p>
       </div>
 
       <TabHeader

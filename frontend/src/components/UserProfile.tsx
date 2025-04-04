@@ -55,7 +55,7 @@ export default function UserProfile() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-full mr-2 top-0 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-50">
+        <div className="absolute right-0 bottom-full mb-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-2 z-50">
           <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-sm font-medium text-[#2C3539] truncate">
               {`${userProfile.first_name || ''} ${userProfile.last_name || ''}`}
