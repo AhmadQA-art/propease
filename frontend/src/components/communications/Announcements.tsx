@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Calendar, Building2, User, Bell, Filter, Tool, DollarSign } from 'lucide-react';
+import { Search, Plus, Calendar, Building2, User, Bell, Filter, Wrench, DollarSign } from 'lucide-react';
 import CreateAnnouncementDialog from './CreateAnnouncementDialog';
 import AnnouncementDrawer from './AnnouncementDrawer';
 import { format, parseISO } from 'date-fns';
@@ -58,7 +58,7 @@ const getStatusColor = (status: Announcement['status']) => {
 const getTypeIcon = (type: string) => {
   switch (type) {
     case 'maintenance notice':
-      return <Tool className="w-4 h-4 text-orange-500" />;
+      return <Wrench className="w-4 h-4 text-orange-500" />;
     case 'rent payment reminder':
       return <DollarSign className="w-4 h-4 text-blue-500" />;
     case 'community event':
