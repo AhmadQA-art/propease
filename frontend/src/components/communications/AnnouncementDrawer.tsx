@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Building2, User, Bell, Mail, MessageCircle, Smartphone, Calendar, Tool, DollarSign } from 'lucide-react';
+import { X, Building2, User, Bell, Mail, MessageCircle, Smartphone, Calendar, Wrench, DollarSign } from 'lucide-react';
 
 interface Announcement {
   id: string;
@@ -52,7 +52,7 @@ const getMethodIcon = (method: 'email' | 'sms' | 'whatsapp') => {
 const getTypeIcon = (type: string) => {
   switch (type) {
     case 'maintenance notice':
-      return <Tool className="w-4 h-4 text-orange-500" />;
+      return <Wrench className="w-4 h-4 text-orange-500" />;
     case 'rent payment reminder':
       return <DollarSign className="w-4 h-4 text-blue-500" />;
     case 'community event':
