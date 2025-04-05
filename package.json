@@ -26,6 +26,9 @@
     "concurrently": "^9.1.2"
   },
   "dependencies": {
-    "react-phone-number-input": "^3.4.12"
+    "dotenv": "^16.4.7",
+    "node-fetch": "^2.7.0",
+    "react-phone-number-input": "^3.4.12",
+    "react-select": "^5.10.1"
   }
 }

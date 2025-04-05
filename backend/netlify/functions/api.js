@@ -7,6 +7,7 @@ const app = express();
 const authRoutes = require('../../src/routes/auth.routes');
 const rentalRoutes = require('../../src/routes/rental.routes');
 // ... other route imports
+const dashboardRoutes = require('../../src/routes/dashboard.routes');
 
 // Middleware
 app.use(cors({
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use('/.netlify/functions/api/auth', authRoutes);
 app.use('/.netlify/functions/api/rentals', rentalRoutes);
 // ... other routes
+app.use('/.netlify/functions/api/dashboard', dashboardRoutes);
 
 // Export the handler
 exports.handler = serverless(app); 

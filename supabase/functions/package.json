@@ -1,0 +1,21 @@
+{
+  "name": "propease-edge-function-tests",
+  "version": "1.0.0",
+  "description": "Test scripts for Propease Supabase Edge Functions",
+  "private": true,
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.7.0"
+  },
+  "scripts": {
+    "test": "./test-runner.sh",
+    "debug": "node test-debug.js",
+    "test:api": "node test-infobip-api.js",
+    "setup": "./setup-environment.sh",
+    "test:email": "./test-runner.sh email",
+    "test:sms": "./test-runner.sh sms",
+    "test:whatsapp": "./test-runner.sh whatsapp",
+    "test:announcement": "./test-runner.sh announcement"
+  }
+}
