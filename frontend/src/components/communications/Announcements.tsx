@@ -28,7 +28,7 @@ interface Announcement {
   method: ('email' | 'sms' | 'whatsapp')[];
   type: string;
   createdAt: Date;
-  status: 'scheduled' | 'sent' | 'draft';
+  status: 'scheduled' | 'sent' | 'draft' | 'cancelled';
   author: {
     name: string;
     imageUrl?: string;
@@ -50,6 +50,8 @@ const getStatusColor = (status: Announcement['status']) => {
       return 'bg-blue-100 text-blue-800';
     case 'draft':
       return 'bg-gray-100 text-gray-800';
+    case 'cancelled':
+      return 'bg-red-100 text-red-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }
@@ -274,6 +276,7 @@ export default function Announcements() {
                     <option value="draft">Draft</option>
                     <option value="scheduled">Scheduled</option>
                     <option value="sent">Sent</option>
+                    <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
                 <div>
