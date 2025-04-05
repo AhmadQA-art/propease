@@ -23,9 +23,9 @@ interface CustomUnit {
   property_id?: string;
 }
 
-// Extend Property type to include property_type
-interface ExtendedProperty extends Property {
-  property_type?: 'residential' | 'commercial';
+// Update the ExtendedProperty interface to properly extend Property
+interface ExtendedProperty extends Omit<Property, 'property_type'> {
+  property_type: 'residential' | 'commercial';
 }
 
 export default function Rentals() {
@@ -45,25 +45,51 @@ export default function Rentals() {
   const filterButtonRef = useRef<HTMLButtonElement>(null);
 
   const transformPropertyToRentalDetails = (property: Property): RentalDetails => {
-    // Use type assertion to handle property_type
-    const extendedProperty = property as unknown as ExtendedProperty;
+    // Calculate statistics from units
+    const units = property.units || [];
+    const totalUnits = units.length;
+    const vacantUnits = units.filter(unit => unit.status === 'vacant').length;
+    const occupiedUnits = units.filter(unit => unit.status === 'occupied').length;
+    const occupancyRate = totalUnits > 0 ? (occupiedUnits / totalUnits) * 100 : 0;
+    
+    // Calculate monthly revenue from occupied units
+    const monthlyRevenue = units.reduce((total, unit) => {
+      if (unit.status === 'occupied') {
+        return total + (unit.rent_amount || 0);
+      }
+      return total;
+    }, 0);
+
     return {
-      ...property,
-      type: extendedProperty.property_type || 'residential', // Use property_type if available
-      unit: property.total_units,
-      status: 'active', // Default status
+      id: property.id,
       propertyName: property.name,
-      rentAmount: property.units?.[0]?.rentAmount || 0,
+      name: property.name,
+      address: property.address,
+      city: property.city,
+      state: property.state,
+      zipCode: property.zip_code,
+      // Use property_type if available, default to "residential" if not
+      type: property.property_type || 'residential',
+      totalUnits,
+      vacantUnits,
+      occupiedUnits,
+      occupancyRate,
+      monthlyRevenue,
+      units: units,
+      owner: property.owner ? {
+        id: property.owner.id,
+        name: `${property.owner.user?.first_name || ''} ${property.owner.user?.last_name || ''}`.trim(),
+        email: property.owner.user?.email || '',
+      } : undefined
     };
   };
 
   useEffect(() => {
-    if (isAuthenticated && userProfile?.organization_id && !dataLoadedRef.current) {
-      dataLoadedRef.current = true;
+    if (isAuthenticated) {
       loadRentals();
       loadPropertyOwnersAndManagers();
     }
-  }, [isAuthenticated, userProfile]);
+  }, [isAuthenticated, userProfile?.organization_id]);
 
   // Clean up ref when organization changes, not every time component unmounts
   useEffect(() => {
@@ -97,8 +123,20 @@ export default function Rentals() {
   }, [isFilterDropdownOpen]);
 
   const loadRentals = async () => {
-    if (!userProfile?.organization_id) {
-      setError('No organization found. Please contact support.');
+    if (!isAuthenticated) {
+      setError('Please log in to view rentals');
+      setLoading(false);
+      return;
+    }
+
+    if (!userProfile) {
+      setError('User profile not loaded');
+      setLoading(false);
+      return;
+    }
+
+    if (!userProfile.organization_id) {
+      setError('You are not associated with any organization. Please contact your administrator.');
       setLoading(false);
       return;
     }
@@ -106,11 +144,13 @@ export default function Rentals() {
     try {
       setLoading(true);
       setError(null);
+      console.log('Loading rentals for organization:', userProfile.organization_id);
       const data = await rentalService.getRentals(userProfile.organization_id);
       const transformedData = (data || []).map(transformPropertyToRentalDetails);
       setRentals(transformedData);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load rentals';
+      console.error('Error loading rentals:', message);
       setError(message);
       toast.error(message);
     } finally {
@@ -119,9 +159,15 @@ export default function Rentals() {
   };
 
   const loadPropertyOwnersAndManagers = async () => {
-    if (!userProfile?.organization_id) return;
+    if (!isAuthenticated || !userProfile) return;
+    
+    if (!userProfile.organization_id) {
+      console.warn('Cannot load owners and managers: No organization ID available');
+      return;
+    }
     
     try {
+      console.log('Loading owners and managers for organization:', userProfile.organization_id);
       const owners = await rentalService.getOwners(userProfile.organization_id);
       const managers = await rentalService.getPropertyManagers(userProfile.organization_id);
       
@@ -129,11 +175,12 @@ export default function Rentals() {
       setPropertyManagers(managers || []);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load owners and managers';
+      console.error('Error loading owners and managers:', message);
       toast.error(message);
     }
   };
 
-  const handleAddRental = async (data: { property: Omit<ExtendedProperty, 'id'>, units: Omit<CustomUnit, 'id' | 'property_id'>[]} ) => {
+  const handleAddRental = async (data: { property: Partial<ExtendedProperty>, units: Omit<CustomUnit, 'id' | 'property_id'>[]} ) => {
     if (!userProfile?.organization_id) {
       toast.error('No organization found. Please contact support.');
       return;
@@ -142,8 +189,9 @@ export default function Rentals() {
     try {
       const propertyData = {
         ...data.property,
-        organization_id: userProfile.organization_id
-      };
+        organization_id: userProfile.organization_id,
+        property_type: data.property.property_type || 'residential' // Ensure property_type is set
+      } as Omit<ExtendedProperty, 'id'>;
       
       await rentalService.createRental(propertyData, data.units);
       toast.success('Rental property added successfully');
@@ -170,12 +218,32 @@ export default function Rentals() {
     setIsFilterDropdownOpen(false);
   };
 
+  // Display appropriate message for unauthorized access
   if (!isAuthenticated) {
-    return <div>Please log in to view rentals.</div>;
+    return (
+      <div className="p-6 text-center">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-semibold text-[#2C3539] mb-4">Authentication Required</h2>
+          <p className="text-gray-600 mb-4">Please log in to view rentals.</p>
+        </div>
+      </div>
+    );
   }
 
   if (!userProfile?.organization_id) {
-    return <div>No organization found. Please contact support.</div>;
+    return (
+      <div className="p-6 text-center">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-xl font-semibold text-[#2C3539] mb-4">Organization Access Required</h2>
+          <p className="text-gray-600 mb-4">
+            You are not associated with any organization. Please contact your administrator to get access.
+          </p>
+          <p className="text-gray-500 text-sm">
+            Note: Users can only view and manage rentals within their assigned organization.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (showAddForm) {

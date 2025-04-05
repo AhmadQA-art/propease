@@ -12,20 +12,35 @@ import {
   HelpCircle,
   FileSignature
 } from 'lucide-react';
+import { featureFlags } from '../config/featureFlags';
 
-const menuItems = [
-  { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
-  { icon: Home, label: 'Rentals', href: '/rentals' },
-  { icon: FileSignature, label: 'Leases', href: '/leases' },
-  { icon: Users2, label: 'People', href: '/people' },
-  { icon: Wrench, label: 'Maintenance', href: '/maintenance' },
-  { icon: MessageSquare, label: 'Communications', href: '/communications' },
-  { icon: CreditCard, label: 'Payments', href: '/payments' },
-  { icon: DollarSign, label: 'Finances', href: '/finances' },
-];
+// Filter menu items based on feature flags
+const getMenuItems = () => {
+  const baseMenuItems = [
+    { icon: LayoutDashboard, label: 'Dashboard', href: '/' },
+    { icon: Home, label: 'Rentals', href: '/rentals' },
+    { icon: FileSignature, label: 'Leases', href: '/leases' },
+    { icon: Users2, label: 'People', href: '/people' },
+    { icon: Wrench, label: 'Maintenance', href: '/maintenance' },
+    { icon: MessageSquare, label: 'Communications', href: '/communications' },
+  ];
+  
+  // Conditionally add payment feature
+  if (featureFlags.enablePayments) {
+    baseMenuItems.push({ icon: CreditCard, label: 'Payments', href: '/payments' });
+  }
+  
+  // Conditionally add finance feature
+  if (featureFlags.enableFinances) {
+    baseMenuItems.push({ icon: DollarSign, label: 'Finances', href: '/finances' });
+  }
+  
+  return baseMenuItems;
+};
 
 export default function Sidebar() {
   const location = useLocation();
+  const menuItems = getMenuItems();
 
   const isActive = (href: string) => {
     return location.pathname === href;

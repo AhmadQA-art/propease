@@ -21,12 +21,14 @@ import Maintenance from './pages/Maintenance';
 import Communications from './pages/Communications';
 import Team from './pages/Team';
 import People from './pages/People';
+import MyAccount from './pages/MyAccount';
 import AutoApiTest from './components/AutoApiTest';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 // Import the entire module to avoid type issues
 import * as ReactHotToast from 'react-hot-toast';
 import ErrorBoundary from './components/ErrorBoundary';
+import { featureFlags } from './config/featureFlags';
 
 //UI Reference imports
 import UIReference from './pages/UIReference';
@@ -107,13 +109,21 @@ function MainRoutes() {
         <Route path="rentals/:id/edit" element={<RentalDetails mode="edit" />} />
         <Route path="leases" element={<Leases />} />
         <Route path="leases/add" element={<AddLease />} />
-        <Route path="finances" element={<Finances />} />
-        <Route path="payments" element={<Payments />} />
+        
+        {/* Feature-flagged routes */}
+        {featureFlags.enableFinances && (
+          <Route path="finances" element={<Finances />} />
+        )}
+        {featureFlags.enablePayments && (
+          <Route path="payments" element={<Payments />} />
+        )}
+        
         <Route path="documents" element={<Documents />} />
         <Route path="maintenance" element={<Maintenance />} />
         <Route path="communications" element={<Communications />} />
         <Route path="team" element={<Team />} />
         <Route path="people" element={<People />} />
+        <Route path="profile" element={<MyAccount />} />
         <Route path="auto-api-test" element={<AutoApiTest />} />
       </Route>
 

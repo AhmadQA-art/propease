@@ -7,6 +7,7 @@ export interface Column {
   label: string;
   render?: (row: Person) => React.ReactNode;
   skipDefaultRenderer?: boolean;
+  width?: string;
 }
 
 export interface PeopleTableProps {
@@ -112,19 +113,20 @@ const PeopleTable: React.FC<PeopleTableProps> = ({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-200">
+      <table className="w-full divide-y divide-gray-200 table-fixed">
         <thead className="bg-gray-50">
           <tr>
             {columns.map((column) => (
               <th
                 key={column.key}
+                style={column.width ? { width: column.width } : {}}
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                 onClick={() => onSort?.(column.key)}
               >
                 {column.label}
               </th>
             ))}
-            <th className="relative px-6 py-3">
+            <th className="relative px-6 py-3 w-10">
               <span className="sr-only">Actions</span>
             </th>
           </tr>
@@ -150,16 +152,22 @@ const PeopleTable: React.FC<PeopleTableProps> = ({
                 onClick={() => onRowClick?.(row)}
               >
                 {columns.map((column) => (
-                  <td key={column.key} className="px-6 py-4 whitespace-nowrap">
-                    {column.render ? (
-                      column.render(row)
-                    ) : column.key === 'name' && !column.skipDefaultRenderer ? (
-                      renderNameCell(row)
-                    ) : column.key === 'status' ? (
-                      renderStatusCell(row)
-                    ) : (
-                      <div className="text-sm text-gray-900">{row[column.key as keyof Person]}</div>
-                    )}
+                  <td 
+                    key={column.key} 
+                    style={column.width ? { width: column.width } : {}}
+                    className="px-6 py-4 whitespace-nowrap"
+                  >
+                    <div className="truncate">
+                      {column.render ? (
+                        column.render(row)
+                      ) : column.key === 'name' && !column.skipDefaultRenderer ? (
+                        renderNameCell(row)
+                      ) : column.key === 'status' ? (
+                        renderStatusCell(row)
+                      ) : (
+                        <div className="text-sm text-gray-900 truncate">{row[column.key as keyof Person]}</div>
+                      )}
+                    </div>
                   </td>
                 ))}
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium relative">

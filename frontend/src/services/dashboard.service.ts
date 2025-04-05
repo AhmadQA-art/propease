@@ -11,6 +11,37 @@ export interface DashboardData {
   maintenanceTrend: number;
 }
 
+export interface UserTask {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  priority: string;
+  due_date: string | null;
+  created_at: string;
+}
+
+// Function to update a task's status to completed
+export const completeTask = async (taskId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .update({ status: 'completed' })
+      .eq('id', taskId);
+    
+    if (error) {
+      console.error('Error completing task:', error);
+      return false;
+    }
+    
+    console.log('Task marked as completed:', taskId);
+    return true;
+  } catch (error) {
+    console.error('Error in completeTask:', error);
+    return false;
+  }
+};
+
 // Fallback data in case of errors
 const fallbackData: DashboardData = {
   totalProperties: 0,
@@ -21,6 +52,69 @@ const fallbackData: DashboardData = {
   unitTrend: 0,
   leaseTrend: 0,
   maintenanceTrend: 0
+};
+
+// Function to get tasks assigned to the current user
+export const getUserTasks = async (): Promise<UserTask[]> => {
+  try {
+    // Get user's session to ensure they're logged in
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.error('No active session found');
+      return [];
+    }
+
+    const userId = session.user.id;
+    console.log('Fetching tasks for user ID:', userId);
+
+    // First get the task IDs assigned to the user from the join table
+    const { data: assignedTasks, error: assignmentError } = await supabase
+      .from('task_assignees')
+      .select('task_id')
+      .eq('user_id', userId);
+
+    if (assignmentError) {
+      console.error('Error fetching task assignments:', assignmentError);
+      return [];
+    }
+
+    if (!assignedTasks || assignedTasks.length === 0) {
+      console.log('No tasks assigned to user');
+      return [];
+    }
+
+    // Extract task IDs from the assignments
+    const taskIds = assignedTasks.map(assignment => assignment.task_id);
+    console.log(`Found ${taskIds.length} task assignments for user`);
+
+    // Then fetch the actual task details
+    const { data: tasks, error: tasksError } = await supabase
+      .from('tasks')
+      .select('id, title, description, status, priority, due_date, created_at')
+      .in('id', taskIds);
+
+    if (tasksError) {
+      console.error('Error fetching task details:', tasksError);
+      return [];
+    }
+
+    if (!tasks) {
+      return [];
+    }
+
+    // Sort tasks by due date (nulls last)
+    const sortedTasks = [...tasks].sort((a, b) => {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    });
+
+    console.log('User tasks retrieved:', sortedTasks.length);
+    return sortedTasks;
+  } catch (error) {
+    console.error('Error in getUserTasks:', error);
+    return [];
+  }
 };
 
 export const getDashboardData = async (): Promise<DashboardData> => {

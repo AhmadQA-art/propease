@@ -1,33 +1,20 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { INFOBIP_CONFIG, corsHeaders, errorResponse, successResponse } from '../shared/infobip.ts';
-
-interface SendEmailRequest {
-  email: string;
-  subject: string;
-  text: string;
-  firstName?: string;
-  debug?: boolean;
-}
-
-serve(async (req: Request) => {
+serve(async (req)=>{
   // Handle CORS preflight request
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { 
+    return new Response('ok', {
       headers: corsHeaders,
       status: 200
     });
   }
-
   console.log("Processing send-email request");
-
   try {
     // Parse request body
     const requestData = await req.json();
-    const { email, subject, text, firstName = 'Tenant', debug = false }: SendEmailRequest = requestData;
-
+    const { email, subject, text, firstName = 'Tenant', debug = false } = requestData;
     console.log("Request payload:", JSON.stringify(requestData));
     console.log("INFOBIP_CONFIG available:", !!INFOBIP_CONFIG);
-
     // Check for debug mode
     if (debug) {
       console.log('Debug mode enabled, returning test response');
@@ -42,35 +29,30 @@ serve(async (req: Request) => {
         }
       });
     }
-
     // Validate request
     if (!email) {
       return errorResponse(400, 'Email address is required');
     }
-
     if (!subject) {
       return errorResponse(400, 'Subject is required');
     }
-
     if (!text) {
       return errorResponse(400, 'Email text is required');
     }
-
     // Create form data for Infobip API
     const formData = new FormData();
     formData.append('from', 'propease <ahmadmesbah@propeasesolutions.com>');
     formData.append('subject', subject);
-    
     // Add recipient with placeholder
-    const recipientJson = JSON.stringify({ 
-      to: email, 
-      placeholders: { firstName } 
+    const recipientJson = JSON.stringify({
+      to: email,
+      placeholders: {
+        firstName
+      }
     });
     formData.append('to', recipientJson);
-    
     // Add message content with placeholder
     formData.append('text', `Hi {{firstName}}, ${text}`);
-
     try {
       // Send email via Infobip API
       console.log(`Sending email to ${email} via Infobip API at ${INFOBIP_CONFIG.BASE_URL}`);
@@ -82,7 +64,6 @@ serve(async (req: Request) => {
         },
         body: formData
       });
-
       let data;
       try {
         data = await response.json();
@@ -93,7 +74,6 @@ serve(async (req: Request) => {
         console.log('Raw response:', rawText);
         return errorResponse(500, `Failed to parse API response: ${jsonError.message}, Raw response: ${rawText}`);
       }
-
       if (!response.ok) {
         console.error('Error from Infobip Email API:', JSON.stringify(data));
         return errorResponse(response.status, {
@@ -103,7 +83,6 @@ serve(async (req: Request) => {
           statusText: response.statusText
         });
       }
-
       console.log("Email sent successfully");
       return successResponse({
         message: 'Email sent successfully',
@@ -128,4 +107,4 @@ serve(async (req: Request) => {
       stack: error.stack
     });
   }
-}); 
+});

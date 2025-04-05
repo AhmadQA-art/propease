@@ -47,6 +47,12 @@ const updateUnit = async (
 export const rentalService = {
   // Get all rentals for user's organization
   async getRentals(organizationId: string) {
+    if (!organizationId) {
+      throw new Error('Organization ID is required to fetch rentals');
+    }
+    
+    console.log('Fetching rentals for organization:', organizationId);
+    
     const { data, error } = await supabase
       .from('properties')
       .select(`
@@ -76,12 +82,32 @@ export const rentalService = {
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: false });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      console.error('Error fetching rentals:', error);
+      throw new Error(`Failed to fetch rentals: ${error.message}`);
+    }
+    
+    if (!data || data.length === 0) {
+      console.log('No rentals found for organization:', organizationId);
+    } else {
+      console.log(`Found ${data.length} rentals for organization:`, organizationId);
+    }
+    
     return data as Property[];
   },
 
   // Get rental by ID
   async getRentalById(id: string, organizationId: string) {
+    if (!id) {
+      throw new Error('Rental ID is required');
+    }
+    
+    if (!organizationId) {
+      throw new Error('Organization ID is required to fetch rental details');
+    }
+    
+    console.log(`Fetching rental ${id} for organization: ${organizationId}`);
+    
     const { data, error } = await supabase
       .from('properties')
       .select(`
@@ -112,7 +138,22 @@ export const rentalService = {
       .eq('organization_id', organizationId)
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Check if this is a "not found" error, which could indicate unauthorized access
+      if (error.code === 'PGRST116') {
+        console.error(`Rental ${id} not found or not accessible for organization ${organizationId}`);
+        throw new Error(`Rental not found or you don't have permission to access it`);
+      }
+      
+      console.error(`Error fetching rental ${id}:`, error);
+      throw new Error(`Failed to fetch rental: ${error.message}`);
+    }
+    
+    if (!data) {
+      console.error(`Rental ${id} not found for organization ${organizationId}`);
+      throw new Error('Rental not found');
+    }
+    
     return data as Property;
   },
 

@@ -12,7 +12,7 @@ export PGHOST="aws-0-us-west-1.pooler.supabase.com"
 export PGPORT="5432"
 export PGUSER="postgres.ljojrcciojdprmvrtbdb"
 export PGDATABASE="postgres"
-export PGPASSWORD="ahmadmomo5007!"
+export PGPASSWORD="Ahmad98Momo5007!"
 
 # Output file
 SCHEMA_SQL="schema.sql"

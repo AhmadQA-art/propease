@@ -185,7 +185,8 @@ const getColumns = (tab: string): Column[] => {
           if (row.type !== 'vendor') return null;
           const vendor = row as Vendor;
           return vendor.vendor_name || vendor.company_name || vendor.company || 'Unknown Vendor';
-        }
+        },
+        width: '200px'
       },
       { 
         key: 'name', 
@@ -212,7 +213,8 @@ const getColumns = (tab: string): Column[] => {
             </div>
           );
         },
-        skipDefaultRenderer: true
+        skipDefaultRenderer: true,
+        width: '200px'
       },
       { 
         key: 'phone', 
@@ -223,7 +225,8 @@ const getColumns = (tab: string): Column[] => {
           
           // Use vendor's phone since contact_person_phone doesn't exist in the interface
           return vendor.phone || null;
-        }
+        },
+        width: '180px'
       },
       { 
         key: 'email', 
@@ -236,14 +239,16 @@ const getColumns = (tab: string): Column[] => {
           const emailToShow = vendor.contact_person_email || vendor.email || '';
           
           return emailToShow ? emailToShow : null;
-        }
+        },
+        width: '220px'
       },
       { key: 'service_type', label: 'Service Type',
         render: (row: Person) => {
           if (row.type !== 'vendor') return null;
           const vendor = row as Vendor;
           return vendor.service_type || 'Not specified';
-        }
+        },
+        width: '180px'
       }
     ]
   };
@@ -914,7 +919,7 @@ export default function People() {
       {(activeTab !== 'All People' || (userProfile?.email && isDevelopmentUser(userProfile.email))) && (
         <div className="mt-6 space-y-4">
           {activeTab !== 'Team' && (
-            <div className="w-full">
+            <div className={`w-full ${activeTab === 'Vendors' ? 'pr-2 overflow-x-auto' : ''}`}>
               <TableToolbar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -950,7 +955,15 @@ export default function People() {
             </div>
           )}
 
-          {renderContent()}
+          {activeTab === 'Vendors' ? (
+            <div className="pr-6 overflow-x-auto max-w-[calc(100vw-280px)]">
+              <div className="min-w-[800px] max-w-[1000px]">
+                {renderContent()}
+              </div>
+            </div>
+          ) : (
+            renderContent()
+          )}
         </div>
       )}
 
