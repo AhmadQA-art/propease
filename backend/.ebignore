@@ -1,0 +1,12 @@
+.git
+.gitignore
+node_modules
+npm-debug.log
+.DS_Store
+.env
+.env.development
+README.md
+backend_context.md
+API_DOCUMENTATION.md
+API_DOCS_README.md
+backend\ fix/ 
