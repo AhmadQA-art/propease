@@ -3,17 +3,18 @@ frontend:
   phases:
     preBuild:
       commands:
-        - nvm install 20  # Use Node 20 as per your requirement
+        - nvm install 20
         - nvm use 20
-        - cd frontend
-        - npm ci --cache .npm --prefer-offline
+        - npm ci
+        - npm install -g vite
     build:
       commands:
         - npm run build
   artifacts:
-    baseDirectory: frontend/dist  # Vite outputs to dist
+    baseDirectory: dist
     files:
       - '**/*'
   cache:
     paths:
-      - frontend/.npm/**/*
+      - node_modules/**/*
+      - .npm/**/*
