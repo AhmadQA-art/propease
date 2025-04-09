@@ -1,0 +1,74 @@
+name: Production CI/CD
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm ci
+      - name: Create deployment package
+        run: |
+          cd backend
+          mkdir -p .platform/hooks/prebuild
+          cat > .platform/hooks/prebuild/01_install_node.sh << 'EOL'
+          #!/bin/bash
+          curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm install 20
+          nvm use 20
+          nvm alias default 20
+          echo "Node.js version set to: $(node -v)"
+          EOL
+          chmod +x .platform/hooks/prebuild/01_install_node.sh
+          zip -r deploy.zip . -x "node_modules/*" "*.git*" "*.env*" "postman/*" "*.md" "dist/*" "netlify/*" "scripts/*"
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: propease-api
+          environment_name: production
+          version_label: prod-${{ github.sha }}
+          region: us-east-1
+          deployment_package: backend/deploy.zip
+          wait_for_environment_recovery: 300
+
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    needs: deploy-backend
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      - name: Build
+        run: |
+          cd frontend
+          npm run build
+      - name: Deploy to Amplify
+        uses: ambientlight/amplify-cli-action@0.3.0
+        with:
+          amplify_command: publish
+          amplify_env: prod
+          amplify_cli_token: ${{ secrets.AMPLIFY_CLI_TOKEN }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1 

@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npx vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "netlify:build": "vite build"
+    "amplify:build": "npm ci && npx vite build"
   },
   "dependencies": {
     "@chakra-ui/form-control": "^2.2.0",
@@ -43,7 +43,9 @@
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.50.1",
     "react-hot-toast": "^2.4.1",
+    "react-phone-number-input": "^3.4.12",
     "react-router-dom": "^6.22.3",
+    "react-select": "^5.10.1",
     "recharts": "^2.12.7",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
