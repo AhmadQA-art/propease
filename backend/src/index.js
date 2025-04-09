@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -33,6 +34,11 @@ app.use(cors(corsOptions));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
+
+// Health check endpoint for AWS Elastic Beanstalk
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 
 // Setup Swagger documentation
 setupSwagger(app);
@@ -96,12 +102,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-const port = process.env.PORT;
-app.listen(port, () => console.log(`Server running on port ${port}`));
-
-const server = app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API Documentation available at http://localhost:${PORT}/api-docs`);
+const port = process.env.PORT || 5001;
+const server = app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+  console.log(`API Documentation available at http://localhost:${port}/api-docs`);
 });
 
 // Handle server shutdown gracefully

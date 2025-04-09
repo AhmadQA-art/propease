@@ -1,9 +1,30 @@
-.git
-.gitignore
-node_modules
-npm-debug.log
-.DS_Store
+# Dependency directories
+node_modules/
+
+# Environment files (they will be set in Elastic Beanstalk)
 .env
+.env.*
+!.env.example
+
+# Development files
+.git/
+.github/
+.vscode/
+*.log
+npm-debug.log*
+
+# Documentation
+docs/
+postman/
+*.md
+
+# Build artifacts
+dist/
+build/
+netlify/
+
+.gitignore
+.DS_Store
 .env.development
 README.md
 backend_context.md
