@@ -33,6 +33,9 @@ jobs:
           EOL
           chmod +x .platform/hooks/prebuild/01_install_node.sh
           zip -r deploy.zip . -x "node_modules/*" "*.git*" "*.env*" "postman/*" "*.md" "dist/*" "netlify/*" "scripts/*"
+      - name: Get timestamp
+        id: timestamp
+        run: echo "::set-output name=timestamp::$(date +%s)"
       - name: Deploy to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v21
         with:
@@ -40,10 +43,11 @@ jobs:
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: Propease-Backend-2
           environment_name: Propease-Backend-2-env
-          version_label: prod-${{ github.sha }}
+          version_label: prod-${{ github.sha }}-${{ steps.timestamp.outputs.timestamp }}
           region: us-east-2
           deployment_package: backend/deploy.zip
           wait_for_environment_recovery: 300
+          use_existing_version_if_available: true
 
   deploy-frontend:
     runs-on: ubuntu-latest
