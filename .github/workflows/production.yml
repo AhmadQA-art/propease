@@ -38,10 +38,10 @@ jobs:
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: propease-api
-          environment_name: production
+          application_name: Propease-Backend-2
+          environment_name: Propease-Backend-2-env
           version_label: prod-${{ github.sha }}
-          region: us-east-1
+          region: us-east-2
           deployment_package: backend/deploy.zip
           wait_for_environment_recovery: 300
 
@@ -71,4 +71,4 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: us-east-1 
+          AWS_REGION: us-east-2 
