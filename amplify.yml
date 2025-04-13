@@ -10,6 +10,7 @@ frontend:
         - npm install --save react-phone-number-input react-select
     build:
       commands:
+        - export PATH="./node_modules/.bin:$PATH"
         - npm run amplify:build
   artifacts:
     baseDirectory: frontend/dist
