@@ -1,17 +1,10 @@
-// vite.config.cjs - CommonJS format
-/** @type {import('vite').UserConfig} */
-module.exports = {
-  // Try to load the plugin, but provide fallback if not available
-  plugins: [
-    (() => {
-      try {
-        return require('@vitejs/plugin-react')();
-      } catch (e) {
-        console.warn('Warning: @vitejs/plugin-react not available, building without React plugin');
-        return null;
-      }
-    })()
-  ].filter(Boolean), // Filter out null values
+const { defineConfig } = require('vite');
+const react = require('@vitejs/plugin-react');
+// const path = require('path'); // You might not need this if using Vite's alias
+
+// https://vitejs.dev/config/
+module.exports = defineConfig({
+  plugins: [react()],
   server: {
     port: 5173,
     hmr: {
@@ -28,6 +21,7 @@ module.exports = {
     },
     proxy: {
       '/api': {
+        // Make sure this target is correct for your backend if needed during development
         target: 'http://localhost:5001',
         changeOrigin: true,
         secure: false,
@@ -37,21 +31,16 @@ module.exports = {
   },
   resolve: {
     alias: {
-      '@': '/src',
+      // '@': path.resolve(__dirname, './src'), // Original way, might cause issues in some environments
+      '@': '/src', // Vite's recommended way for alias - Should work better
     },
-  },
-  css: {
-    postcss: './postcss.config.cjs',
   },
   build: {
     sourcemap: true,
-    outDir: 'dist',
     rollupOptions: {
       output: {
-        manualChunks: undefined,
+        manualChunks: undefined, // Keep this unless you have specific chunking needs
       },
     },
-    // Make sure to handle base URL for assets properly
-    assetsDir: 'assets',
   },
-}; 
+});

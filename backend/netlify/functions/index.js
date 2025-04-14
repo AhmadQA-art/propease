@@ -40,6 +40,27 @@ app.get('/health', (req, res) => {
   res.status(200).send('OK');
 });
 
+// Root route handler
+app.get('/', (req, res) => {
+  res.json({
+    status: 'Online',
+    name: 'PropEase API',
+    version: '1.0',
+    documentation: '/api-docs',
+    health: '/health',
+    test: '/api/test'
+  });
+});
+
+// Test route for verifying API access
+app.get('/api/test', (req, res) => {
+  res.json({
+    message: 'Backend API is running',
+    environment: process.env.NODE_ENV,
+    nodeVersion: process.version
+  });
+});
+
 // Setup Swagger documentation
 setupSwagger(app);
 

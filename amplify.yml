@@ -5,25 +5,21 @@ frontend:
       commands:
         - nvm install 20
         - nvm use 20
-        - cd frontend
-        - npm ci
-        - echo "Installing all dependencies..."
-        - npm i -D autoprefixer postcss tailwindcss
-        - echo "Creating CJS versions of config files..."
-        - cp postcss.config.js postcss.config.cjs
+        - cd propease/frontend  # Changed to match assumed structure
+        - npm install
+        - npm list vite  # Debug: Verify vite is installed
+        - npm install --save react-phone-number-input react-select
     build:
       commands:
-        - echo "Building with proper environment variables..."
-        - export NODE_ENV=production
-        - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
-        - echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
-        - echo "Using local node_modules/.bin/vite instead of npx"
-        - node --no-warnings ./node_modules/vite/bin/vite.js build --config vite.config.cjs
+        - pwd  # Debug: Confirm current directory
+        - ls -l node_modules/vite  # Debug: Check if vite package exists
+        - ls -l node_modules/.bin/vite  # Debug: Check if vite binary exists
+        - npm run build
   artifacts:
-    baseDirectory: frontend/dist
+    baseDirectory: propease/frontend/dist  # Adjusted to match new path
     files:
       - '**/*'
   cache:
     paths:
-      - frontend/node_modules/**/*
-      - node_modules/**/*
+      - propease/frontend/node_modules/**/*  # Adjusted cache path
+      - propease/frontend/.npm/**/*
