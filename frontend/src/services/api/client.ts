@@ -1,10 +1,20 @@
 import axios from 'axios';
 import { supabase } from '../supabase/client';
 
+// Get the API URL from environment variables
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
+// Determine if we're using a relative or absolute URL
+const isAbsoluteUrl = API_URL.startsWith('http://') || API_URL.startsWith('https://');
+
+// For relative URLs like '/api', use the current origin
+// For absolute URLs, use them directly
+const baseURL = isAbsoluteUrl ? API_URL : `${window.location.origin}${API_URL}`;
+
+console.log(`[API Client] Initializing with baseURL: ${baseURL} (from ${API_URL})`);
+
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

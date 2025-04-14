@@ -193,3 +193,86 @@ This update implements the frontend changes specified in the implementation plan
 - All dialogs use consistent styling and field layouts
 - Form validation is included for required fields
 - The Team View and team member invitation flow remain unchanged
+
+# PropEase Property Management Solution
+
+## Project Overview
+PropEase is a comprehensive property management system with a React frontend and Node.js/Express backend. The application is deployed using AWS services (Amplify for frontend and Elastic Beanstalk for backend).
+
+## Architecture
+- **Frontend**: React/TypeScript with Vite, deployed on AWS Amplify
+- **Backend**: Node.js/Express, deployed on AWS Elastic Beanstalk
+- **Database**: Supabase (PostgreSQL)
+
+## Deployment Configuration
+
+### Frontend (AWS Amplify)
+- Build configuration is in `amplify.yml`
+- Environment variables are set in `.env.production` and during the build process
+- API endpoint is configured to connect to the Elastic Beanstalk backend
+
+### Backend (AWS Elastic Beanstalk)
+- Configuration is in `.ebextensions` directory
+- Health check endpoint is at `/health`
+- Root route provides API status information
+- CORS is configured to allow requests from Amplify domains
+
+## Troubleshooting Common Issues
+
+### CORS Issues
+If experiencing CORS errors:
+1. Check the CORS configuration in `backend/src/config/cors.js`
+2. Ensure the Amplify domain is in the allowed origins list
+3. Verify that the backend is responding correctly to preflight requests
+
+### API Connection Issues
+If the frontend cannot connect to the backend:
+1. Verify that the API URL is correctly set in `.env.production` and `amplify.yml`
+2. Check the API client configuration in `frontend/src/services/api/client.ts`
+3. Ensure that AWS Elastic Beanstalk environment is healthy
+
+### Build Failures
+If the build process fails:
+1. Check `amplify.yml` for correct build commands
+2. Ensure Node.js version compatibility (using Node 20+)
+3. Verify that all dependencies are correctly specified in `package.json`
+
+### 404 Errors
+If experiencing 404 errors on API routes:
+1. Check that the route is properly defined in the backend's `index.js`
+2. Verify that the API client is using the correct base URL
+3. Check the network tab in browser DevTools to see the actual request URL
+
+## Development Setup
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Backend
+```bash
+cd backend
+npm install
+npm start
+```
+
+## Environment Variables
+
+### Frontend (.env.production)
+- `VITE_API_URL`: Backend API URL
+- `VITE_SUPABASE_URL`: Supabase project URL
+- `VITE_SUPABASE_ANON_KEY`: Supabase anonymous key
+- `NODE_ENV`: Production environment flag
+
+### Backend (.env)
+- `PORT`: Server port (default: 5001)
+- `NODE_ENV`: Environment name
+- `CORS_ORIGIN`: Allowed CORS origins
+
+## Testing the Deployment
+1. Frontend should be accessible at the Amplify URL
+2. Backend health check should return "OK" at `<backend-url>/health`
+3. API test endpoint should return status information at `<backend-url>/api/test`

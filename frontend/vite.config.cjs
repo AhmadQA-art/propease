@@ -48,5 +48,7 @@ module.exports = {
         manualChunks: undefined,
       },
     },
+    // Make sure to handle base URL for assets properly
+    assetsDir: 'assets',
   },
 }; 
