@@ -7,6 +7,7 @@ frontend:
         - nvm use 20
         - cd frontend
         - npm install
+        - npm install -g vite
     build:
       commands:
         - npm run build
