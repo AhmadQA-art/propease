@@ -5,21 +5,20 @@ frontend:
       commands:
         - nvm install 20
         - nvm use 20
-        - cd propease/frontend  # Changed to match assumed structure
-        - npm install
-        - npm list vite  # Debug: Verify vite is installed
-        - npm install --save react-phone-number-input react-select
+        - cd frontend
+        - npm ci
     build:
       commands:
-        - pwd  # Debug: Confirm current directory
-        - ls -l node_modules/vite  # Debug: Check if vite package exists
-        - ls -l node_modules/.bin/vite  # Debug: Check if vite binary exists
+        - echo "Building with proper environment variables..."
+        - export NODE_ENV=production
+        - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
+        - echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
         - npm run build
   artifacts:
-    baseDirectory: propease/frontend/dist  # Adjusted to match new path
+    baseDirectory: frontend/dist
     files:
       - '**/*'
   cache:
     paths:
-      - propease/frontend/node_modules/**/*  # Adjusted cache path
-      - propease/frontend/.npm/**/*
+      - frontend/node_modules/**/*
+      - node_modules/**/*
