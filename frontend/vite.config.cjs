@@ -1,9 +1,6 @@
-const { defineConfig } = require('vite');
-const react = require('@vitejs/plugin-react');
-
-// https://vitejs.dev/config/
-module.exports = defineConfig({
-  plugins: [react()],
+// vite.config.cjs - CommonJS format
+module.exports = {
+  plugins: [require('@vitejs/plugin-react')()],
   server: {
     port: 5173,
     hmr: {
@@ -29,7 +26,7 @@ module.exports = defineConfig({
   },
   resolve: {
     alias: {
-      '@': '/src', // Use Vite's path alias instead of path.resolve
+      '@': '/src',
     },
   },
   build: {
@@ -40,4 +37,4 @@ module.exports = defineConfig({
       },
     },
   },
-}); 
+}; 

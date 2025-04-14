@@ -7,12 +7,11 @@ frontend:
         - nvm use 20
         - cd frontend
         - npm install
-        - npm install -g vite@5.4.18
-        - npm install --save-dev @vitejs/plugin-react@4.3.4
+        - npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
     build:
       commands:
         - export NODE_ENV=production
-        - npx vite build --config vite.config.cjs
+        - ./node_modules/.bin/vite build --config vite.config.cjs
   artifacts:
     baseDirectory: frontend/dist
     files:
