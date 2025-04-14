@@ -15,7 +15,7 @@ frontend:
         - 'echo "Build directory: $(pwd)"'
         - ls -la
         - 'echo "Running custom build script..."'
-        - node build-amplify.js
+        - node build-amplify.cjs
         - 'echo "Build script completed"'
         - ls -la dist
   artifacts:
