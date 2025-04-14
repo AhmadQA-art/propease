@@ -8,10 +8,10 @@ frontend:
         - cd frontend
         - npm ci
         - npm install --save react-phone-number-input react-select
+        - npm install -g vite@5.1.4
     build:
       commands:
-        - export PATH="./node_modules/.bin:$PATH"
-        - npm run amplify:build
+        - vite build
   artifacts:
     baseDirectory: frontend/dist
     files:
