@@ -5,26 +5,11 @@ frontend:
       commands:
         - nvm install 20
         - nvm use 20
-        - node --version
-        - npm --version
         - cd frontend
-        - echo "Clearing npm cache to prevent caching issues"
-        - npm cache clean --force
-        - echo "Installing dependencies with explicit vite install"
         - npm install
-        - npm install --save react-phone-number-input react-select
-        - echo "Explicitly installing vite and checking its installation"
-        - npm install vite@5.1.4 --save-dev
-        - npm list vite
-        - ls -la node_modules/vite || echo "vite module not found!"
-        - npm rebuild
     build:
       commands:
-        - echo "Current directory: $(pwd)"
-        - echo "Contents of node_modules/.bin:"
-        - ls -la node_modules/.bin/ || echo "bin directory not found!"
-        - echo "Using npx to run vite directly"
-        - npx vite build || node build-amplify.js
+        - npm run build
   artifacts:
     baseDirectory: frontend/dist
     files:
