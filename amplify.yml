@@ -11,7 +11,8 @@ frontend:
     build:
       commands:
         - export NODE_ENV=production
-        - ./node_modules/.bin/vite build --config vite.config.cjs
+        - cd frontend
+        - npx vite build --config vite.config.cjs
   artifacts:
     baseDirectory: frontend/dist
     files:
