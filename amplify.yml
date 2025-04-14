@@ -9,16 +9,14 @@ frontend:
         - cd frontend
         - 'echo "After cd: $(pwd)"'
         - npm install
-        - npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
     build:
       commands:
         - export NODE_ENV=production
         - 'echo "Build directory: $(pwd)"'
         - ls -la
         - 'mkdir -p dist'
-        - 'cp -r src/* dist/'
-        - 'cp index.html dist/'
-        - 'echo "Build completed manually" > dist/build-info.txt'
+        - 'cp placeholder.html dist/index.html'
+        - 'echo "Placeholder site deployed" > dist/build-info.txt'
   artifacts:
     baseDirectory: frontend/dist
     files:
