@@ -6,9 +6,13 @@ frontend:
         - nvm install 20
         - nvm use 20
         - cd frontend
-        - npm ci
+        - npm install
+        - npm list vite
     build:
       commands:
+        - pwd
+        - ls -l node_modules/vite
+        - ls -l node_modules/.bin/vite
         - echo "Building with proper environment variables..."
         - export NODE_ENV=production
         - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
@@ -21,4 +25,3 @@ frontend:
   cache:
     paths:
       - frontend/node_modules/**/*
-      - node_modules/**/*
