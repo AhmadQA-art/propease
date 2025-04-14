@@ -5,13 +5,19 @@ frontend:
       commands:
         - nvm install 20
         - nvm use 20
+        - echo "Current directory (preBuild): $(pwd)"
+        - ls -la
         - cd frontend
+        - echo "After cd frontend (preBuild): $(pwd)"
+        - ls -la
         - npm install
         - npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
     build:
       commands:
         - export NODE_ENV=production
-        - cd frontend
+        - echo "Current directory (build): $(pwd)"
+        - ls -la
+        - echo "Current npm location: $(which npm)"
         - npx vite build --config vite.config.cjs
   artifacts:
     baseDirectory: frontend/dist
