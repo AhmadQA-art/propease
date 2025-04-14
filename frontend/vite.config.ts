@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,36 +12,32 @@ export default defineConfig({
       port: 5173,
       clientPort: 5173,
       overlay: true,
-      timeout: 30000
+      timeout: 30000,
     },
     watch: {
       usePolling: true,
-      interval: 1000
+      interval: 1000,
     },
     proxy: {
       '/api': {
         target: 'http://localhost:5001',
         changeOrigin: true,
-        secure: false
-      }
+        secure: false,
+      },
     },
-    host: true
+    host: true,
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': '/src', // Use Vite's path alias instead of path.resolve
     },
-  },
-  define: {
-    global: {},
-    'process.env': {}
   },
   build: {
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: undefined
-      }
-    }
-  }
+        manualChunks: undefined,
+      },
+    },
+  },
 });
