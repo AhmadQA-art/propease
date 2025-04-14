@@ -12,11 +12,14 @@ frontend:
         - ls -la
         - npm install
         - npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
+        - npm ls vite
+        - npm ls @vitejs/plugin-react
     build:
       commands:
         - export NODE_ENV=production
         - 'echo "Build directory: $(pwd)"'
         - ls -la
+        - 'echo "Checking if node_modules exists: $(ls -la node_modules | grep vite)"'
         - npm run build
   artifacts:
     baseDirectory: frontend/dist

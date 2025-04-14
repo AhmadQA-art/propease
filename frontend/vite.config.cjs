@@ -1,6 +1,17 @@
 // vite.config.cjs - CommonJS format
+/** @type {import('vite').UserConfig} */
 module.exports = {
-  plugins: [require('@vitejs/plugin-react')()],
+  // Try to load the plugin, but provide fallback if not available
+  plugins: [
+    (() => {
+      try {
+        return require('@vitejs/plugin-react')();
+      } catch (e) {
+        console.warn('Warning: @vitejs/plugin-react not available, building without React plugin');
+        return null;
+      }
+    })()
+  ].filter(Boolean), // Filter out null values
   server: {
     port: 5173,
     hmr: {
@@ -31,6 +42,7 @@ module.exports = {
   },
   build: {
     sourcemap: true,
+    outDir: 'dist',
     rollupOptions: {
       output: {
         manualChunks: undefined,
