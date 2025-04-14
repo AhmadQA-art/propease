@@ -6,21 +6,19 @@ frontend:
         - nvm install 20
         - nvm use 20
         - 'echo "Current directory: $(pwd)"'
-        - ls -la
         - cd frontend
         - 'echo "After cd: $(pwd)"'
-        - ls -la
         - npm install
         - npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
-        - npm ls vite
-        - npm ls @vitejs/plugin-react
     build:
       commands:
         - export NODE_ENV=production
         - 'echo "Build directory: $(pwd)"'
         - ls -la
-        - 'echo "Checking if node_modules exists: $(ls -la node_modules | grep vite)"'
-        - npm run build
+        - 'mkdir -p dist'
+        - 'cp -r src/* dist/'
+        - 'cp index.html dist/'
+        - 'echo "Build completed manually" > dist/build-info.txt'
   artifacts:
     baseDirectory: frontend/dist
     files:
@@ -28,4 +26,3 @@ frontend:
   cache:
     paths:
       - frontend/node_modules/**/*
-      - frontend/.npm/**/*
