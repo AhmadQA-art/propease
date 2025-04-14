@@ -14,9 +14,10 @@ frontend:
         - export NODE_ENV=production
         - 'echo "Build directory: $(pwd)"'
         - ls -la
-        - 'mkdir -p dist'
-        - 'cp placeholder.html dist/index.html'
-        - 'echo "Placeholder site deployed" > dist/build-info.txt'
+        - 'echo "Running custom build script..."'
+        - node build-amplify.js
+        - 'echo "Build script completed"'
+        - ls -la dist
   artifacts:
     baseDirectory: frontend/dist
     files:
