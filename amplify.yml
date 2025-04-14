@@ -9,6 +9,8 @@ frontend:
         - npm ci
         - echo "Installing all dependencies..."
         - npm i -D autoprefixer postcss tailwindcss
+        - echo "Creating CJS versions of config files..."
+        - cp postcss.config.js postcss.config.cjs
     build:
       commands:
         - echo "Building with proper environment variables..."
@@ -16,7 +18,7 @@ frontend:
         - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
         - echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
         - echo "Using local node_modules/.bin/vite instead of npx"
-        - ./node_modules/.bin/vite build --config vite.config.cjs
+        - node --no-warnings ./node_modules/vite/bin/vite.js build --config vite.config.cjs
   artifacts:
     baseDirectory: frontend/dist
     files:

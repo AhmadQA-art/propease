@@ -40,6 +40,9 @@ module.exports = {
       '@': '/src',
     },
   },
+  css: {
+    postcss: './postcss.config.cjs',
+  },
   build: {
     sourcemap: true,
     outDir: 'dist',
