@@ -12,8 +12,8 @@ frontend:
         - echo "Building with proper environment variables..."
         - export NODE_ENV=production
         - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
-        - echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
-        - cd frontend && npx --no-install vite build
+        - echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
+        - npx --no-install vite build
   artifacts:
     baseDirectory: frontend/dist
     files:
