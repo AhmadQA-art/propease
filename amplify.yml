@@ -7,13 +7,16 @@ frontend:
         - nvm use 20
         - cd frontend
         - npm ci
+        - echo "Installing all dependencies..."
+        - npm i -D autoprefixer postcss tailwindcss
     build:
       commands:
         - echo "Building with proper environment variables..."
         - export NODE_ENV=production
         - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
         - echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
-        - npm run build
+        - echo "Using local node_modules/.bin/vite instead of npx"
+        - ./node_modules/.bin/vite build --config vite.config.cjs
   artifacts:
     baseDirectory: frontend/dist
     files:
