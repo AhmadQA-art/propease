@@ -6,12 +6,12 @@ frontend:
         - nvm install 20
         - nvm use 20
         - cd frontend
-        - npm ci
+        - npm install
         - npm install --save react-phone-number-input react-select
-        - npm install -g vite@5.1.4
     build:
       commands:
-        - vite build
+        - ls -l node_modules/.bin/vite  # Debug: Verify vite binary exists
+        - npm run build
   artifacts:
     baseDirectory: frontend/dist
     files:
@@ -19,4 +19,4 @@ frontend:
   cache:
     paths:
       - frontend/node_modules/**/*
-      - frontend/.npm/**/* 
+      - frontend/.npm/**/*
