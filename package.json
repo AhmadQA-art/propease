@@ -25,6 +25,8 @@
     "update-postman": "npm run generate-swagger && node scripts/update-postman.js"
   },
   "devDependencies": {
+    "@esbuild/linux-x64": "^0.25.2",
+    "@rollup/rollup-linux-x64-gnu": "^4.40.0",
     "concurrently": "^9.1.2"
   },
   "dependencies": {
