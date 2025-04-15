@@ -1,40 +1,102 @@
-version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - nvm install 20
-        - nvm use 20
-        - ls -l
-        - if [ -d "frontend" ]; then echo "frontend/ exists"; else echo "frontend/ missing"; exit 1; fi
-        - rm -rf node_modules package-lock.json
-        - npm cache clean --force
-        - npm install --legacy-peer-deps
-        - npm list vite || echo "Vite not listed in root dependencies"
-        - npm install --workspaces --legacy-peer-deps --include=optional
-        - npm install --save-dev esbuild@0.21.5 @esbuild/linux-x64@0.21.5 @rollup/rollup-linux-x64-gnu client-only @tanstack/react-virtual --legacy-peer-deps
-        - cd frontend
-        - if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; fi
-        - echo "import { defineConfig } from 'vite'\nimport react from '@vitejs/plugin-react'\n\nexport default defineConfig({\n  plugins: [react()],\n  build: {\n    rollupOptions: {\n      external: ['client-only', '@tanstack/react-virtual']\n    }\n  }\n})" > vite.config.ts
-        - rm -rf node_modules package-lock.json
-        - npm install --no-optional --legacy-peer-deps
-        - npm list vite || { echo "Vite not listed in frontend dependencies"; exit 1; }
-        - ls -l node_modules/vite || { echo "Vite not found in frontend node_modules"; exit 1; }
-        - cd ..
-    build:
-      commands:
-        - echo "Building frontend application..."
-        - export NODE_ENV=production
-        - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
-        - mkdir -p frontend
-        - echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
-        - cd frontend
-        - npm run build
-  artifacts:
-    baseDirectory: frontend/dist
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - node_modules/**/*
-      - frontend/node_modules/**/*
+#!/bin/bash
+
+# Navigate to project root
+cd ~/Desktop/propease
+
+# PreBuild Phase
+echo "Starting PreBuild Phase..."
+
+# Verify Node version
+NODE_VERSION=$(node -v)
+echo "Node version: $NODE_VERSION"
+if [[ $NODE_VERSION != v20* && $NODE_VERSION != v22* ]]; then
+  echo "Error: Node.js version 20.x.x or 22.x.x is required. Current version: $NODE_VERSION"
+  exit 1
+fi
+
+# Debug: Show root directory contents
+ls -l
+
+# Check frontend directory
+if [ -d "frontend" ]; then
+  echo "frontend/ exists"
+else
+  echo "frontend/ missing"
+  exit 1
+fi
+
+# Install dependencies in root
+rm -rf node_modules package-lock.json
+npm cache clean --force
+npm install --legacy-peer-deps
+npm list vite || echo "Vite not listed in root dependencies"
+
+# Install workspace dependencies with optional dependencies
+npm install --workspaces --legacy-peer-deps --include=optional
+
+# Install specific versions of esbuild, Rollup native modules, and client-only
+npm install --save-dev esbuild@0.21.5 @esbuild/linux-x64@0.21.5 @rollup/rollup-linux-x64-gnu client-only @tanstack/react-virtual --legacy-peer-deps
+
+# Create or update Vite configuration with external imports
+if [ -f "frontend/vite.config.ts" ]; then
+  cp frontend/vite.config.ts frontend/vite.config.ts.bak
+  echo "import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      external: ['client-only', '@tanstack/react-virtual']
+    }
+  }
+})" > frontend/vite.config.ts
+else
+  cp frontend/vite.config.js frontend/vite.config.js.bak
+  echo "import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      external: ['client-only', '@tanstack/react-virtual']
+    }
+  }
+})" > frontend/vite.config.js
+fi
+
+# Install dependencies in frontend
+cd frontend
+rm -rf node_modules package-lock.json
+npm install --no-optional --legacy-peer-deps
+
+# Return to root
+cd ..
+
+# Build Phase
+echo "Starting Build Phase..."
+echo "Building frontend application..."
+
+# Set environment variables
+export NODE_ENV=production
+export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
+
+# Ensure frontend directory
+mkdir -p frontend
+
+# Create .env.production.local
+echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
+
+# Run build
+cd frontend
+rm -rf dist
+npm run build || { echo "Build failed"; exit 1; }
+
+# Verify output
+if [ -d "dist" ]; then
+  echo "Build successful: frontend/dist created"
+else
+  echo "Build failed: frontend/dist not found"
+  exit 1
+fi
