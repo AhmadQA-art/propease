@@ -7,19 +7,40 @@ frontend:
         - nvm use 20
         - ls -l
         - if [ -d "frontend" ]; then echo "frontend/ exists"; else echo "frontend/ missing"; exit 1; fi
+        - cd frontend
         - rm -rf node_modules package-lock.json
         - npm cache clean --force
         - npm install --legacy-peer-deps
-        - npm list vite || echo "Vite not listed in root dependencies"
-        - npm install --workspaces --legacy-peer-deps --include=optional
+        - npm list vite || echo "Vite not listed in dependencies"
+        - ls -l node_modules/vite || echo "Vite not found in frontend node_modules"
         - npm install --save-dev esbuild@0.21.5 @esbuild/linux-x64@0.21.5 @rollup/rollup-linux-x64-gnu client-only @tanstack/react-virtual --legacy-peer-deps
-        - cd frontend
-        - if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; fi
-        - echo "import { defineConfig } from 'vite'\nimport react from '@vitejs/plugin-react'\n\nexport default defineConfig({\n  plugins: [react()],\n  build: {\n    rollupOptions: {\n      external: ['client-only', '@tanstack/react-virtual']\n    }\n  }\n})" > vite.config.ts
-        - rm -rf node_modules package-lock.json
-        - npm install --no-optional --legacy-peer-deps
-        - npm list vite || { echo "Vite not listed in frontend dependencies"; exit 1; }
-        - ls -l node_modules/vite || { echo "Vite not found in frontend node_modules"; exit 1; }
+        - if [ -f "vite.config.ts" ]; then
+            cp vite.config.ts vite.config.ts.bak
+            echo "import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      external: ['client-only', '@tanstack/react-virtual']
+    }
+  }
+})" > vite.config.ts
+          else
+            cp vite.config.js vite.config.js.bak
+            echo "import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      external: ['client-only', '@tanstack/react-virtual']
+    }
+  }
+})" > vite.config.js
+          fi
         - cd ..
     build:
       commands:
@@ -36,5 +57,4 @@ frontend:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
       - frontend/node_modules/**/*

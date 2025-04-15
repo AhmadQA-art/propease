@@ -25,9 +25,12 @@
     "update-postman": "npm run generate-swagger && node scripts/update-postman.js"
   },
   "devDependencies": {
-    "@esbuild/linux-x64": "^0.25.2",
+    "@esbuild/linux-x64": "^0.21.5",
     "@rollup/rollup-linux-x64-gnu": "^4.40.0",
-    "concurrently": "^9.1.2"
+    "@tanstack/react-virtual": "^3.13.6",
+    "client-only": "^0.0.1",
+    "concurrently": "^9.1.2",
+    "esbuild": "^0.21.5"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
