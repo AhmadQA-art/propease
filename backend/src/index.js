@@ -34,30 +34,19 @@ app.use(cors(corsOptions));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint for AWS Elastic Beanstalk
+// Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).send('OK');
+  res.status(200).json({ status: 'healthy' });
 });
 
 // Root route handler
 app.get('/', (req, res) => {
-  res.json({
-    status: 'Online',
-    name: 'PropEase API',
-    version: '1.0',
-    documentation: '/api-docs',
-    health: '/health',
-    test: '/api/test'
-  });
-});
-
-// Test route for verifying API access
-app.get('/api/test', (req, res) => {
-  res.json({
-    message: 'Backend API is running',
-    environment: process.env.NODE_ENV,
-    nodeVersion: process.version
+  res.status(200).json({ 
+    message: 'PropEase API is running',
+    version: process.env.npm_package_version || '1.0.0',
+    environment: process.env.NODE_ENV
   });
 });
 
@@ -73,31 +62,9 @@ app.use('/auto', (req, res) => {
   res.redirect(307, targetUrl); // 307 maintains the original HTTP method
 });
 
-// List of API endpoints that need to be accessible directly without /api prefix
-const directApiAccess = [
-  'auth', 
-  'properties', 
-  'lease', 
-  'maintenance', 
-  'payment', 
-  'user', 
-  'rental', 
-  'people',
-  'invite',
-  'owners',
-  'departments'
-];
-
-// Add direct access to other API routes (for compatibility)
-directApiAccess.forEach(endpoint => {
-  app.use(`/${endpoint}`, (req, res) => {
-    const targetUrl = `/api/${endpoint}${req.url}`;
-    console.log(`Redirecting request from /${endpoint}${req.url} to ${targetUrl}`);
-    
-    // Redirect to the API endpoint with the /api prefix
-    res.redirect(307, targetUrl); // 307 maintains the original HTTP method
-  });
-});
+// Import and use API routes
+const apiRoutes = require('./routes');
+app.use('/api', apiRoutes);
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -116,24 +83,26 @@ app.use('/api/departments', departmentRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Global error handler:', err);
-  res.status(500).json({ 
-    error: 'Internal server error', 
-    details: err.message 
+  console.error(err.stack);
+  res.status(500).json({
+    status: 'error',
+    message: 'Internal Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-const port = process.env.PORT || 5001;
-const server = app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-  console.log(`API Documentation available at http://localhost:${port}/api-docs`);
+const PORT = process.env.PORT || 5001;
+const server = app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV}`);
 });
 
-// Handle server shutdown gracefully
+// Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
+  console.log('SIGTERM signal received. Closing HTTP server...');
   server.close(() => {
     console.log('HTTP server closed');
+    process.exit(0);
   });
 });
 
