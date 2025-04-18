@@ -6,18 +6,18 @@ frontend:
         - nvm install 20
         - nvm use 20
         - ls -l
-        - if [ -d "frontend" ]; then echo "frontend/ exists"; else echo "frontend/ missing"; exit 1; fi
+        - 'if [ -d "frontend" ]; then echo "frontend/ exists"; else echo "frontend/ missing"; exit 1; fi'
         - rm -rf node_modules package-lock.json
         - npm cache clean --force
         - npm install --legacy-peer-deps
-        - npm list vite || echo "Vite not listed in root dependencies"
+        - 'npm list vite || echo "Vite not listed in root dependencies"'
         - npm install --workspaces --legacy-peer-deps --include=optional
         - npm install --save-dev esbuild@0.21.5 @esbuild/linux-x64@0.21.5 @rollup/rollup-linux-x64-gnu client-only @tanstack/react-virtual --legacy-peer-deps
         - cd frontend
-        - if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; fi
-        - if [ -f "vite.config.js" ]; then cp vite.config.js vite.config.js.bak; fi
+        - 'if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; fi'
+        - 'if [ -f "vite.config.js" ]; then cp vite.config.js vite.config.js.bak; fi'
         - |
-          echo > vite.config.ts << 'EOF'
+          cat > vite.config.ts << 'EOF'
           import { defineConfig } from 'vite'
           import react from '@vitejs/plugin-react'
 
@@ -33,7 +33,7 @@ frontend:
         - rm -rf node_modules package-lock.json
         - npm install --no-optional --legacy-peer-deps
         - echo "Checking for Vite availability..."
-        - npx --no -- vite --version || { echo "ERROR: Vite is not available. Make sure it's installed via workspaces or locally."; exit 1; }
+        - 'npx --no -- vite --version || { echo "ERROR: Vite is not available. Make sure it is installed via workspaces or locally."; exit 1; }'
         - cd ..
     build:
       commands:
@@ -41,10 +41,10 @@ frontend:
         - export NODE_ENV=production
         - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
         - mkdir -p frontend
-        - echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
+        - 'echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local'
         - cd frontend
         - rm -rf dist
-        - npm run build || { echo "Build failed"; exit 1; }
+        - 'npm run build || { echo "Build failed"; exit 1; }'
   artifacts:
     baseDirectory: frontend/dist
     files:
