@@ -67,6 +67,9 @@ EOF
 rm -rf node_modules package-lock.json
 npm install --no-optional --legacy-peer-deps
 
+# Explicitly install Vite and the React plugin
+npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
+
 # Verify Vite is available (in workspace-aware way)
 echo "Checking for Vite availability..."
 npx --no -- vite --version || { 
