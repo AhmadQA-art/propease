@@ -37,39 +37,42 @@ npm install --workspaces --legacy-peer-deps --include=optional
 # Install specific versions of esbuild, Rollup native modules, and client-only
 npm install --save-dev esbuild@0.21.5 @esbuild/linux-x64@0.21.5 @rollup/rollup-linux-x64-gnu client-only @tanstack/react-virtual --legacy-peer-deps
 
+# Change to frontend directory
+cd frontend
+
 # Create or update Vite configuration with external imports
-if [ -f "frontend/vite.config.ts" ]; then
-  cp frontend/vite.config.ts frontend/vite.config.ts.bak
-  echo "import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  build: {
-    rollupOptions: {
-      external: ['client-only', '@tanstack/react-virtual']
-    }
-  }
-})" > frontend/vite.config.ts
-else
-  cp frontend/vite.config.js frontend/vite.config.js.bak
-  echo "import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  build: {
-    rollupOptions: {
-      external: ['client-only', '@tanstack/react-virtual']
-    }
-  }
-})" > frontend/vite.config.js
+if [ -f "vite.config.ts" ]; then
+  cp vite.config.ts vite.config.ts.bak
+fi
+if [ -f "vite.config.js" ]; then
+  cp vite.config.js vite.config.js.bak
 fi
 
+# Use the same syntax as in amplify.yml
+echo > vite.config.ts << 'EOF'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      external: ['client-only', '@tanstack/react-virtual']
+    }
+  }
+})
+EOF
+
 # Install dependencies in frontend
-cd frontend
 rm -rf node_modules package-lock.json
 npm install --no-optional --legacy-peer-deps
+
+# Verify Vite is available (in workspace-aware way)
+echo "Checking for Vite availability..."
+npx --no -- vite --version || { 
+  echo "ERROR: Vite is not available. Make sure it's installed via workspaces or locally."
+  exit 1
+}
 
 # Return to root
 cd ..
