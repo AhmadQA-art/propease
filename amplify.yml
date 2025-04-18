@@ -32,20 +32,18 @@ frontend:
           EOF
         - rm -rf node_modules package-lock.json
         - npm cache clean --force
-        # Install Vite globally to ensure it's available
-        - npm install -g vite@5.4.18
-        - npm install --no-optional --legacy-peer-deps
-        # Explicitly install Vite and the React plugin
+        # Install TypeScript to support .ts config files
+        - npm install --save-dev typescript
+        # Install Vite and React plugin locally (remove global install)
         - npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
+        - npm install --no-optional --legacy-peer-deps
         - echo "Checking for Vite availability..."
-        # Create a simple test file to verify Vite works
         - |
           echo "console.log('Vite test');" > vite-test.js
-          if command -v vite >/dev/null 2>&1; then
-            echo "Vite is available in PATH"
+          if ./node_modules/.bin/vite --version >/dev/null 2>&1; then
+            echo "Vite is available locally"
           else
-            echo "ERROR: Vite command not found in PATH"
-            npm list vite -g
+            echo "ERROR: Vite command not found locally"
             npm list vite
             exit 1
           fi
@@ -59,8 +57,9 @@ frontend:
         - 'echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local'
         - cd frontend
         - rm -rf dist
-        # Use direct path to vite from global install
-        - 'PATH="$PATH:$(npm bin -g)" npm run build || { echo "Build failed"; exit 1; }'
+        # Use the local Vite binary directly
+        - ./node_modules/.bin/vite build --mode production || { echo "Build failed"; exit 1; }
+        - cd ..
   artifacts:
     baseDirectory: frontend/dist
     files:
