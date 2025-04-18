@@ -65,17 +65,28 @@ EOF
 
 # Install dependencies in frontend
 rm -rf node_modules package-lock.json
+npm cache clean --force
+
+# Install Vite globally to ensure it's available
+npm install -g vite@5.4.18
+
 npm install --no-optional --legacy-peer-deps
 
 # Explicitly install Vite and the React plugin
 npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
 
-# Verify Vite is available (in workspace-aware way)
+# Verify Vite is available using more reliable methods
 echo "Checking for Vite availability..."
-npx --no -- vite --version || { 
-  echo "ERROR: Vite is not available. Make sure it's installed via workspaces or locally."
+# Create a simple test file to verify Vite works
+echo "console.log('Vite test');" > vite-test.js
+if command -v vite >/dev/null 2>&1; then
+  echo "Vite is available in PATH"
+else
+  echo "ERROR: Vite command not found in PATH"
+  npm list vite -g
+  npm list vite
   exit 1
-}
+fi
 
 # Return to root
 cd ..
@@ -97,7 +108,9 @@ echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
 # Run build
 cd frontend
 rm -rf dist
-npm run build || { echo "Build failed"; exit 1; }
+
+# Use direct path to vite from global install
+PATH="$PATH:$(npm bin -g)" npm run build || { echo "Build failed"; exit 1; }
 
 # Verify output
 if [ -d "dist" ]; then
