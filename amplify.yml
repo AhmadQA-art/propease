@@ -4,25 +4,20 @@ frontend:
   phases:
     preBuild:
       commands:
-        - nvm install 20
-        - nvm use 20
-        - rm -rf node_modules
-        - npm ci
-        - |
-          cat > postcss.config.cjs << 'EOF'
-          module.exports = { plugins: {} };
-          EOF
+        - "nvm install 20"
+        - "nvm use 20"
+        - "rm -rf node_modules"
+        - "npm ci"
+        - "echo 'module.exports = { plugins: {} };' > frontend/postcss.config.cjs"
     
     build:
       commands:
-        - export NODE_ENV=production
-        - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
+        - "export NODE_ENV=production"
+        - "export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com"
+        - "echo \"VITE_API_URL=$VITE_API_URL\" > frontend/.env.production.local"
         - |
-          cat > .env.production.local << 'EOF'
-          VITE_API_URL=$VITE_API_URL
-          EOF
-        - |
-          cat > vite.config.js << 'EOF'
+          # Create vite.config.js file with explicit root path
+          cat > frontend/vite.config.js << 'EOL'
           import { defineConfig } from 'vite';
           import react from '@vitejs/plugin-react';
           import path from 'path';
@@ -32,7 +27,7 @@ frontend:
 
           export default defineConfig({
             plugins: [react()],
-            root: __dirname,
+            root: __dirname, // Set the root to frontend directory
             resolve: {
               alias: {
                 '@': path.resolve(__dirname, './src'),
@@ -42,16 +37,19 @@ frontend:
               outDir: 'build',
             },
           });
-          EOF
-        - rm -rf dist build
-        - node_modules/.bin/vite build --mode production
-        - ls -la build || echo "WARNING: build directory does not exist!"
-        - pwd && ls -la . || echo "Listing directory contents for debugging"
+          EOL
+        - "rm -rf frontend/dist frontend/build"
+        - |
+          # Build using workspace-aware command with explicit root
+          echo "Building frontend with workspace command..."
+          cd frontend && ../node_modules/.bin/vite build --mode production
+        - "ls -la frontend/build || echo \"WARNING: frontend/build directory does not exist!\""
+        - "pwd && ls -la frontend || echo \"Listing frontend directory contents for debugging\""
 
   artifacts:
-    baseDirectory: build
+    baseDirectory: frontend/build
     files:
-      - '**/*'
+      - "**/*"
 
   cache:
     paths:
