@@ -48,14 +48,26 @@ npm cache clean --force
 echo "Installing frontend dependencies..."
 npm install --legacy-peer-deps
 
-# Create a simplified PostCSS config
+# Explicitly install Vite with exact version
+echo "Installing Vite and plugins explicitly..."
+npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4 autoprefixer postcss tailwindcss
+
+# Verify Vite installation - exactly like in amplify.yml
+if ./node_modules/.bin/vite --version >/dev/null 2>&1; then 
+  echo "Vite installed successfully"
+else 
+  echo "Vite installation failed"
+  exit 1
+fi
+
+# Create a simplified PostCSS config - exactly like in amplify.yml
 echo "module.exports = {plugins: {}};" > postcss.config.cjs
 
 # Set environment variables
 export NODE_ENV=production
 export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
 
-# Create .env.production.local
+# Create .env.production.local - exactly like in amplify.yml
 echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
 
 # Create Vite config using the same format as in amplify.yml
@@ -85,13 +97,13 @@ EOF
 echo "Cleaning previous build artifacts..."
 rm -rf dist build
 
-# Build with npx
-echo "Building with npx vite..."
-npx vite build
+# Build with local Vite binary - exactly like in amplify.yml
+echo "Building with local Vite binary..."
+./node_modules/.bin/vite build --mode production
 
-# Verify build output
+# Verify build output - exactly like in amplify.yml
 if [ -d "build" ]; then 
-  echo "Build successful in $(pwd)"
+  echo "Build successful"
 else
   echo "Build failed - build directory not found"
   exit 1
