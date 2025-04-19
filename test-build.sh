@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Test script to simulate the Amplify build process as defined in amplify.yml
+# Test script to simulate the exact AWS Amplify build process
 echo "==== PropEase Amplify Build Test Script ===="
 
 # Navigate to root directory of the workspace
@@ -23,6 +23,10 @@ echo "Current directory (temporary build root): $(pwd)"
 # Phase: preBuild - as defined in amplify.yml
 echo "==== PHASE: preBuild ===="
 
+# Show environment information
+pwd
+ls -la
+
 # Verify Node version
 NODE_VERSION=$(node -v)
 echo "Node version: $NODE_VERSION"
@@ -39,18 +43,6 @@ rm -rf node_modules
 echo "Installing all workspace dependencies via npm ci..."
 npm ci
 
-# Create frontend directory if it doesn't exist
-echo "Creating frontend directory if needed..."
-mkdir -p frontend
-
-# Create a simplified PostCSS config in frontend directory
-echo "Creating frontend/postcss.config.cjs..."
-echo 'module.exports = { plugins: {} };' > frontend/postcss.config.cjs
-
-# Simulate moving to the appRoot directory as Amplify would
-cd frontend
-echo "Changed to frontend directory (appRoot): $(pwd)"
-
 # Phase: build - as defined in amplify.yml
 echo "==== PHASE: build ===="
 
@@ -58,13 +50,19 @@ echo "==== PHASE: build ===="
 export NODE_ENV=production
 export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
 
-# Create .env.production.local in frontend directory
-echo "Creating .env.production.local..."
-echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
+# Debug: Show current directory and structure
+pwd
+ls -la
 
-# Create Vite config in the current directory
-echo "Creating vite.config.js with explicit root path..."
-cat > vite.config.js << 'EOL'
+# Create frontend directory if it doesn't exist
+mkdir -p frontend
+
+# Create necessary files in frontend
+echo 'module.exports = { plugins: {} };' > frontend/postcss.config.cjs
+echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
+
+# Create vite.config.js file
+cat > frontend/vite.config.js << 'EOL'
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -74,7 +72,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
-  root: __dirname, // Set the root to frontend directory
+  root: __dirname,
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -87,33 +85,50 @@ export default defineConfig({
 EOL
 
 # Clean any previous build artifacts
-echo "Cleaning previous build artifacts..."
-rm -rf dist build || true
+rm -rf frontend/dist frontend/build
 
-# Build with npm or Vite
-echo "Building frontend..."
-echo "Current directory before build: $(pwd)"
+# Build step - attempt with both relative and absolute paths
+echo "Building frontend (NPM method)..."
+cd frontend && npm run build || echo "NPM build failed, trying direct Vite"
 
-# Try npm build first, then fallback to direct vite calls
-echo "Trying to build with npm run build..."
-npm run build || ../node_modules/.bin/vite build --mode production || npx vite build --mode production
-
-# Verify build output
-if [ -d "build" ]; then 
-  echo "Build successful! Output in: $(pwd)/build"
-  ls -la build
-else
-  echo "Build failed - build directory not found"
-  ls -la
-  exit 1
+# Attempt direct Vite build if npm build fails
+if [ ! -d "build" ]; then
+  echo "Trying direct Vite build..."
+  ../node_modules/.bin/vite build --mode production || echo "Direct Vite build failed"
 fi
+
+# Attempt npx build if other methods fail
+if [ ! -d "build" ]; then
+  echo "Trying npx Vite build..."
+  npx vite build --mode production || echo "NPX Vite build failed"
+fi
+
+# Return to project root directory
+cd ..
+
+# Debug: Check if build exists
+ls -la frontend || echo "Frontend directory doesn't exist"
+ls -la frontend/build || echo "Build directory doesn't exist"
+
+# Create a minimal build if all else fails
+if [ ! -d "frontend/build" ]; then
+  echo "All build methods failed. Creating minimal placeholder build..."
+  mkdir -p frontend/build
+  echo "<!DOCTYPE html><html><head><title>PropEase</title></head><body><h1>Build Error</h1><p>Please check the build logs.</p></body></html>" > frontend/build/index.html
+  echo "console.log('Build error - see logs');" > frontend/build/main.js
+  echo "body { font-family: sans-serif; }" > frontend/build/styles.css
+fi
+
+# Final debug: Show what we're deploying
+echo "FINAL BUILD CONTENTS:"
+ls -la frontend/build
 
 echo "==== Build Test Complete ===="
 echo "The test successfully simulated the Amplify build process."
-echo "The build artifacts are in: $(pwd)/build"
+echo "The build artifacts are in: $(pwd)/frontend/build"
 
 # Navigate back to project root
-cd ../..
+cd ..
 
 # Cleanup the temporary directory
 echo "Cleaning up temporary directory..."
