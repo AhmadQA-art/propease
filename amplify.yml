@@ -1,0 +1,71 @@
+version: 1
+appRoot: frontend
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - |
+          echo "=== PREBUILD PHASE ==="
+          echo "Running in: $(pwd)"
+          
+          # Install Node.js
+          nvm install 20
+          nvm use 20
+          
+          # We're already in frontend dir due to appRoot, install dependencies from parent
+          echo "Installing dependencies from parent directory..."
+          cd ..
+          rm -rf node_modules
+          npm ci
+          echo "Dependencies installed at root level"
+          cd frontend
+          
+          # Create PostCSS config - notice NO frontend/ prefix as we're already in frontend/
+          echo "Creating postcss.config.cjs..."
+          echo 'module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };' > postcss.config.cjs
+    
+    build:
+      commands:
+        - |
+          echo "=== BUILD PHASE ==="
+          echo "Running in: $(pwd)"
+          
+          # Set environment variables
+          export NODE_ENV=production
+          export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
+          echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
+          
+          # Clean previous build output
+          echo "Cleaning previous build artifacts..."
+          rm -rf dist build .vite
+          
+          # Build with explicitly referenced Vite binary from root
+          echo "Building with Vite..."
+          if [ -f "../node_modules/.bin/vite" ]; then
+            echo "Using Vite from ../node_modules/.bin..."
+            ../node_modules/.bin/vite build --mode production
+          else
+            echo "Vite not found in expected location, trying npm..."
+            npm run build
+          fi
+          
+          # Verify build output
+          if [ -d "build" ]; then
+            echo "✅ Build successful! Output directory: build/"
+            ls -la build
+          else
+            echo "❌ ERROR: Build directory not found"
+            echo "Current directory: $(pwd)"
+            ls -la
+            exit 1
+          fi
+
+  artifacts:
+    # Path is relative to appRoot (frontend/), so just "build"
+    baseDirectory: build
+    files:
+      - '**/*'
+
+  cache:
+    paths:
+      - ../node_modules/**/*
