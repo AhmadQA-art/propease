@@ -43,6 +43,7 @@ frontend:
           EOL
         - "mkdir -p frontend"
         - "rm -rf frontend/dist frontend/build || true"
+        - "rm -rf build || true"  # Clean any build directory at root level
         - |
           # Build using workspace-aware command with explicit root
           echo "Building frontend with workspace command..."
@@ -50,12 +51,53 @@ frontend:
             echo "Creating frontend directory..."
             mkdir -p frontend
           fi
-          cd frontend && ../node_modules/.bin/vite build --mode production
-        - "ls -la frontend/build || echo \"WARNING: frontend/build directory does not exist!\""
-        - "pwd && ls -la frontend || echo \"Listing frontend directory contents for debugging\""
+          
+          # Execute the build
+          echo "Current directory: $(pwd)"
+          echo "Listing node_modules/.bin:"
+          ls -la node_modules/.bin/
+          
+          # Copy node_modules inside frontend if needed
+          if [ ! -d "frontend/node_modules" ]; then
+            echo "Creating frontend/node_modules symlink..."
+            mkdir -p frontend/node_modules
+            ln -sf ../node_modules/* frontend/node_modules/
+          fi
+          
+          # Actually run the build directly in frontend directory
+          echo "Running build in frontend directory..."
+          cd frontend && npm run build || ../node_modules/.bin/vite build --mode production || npx vite build --mode production
+          
+          # Debug output
+          echo "After build - Current directory: $(pwd)"
+          ls -la
+        - "pwd"
+        - "ls -la"
+        - |
+          # CRITICAL: Copy build output from frontend/build to build at root level
+          # This ensures artifacts are available in the baseDirectory location
+          if [ -d "frontend/build" ]; then
+            echo "Copying build artifacts from frontend/build to build at root level..."
+            mkdir -p ../build
+            cp -r build/* ../build/ || true
+          fi
+          
+          # Exit frontend directory to get back to root
+          cd ..
+          
+          # Verify the build artifacts exist at root level
+          if [ -d "build" ]; then
+            echo "Build artifacts successfully copied to root build directory"
+            ls -la build
+          else
+            echo "ERROR: No build directory found at root level"
+            pwd
+            ls -la
+          fi
+        - "ls -la build || echo \"WARNING: build directory does not exist at root level!\""
 
   artifacts:
-    baseDirectory: frontend/build
+    baseDirectory: build
     files:
       - "**/*"
 

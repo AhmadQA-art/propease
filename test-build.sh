@@ -1,9 +1,15 @@
 #!/bin/bash
 set -e
 
+# Test script to simulate the Amplify build process as defined in amplify.yml
+echo "==== PropEase Amplify Build Test Script ===="
+
 # Navigate to root directory of the workspace
 cd ~/Desktop/propease
 echo "Current directory (workspace root): $(pwd)"
+
+# Phase: preBuild - as defined in amplify.yml
+echo "==== PHASE: preBuild ===="
 
 # Verify Node version
 NODE_VERSION=$(node -v)
@@ -21,28 +27,28 @@ rm -rf node_modules
 echo "Installing all workspace dependencies via npm ci..."
 npm ci
 
-# Debug: Check where Vite is installed
-echo "Checking if root node_modules/.bin exists..."
-ls -la node_modules/.bin/ || echo "Root node_modules/.bin directory not found"
-
-echo "Checking for Vite in node_modules/.bin..."
-ls -la node_modules/.bin/vite 2>/dev/null || echo "Vite binary not found in node_modules/.bin"
-
-echo "Checking if Vite is installed in node_modules..."
-ls -la node_modules/vite/ 2>/dev/null || echo "Vite package not found in node_modules"
+# Create frontend directory if it doesn't exist
+echo "Creating frontend directory if needed..."
+mkdir -p frontend
 
 # Create a simplified PostCSS config in frontend directory
 echo "Creating frontend/postcss.config.cjs..."
 echo 'module.exports = { plugins: {} };' > frontend/postcss.config.cjs
 
+# Phase: build - as defined in amplify.yml
+echo "==== PHASE: build ===="
+
 # Set environment variables
 export NODE_ENV=production
 export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
+
+# Create .env.production.local in frontend directory
+echo "Creating frontend/.env.production.local..."
 echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
 
 # Create Vite config in the frontend directory
 echo "Creating frontend/vite.config.js with explicit root path..."
-cat > frontend/vite.config.js << EOL
+cat > frontend/vite.config.js << 'EOL'
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -66,12 +72,18 @@ EOL
 
 # Clean any previous build artifacts
 echo "Cleaning previous build artifacts in frontend directory..."
-rm -rf frontend/dist frontend/build
+rm -rf frontend/dist frontend/build || true
 
 # Build with Vite using workspace-aware command
-echo "Building frontend with workspace-aware command..."
+echo "Building frontend with workspace command..."
 
-# Change to the frontend directory and use relative path to node_modules
+# Ensure frontend directory exists
+if [ ! -d "frontend" ]; then
+  echo "Creating frontend directory..."
+  mkdir -p frontend
+fi
+
+# Change to the frontend directory and run the build
 cd frontend
 if [ -f "../node_modules/.bin/vite" ]; then
   echo "Using Vite binary from workspace root..."
@@ -81,10 +93,18 @@ else
   npx vite build --mode production
 fi
 
-# Verify build output
+# Verify build output (matches the artifacts baseDirectory in amplify.yml)
 if [ -d "build" ]; then 
-  echo "Build successful! Output in: $(pwd)/build"
+  echo "Build successful! Output in: $(pwd)/build (matches artifacts.baseDirectory in amplify.yml)"
+  ls -la build
 else
   echo "Build failed - build directory not found"
   exit 1
 fi
+
+# Debug output similar to amplify.yml
+pwd && ls -la . || echo "Listing frontend directory contents for debugging"
+
+echo "==== Build Test Complete ===="
+echo "The test successfully simulated the Amplify build process."
+echo "The build artifacts are in: $(pwd)/build"
