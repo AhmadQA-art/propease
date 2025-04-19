@@ -1,50 +1,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  const env = mode === 'production' ? 'production' : 'development';
-  
-  return {
-    plugins: [react()],
-    server: {
-      port: 5173,
-      hmr: {
-        protocol: 'ws',
-        host: 'localhost',
-        port: 5173,
-        clientPort: 5173,
-        overlay: true,
-        timeout: 30000,
-      },
-      watch: {
-        usePolling: true,
-        interval: 1000,
-      },
-      proxy: {
-        '/api': {
-          target: 'http://localhost:5001',
-          changeOrigin: true,
-          secure: false,
-        },
-      },
-      host: true,
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
     },
-    resolve: {
-      alias: {
-        '@': '/src',
-      },
-    },
-    build: {
-      sourcemap: true,
-      rollupOptions: {
-        output: {
-          manualChunks: undefined,
-        },
-      },
-    },
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(env)
-    }
-  };
-}); 
+  },
+  build: {
+    outDir: 'build',
+  },
+});

@@ -1,11 +1,14 @@
-const { build } = require('vite');
-const react = require('@vitejs/plugin-react');
-const path = require('path');
+import { build } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildApp() {
   try {
     await build({
-      plugins: [react.default()],
+      plugins: [react()],
       resolve: {
         alias: {
           '@': path.resolve(__dirname, './src'),

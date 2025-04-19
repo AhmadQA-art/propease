@@ -1,10 +1,9 @@
 #!/bin/bash
+set -e
 
 # Navigate to project root
 cd ~/Desktop/propease
-
-# PreBuild Phase
-echo "Starting PreBuild Phase..."
+echo "👉 Current directory: $(pwd)"
 
 # Verify Node version
 NODE_VERSION=$(node -v)
@@ -14,9 +13,6 @@ if [[ $NODE_VERSION != v20* && $NODE_VERSION != v22* ]]; then
   exit 1
 fi
 
-# Debug: Show root directory contents
-ls -l
-
 # Check frontend directory
 if [ -d "frontend" ]; then
   echo "frontend/ exists"
@@ -25,97 +21,78 @@ else
   exit 1
 fi
 
-# Install dependencies in root
-rm -rf node_modules package-lock.json
-npm cache clean --force
-npm install --legacy-peer-deps
-npm list vite || echo "Vite not listed in root dependencies"
-
-# Install workspace dependencies with optional dependencies
-npm install --workspaces --legacy-peer-deps --include=optional
-
-# Install specific versions of esbuild, Rollup native modules, and client-only
-npm install --save-dev esbuild@0.21.5 @esbuild/linux-x64@0.21.5 @rollup/rollup-linux-x64-gnu client-only @tanstack/react-virtual --legacy-peer-deps
-
-# Change to frontend directory
+# Navigate to frontend directory
+echo "Changing to frontend directory..."
 cd frontend
+echo "👉 Current directory: $(pwd)"
 
-# Create or update Vite configuration with external imports
+# Create backup of existing configuration files
 if [ -f "vite.config.ts" ]; then
   cp vite.config.ts vite.config.ts.bak
+  rm vite.config.ts
 fi
 if [ -f "vite.config.js" ]; then
   cp vite.config.js vite.config.js.bak
+  rm vite.config.js
+fi
+if [ -f "postcss.config.cjs" ]; then
+  cp postcss.config.cjs postcss.config.cjs.bak
 fi
 
-# Use the same syntax as in amplify.yml
-echo > vite.config.ts << 'EOF'
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-  build: {
-    rollupOptions: {
-      external: ['client-only', '@tanstack/react-virtual']
-    }
-  }
-})
-EOF
-
-# Install dependencies in frontend
+# Clean previous installations
+echo "Cleaning previous installations..."
 rm -rf node_modules package-lock.json
 npm cache clean --force
 
-# Install Vite globally to ensure it's available
-npm install -g vite@5.4.18
+# Install dependencies in frontend directory
+echo "Installing frontend dependencies in $(pwd)..."
+npm install --legacy-peer-deps
 
-npm install --no-optional --legacy-peer-deps
-
-# Explicitly install Vite and the React plugin
-npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
-
-# Verify Vite is available using more reliable methods
-echo "Checking for Vite availability..."
-# Create a simple test file to verify Vite works
-echo "console.log('Vite test');" > vite-test.js
-if command -v vite >/dev/null 2>&1; then
-  echo "Vite is available in PATH"
-else
-  echo "ERROR: Vite command not found in PATH"
-  npm list vite -g
-  npm list vite
-  exit 1
-fi
-
-# Return to root
-cd ..
-
-# Build Phase
-echo "Starting Build Phase..."
-echo "Building frontend application..."
+# Create a simplified PostCSS config that doesn't require plugins
+echo "module.exports = {plugins: {}};" > postcss.config.cjs
 
 # Set environment variables
 export NODE_ENV=production
 export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
 
-# Ensure frontend directory
-mkdir -p frontend
-
 # Create .env.production.local
-echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
+echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
 
-# Run build
-cd frontend
-rm -rf dist
+# Create Vite config - use ES module format since package.json has "type": "module"
+echo "Creating vite.config.js in $(pwd)..."
+cat > vite.config.js << 'EOF'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-# Use direct path to vite from global install
-PATH="$PATH:$(npm bin -g)" npm run build || { echo "Build failed"; exit 1; }
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-# Verify output
-if [ -d "dist" ]; then
-  echo "Build successful: frontend/dist created"
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    outDir: 'build',
+  },
+});
+EOF
+
+# Clean any previous build artifacts
+echo "Cleaning previous build artifacts in $(pwd)..."
+rm -rf dist build
+
+# Build with npx to ensure proper local dependency resolution
+echo "🧪 Building with npx vite in $(pwd)..."
+npx vite build
+
+# Verify build output
+if [ -d "build" ]; then 
+  echo "✅ Build completed successfully in $(pwd)!"
 else
-  echo "Build failed: frontend/dist not found"
+  echo "❌ Build failed - build directory not found"
   exit 1
 fi
