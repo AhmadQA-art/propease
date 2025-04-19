@@ -1,0 +1,45 @@
+version: 1
+appRoot: frontend
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing Node.js version 20.x.x (running in $(pwd))"
+        - nvm use 20 || nvm install 20
+        - node -v
+        - npm -v
+        - echo "Clearing npm cache"
+        - npm cache clean --force
+        - echo "Cleaning existing node_modules in $(pwd)"
+        - rm -rf node_modules
+        - echo "Installing autoprefixer, postcss, and tailwindcss globally"
+        - npm install -g autoprefixer postcss tailwindcss
+        - echo "Installing frontend dependencies (standalone mode) in $(pwd)"
+        - npm install --no-workspaces --verbose
+        - echo "Verifying autoprefixer installation"
+        - npm list autoprefixer || npm install autoprefixer
+    build:
+      commands:
+        - set -x
+        - echo "Setting environment variables (in $(pwd))"
+        - export NODE_ENV=production
+        - export VITE_API_URL=https://api.propease.com
+        - echo "Cleaning previous build in $(pwd)"
+        - rm -rf build
+        - echo "Building frontend with npx vite (in $(pwd))"
+        - npx vite build --mode production
+        - echo "Verifying build output exists in $(pwd)"
+        - |
+          if [ -d build ] && [ -f build/index.html ]; then
+            echo "✅ Build verified"
+          else
+            echo "❌ Build verification failed"
+            exit 1
+          fi
+  artifacts:
+    baseDirectory: build
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - node_modules/**/*

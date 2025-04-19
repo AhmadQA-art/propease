@@ -15,9 +15,9 @@
     "dev:backend": "npm run dev --workspace=backend",
     "build": "npm run build --workspaces",
     "build:frontend": "npm run build --workspace=frontend",
-    "build:amplify": "cd frontend && npm run build:amplify",
+    "build:amplify": "npm install autoprefixer postcss tailwindcss --no-save && cd frontend && npm run build:amplify",
     "build:frontend:standalone": "cd frontend && npm run build:standalone",
-    "amplify:build": "cd frontend && npm install --no-workspaces && npx vite build --mode production",
+    "amplify:build": "npm install autoprefixer postcss tailwindcss --no-save && cd frontend && npm install --no-workspaces && npx vite build --mode production",
     "start": "npm run start --workspace=backend",
     "lint": "npm run lint --workspaces",
     "test": "npm run test --workspaces",
@@ -32,7 +32,10 @@
     "@tanstack/react-virtual": "^3.13.6",
     "client-only": "^0.0.1",
     "concurrently": "^9.1.2",
-    "esbuild": "^0.21.5"
+    "esbuild": "^0.21.5",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
