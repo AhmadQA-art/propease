@@ -8,6 +8,18 @@ echo "==== PropEase Amplify Build Test Script ===="
 cd ~/Desktop/propease
 echo "Current directory (workspace root): $(pwd)"
 
+# Create a temporary directory to simulate the Amplify build environment
+TMP_BUILD_DIR=$(mktemp -d)
+echo "Creating temporary build directory at: $TMP_BUILD_DIR"
+
+# Copy project files to the temp directory
+echo "Copying project files to temporary directory..."
+cp -r . $TMP_BUILD_DIR
+
+# Change to the temporary directory
+cd $TMP_BUILD_DIR
+echo "Current directory (temporary build root): $(pwd)"
+
 # Phase: preBuild - as defined in amplify.yml
 echo "==== PHASE: preBuild ===="
 
@@ -35,6 +47,10 @@ mkdir -p frontend
 echo "Creating frontend/postcss.config.cjs..."
 echo 'module.exports = { plugins: {} };' > frontend/postcss.config.cjs
 
+# Simulate moving to the appRoot directory as Amplify would
+cd frontend
+echo "Changed to frontend directory (appRoot): $(pwd)"
+
 # Phase: build - as defined in amplify.yml
 echo "==== PHASE: build ===="
 
@@ -43,12 +59,12 @@ export NODE_ENV=production
 export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
 
 # Create .env.production.local in frontend directory
-echo "Creating frontend/.env.production.local..."
-echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
+echo "Creating .env.production.local..."
+echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
 
-# Create Vite config in the frontend directory
-echo "Creating frontend/vite.config.js with explicit root path..."
-cat > frontend/vite.config.js << 'EOL'
+# Create Vite config in the current directory
+echo "Creating vite.config.js with explicit root path..."
+cat > vite.config.js << 'EOL'
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
@@ -71,40 +87,36 @@ export default defineConfig({
 EOL
 
 # Clean any previous build artifacts
-echo "Cleaning previous build artifacts in frontend directory..."
-rm -rf frontend/dist frontend/build || true
+echo "Cleaning previous build artifacts..."
+rm -rf dist build || true
 
-# Build with Vite using workspace-aware command
-echo "Building frontend with workspace command..."
+# Build with npm or Vite
+echo "Building frontend..."
+echo "Current directory before build: $(pwd)"
 
-# Ensure frontend directory exists
-if [ ! -d "frontend" ]; then
-  echo "Creating frontend directory..."
-  mkdir -p frontend
-fi
+# Try npm build first, then fallback to direct vite calls
+echo "Trying to build with npm run build..."
+npm run build || ../node_modules/.bin/vite build --mode production || npx vite build --mode production
 
-# Change to the frontend directory and run the build
-cd frontend
-if [ -f "../node_modules/.bin/vite" ]; then
-  echo "Using Vite binary from workspace root..."
-  ../node_modules/.bin/vite build --mode production
-else
-  echo "Vite binary not found, trying with npx..."
-  npx vite build --mode production
-fi
-
-# Verify build output (matches the artifacts baseDirectory in amplify.yml)
+# Verify build output
 if [ -d "build" ]; then 
-  echo "Build successful! Output in: $(pwd)/build (matches artifacts.baseDirectory in amplify.yml)"
+  echo "Build successful! Output in: $(pwd)/build"
   ls -la build
 else
   echo "Build failed - build directory not found"
+  ls -la
   exit 1
 fi
-
-# Debug output similar to amplify.yml
-pwd && ls -la . || echo "Listing frontend directory contents for debugging"
 
 echo "==== Build Test Complete ===="
 echo "The test successfully simulated the Amplify build process."
 echo "The build artifacts are in: $(pwd)/build"
+
+# Navigate back to project root
+cd ../..
+
+# Cleanup the temporary directory
+echo "Cleaning up temporary directory..."
+rm -rf $TMP_BUILD_DIR
+
+echo "Test completed successfully!"

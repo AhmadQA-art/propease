@@ -1,5 +1,4 @@
 version: 1
-appRoot: frontend
 frontend:
   phases:
     preBuild:
@@ -10,17 +9,16 @@ frontend:
         - "npm ci"
         - "mkdir -p frontend"
         - "echo 'module.exports = { plugins: {} };' > frontend/postcss.config.cjs"
+        - "cd frontend"
     
     build:
       commands:
         - "export NODE_ENV=production"
         - "export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com"
-        - "mkdir -p frontend"
-        - "echo \"VITE_API_URL=$VITE_API_URL\" > frontend/.env.production.local"
+        - "echo \"VITE_API_URL=$VITE_API_URL\" > .env.production.local"
         - |
           # Create vite.config.js file with explicit root path
-          mkdir -p frontend
-          cat > frontend/vite.config.js << 'EOL'
+          cat > vite.config.js << 'EOL'
           import { defineConfig } from 'vite';
           import react from '@vitejs/plugin-react';
           import path from 'path';
@@ -41,63 +39,29 @@ frontend:
             },
           });
           EOL
-        - "mkdir -p frontend"
-        - "rm -rf frontend/dist frontend/build || true"
-        - "rm -rf build || true"  # Clean any build directory at root level
+        - "rm -rf dist build || true"
         - |
-          # Build using workspace-aware command with explicit root
+          # Build using workspace-aware command
           echo "Building frontend with workspace command..."
-          if [ ! -d "frontend" ]; then
-            echo "Creating frontend directory..."
-            mkdir -p frontend
-          fi
           
-          # Execute the build
-          echo "Current directory: $(pwd)"
-          echo "Listing node_modules/.bin:"
-          ls -la node_modules/.bin/
+          # Execute the build command directly
+          # Try npm run build first, then fallback to direct vite calls
+          echo "Current directory before build: $(pwd)"
+          echo "Trying to build with npm run build..."
+          npm run build || ../node_modules/.bin/vite build --mode production || npx vite build --mode production
           
-          # Copy node_modules inside frontend if needed
-          if [ ! -d "frontend/node_modules" ]; then
-            echo "Creating frontend/node_modules symlink..."
-            mkdir -p frontend/node_modules
-            ln -sf ../node_modules/* frontend/node_modules/
-          fi
-          
-          # Actually run the build directly in frontend directory
-          echo "Running build in frontend directory..."
-          cd frontend && npm run build || ../node_modules/.bin/vite build --mode production || npx vite build --mode production
-          
-          # Debug output
-          echo "After build - Current directory: $(pwd)"
-          ls -la
-        - "pwd"
-        - "ls -la"
-        - |
-          # CRITICAL: Copy build output from frontend/build to build at root level
-          # This ensures artifacts are available in the baseDirectory location
-          if [ -d "frontend/build" ]; then
-            echo "Copying build artifacts from frontend/build to build at root level..."
-            mkdir -p ../build
-            cp -r build/* ../build/ || true
-          fi
-          
-          # Exit frontend directory to get back to root
-          cd ..
-          
-          # Verify the build artifacts exist at root level
+          # Verify build output exists
           if [ -d "build" ]; then
-            echo "Build artifacts successfully copied to root build directory"
+            echo "Build successful! Output found in $(pwd)/build"
             ls -la build
           else
-            echo "ERROR: No build directory found at root level"
-            pwd
+            echo "ERROR: Build directory not found at $(pwd)/build"
             ls -la
+            exit 1
           fi
-        - "ls -la build || echo \"WARNING: build directory does not exist at root level!\""
 
   artifacts:
-    baseDirectory: build
+    baseDirectory: frontend/build
     files:
       - "**/*"
 
