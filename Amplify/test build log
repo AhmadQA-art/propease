@@ -1,0 +1,190 @@
+ahmad@pop-os:~/Desktop/propease$ ./test-build.sh
+Running in: /home/ahmad/Desktop/propease
+Node version: v22.14.0
+✅ Node.js version compatible: v22.14.0
+Changed to frontend directory: /home/ahmad/Desktop/propease/frontend
+Running diagnostic script
+======== ENVIRONMENT DIAGNOSTIC ========
+Current directory: /home/ahmad/Desktop/propease/frontend
+Directory listing:
+total 132
+drwxrwxr-x  8 ahmad ahmad 4096 Apr 19 21:11 .
+drwxrwxr-x 21 ahmad ahmad 4096 Apr 19 20:07 ..
+drwxrwxr-x  3 ahmad ahmad 4096 Apr 19 19:09 build
+-rw-rw-r--  1 ahmad ahmad  603 Apr 19 01:31 build-amplify.cjs
+-rw-rw-r--  1 ahmad ahmad 1256 Apr 18 19:39 build-amplify.js
+-rw-rw-r--  1 ahmad ahmad  682 Apr 19 01:21 build.js
+-rw-rw-r--  1 ahmad ahmad   52 Apr 19 01:53 build-script.js
+-rwxrwxr-x  1 ahmad ahmad 2408 Apr 19 21:27 check-env.sh
+-rwxrwxr-x  1 ahmad ahmad  973 Apr 19 02:19 direct-build.js
+-rw-rw-r--  1 ahmad ahmad  492 Apr 18 23:30 .env
+-rw-rw-r--  1 ahmad ahmad  492 Apr 18 19:39 .env.development
+-rw-rw-r--  1 ahmad ahmad   88 Apr 19 19:09 .env.production.local
+-rwxrwxr-x  1 ahmad ahmad 1054 Apr 18 19:39 eslint.config.js
+drwxrwxr-x  2 ahmad ahmad 4096 Apr 18 19:39 fix
+-rw-rw-r--  1 ahmad ahmad 3960 Apr 18 19:39 frontend-deployment-guide.md
+-rwxrwxr-x  1 ahmad ahmad  597 Apr 18 19:39 index.html
+drwxrwxr-x  3 ahmad ahmad 4096 Apr 19 19:08 node_modules
+-rw-rw-r--  1 ahmad ahmad    3 Apr 18 19:39 .nvmrc
+-rw-rw-r--  1 ahmad ahmad 2584 Apr 19 21:28 package.json
+-rwxrwxr-x  1 ahmad ahmad   34 Apr 19 19:09 postcss.config.cjs
+-rwxrwxr-x  1 ahmad ahmad   32 Apr 19 14:16 postcss.config.cjs.bak
+drwxrwxr-x  2 ahmad ahmad 4096 Apr 18 19:39 public
+-rw-rw-r--  1 ahmad ahmad 3049 Apr 18 19:39 README.md
+drwxrwxr-x  2 ahmad ahmad 4096 Apr 18 19:39 scripts
+drwxrwxr-x 16 ahmad ahmad 4096 Apr 18 19:39 src
+-rwxrwxr-x  1 ahmad ahmad  172 Apr 18 19:39 tailwind.config.cjs
+-rwxrwxr-x  1 ahmad ahmad  552 Apr 18 19:39 tsconfig.app.json
+-rwxrwxr-x  1 ahmad ahmad  978 Apr 18 19:39 tsconfig.json
+-rwxrwxr-x  1 ahmad ahmad  213 Apr 18 19:39 tsconfig.node.json
+-rw-rw-r--  1 ahmad ahmad  440 Apr 19 19:09 vite.config.js
+-rw-rw-r--  1 ahmad ahmad  383 Apr 19 12:02 vite.config.js.bak
+-rwxrwxr-x  1 ahmad ahmad    1 Apr 19 01:47 vite.config.ts.bak
+-rw-rw-r--  1 ahmad ahmad   26 Apr 19 00:46 vite-test.js
+
+======== NODE ENVIRONMENT ========
+Node version: v22.14.0
+NPM version: 10.9.2
+
+======== MONOREPO STRUCTURE ========
+Checking parent directory (monorepo root):
+✅ Parent directory has package.json (monorepo root found)
+Workspace configuration in root package.json:
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+--
+    "build": "npm run build --workspaces",
+    "build:frontend": "npm run build --workspace=frontend",
+    "build:amplify": "cd frontend && npm run build:amplify",
+    "build:frontend:standalone": "cd frontend && npm run build:standalone",
+    "amplify:build": "cd frontend && npm install --no-workspaces && npx vite build --mode production",
+    "start": "npm run start --workspace=backend",
+    "lint": "npm run lint --workspaces",
+    "test": "npm run test --workspaces",
+    "deploy": "netlify deploy --prod",
+    "generate-swagger": "node scripts/generate-swagger.js",
+    "postman-setup": "npm run generate-swagger && node scripts/generate-postman-collection.js",
+    "update-postman": "npm run generate-swagger && node scripts/update-postman.js"
+  },
+
+======== VITE AVAILABILITY ========
+Checking for local vite in node_modules:
+❌ Vite not found in node_modules/.bin
+
+Checking for vite in parent node_modules (monorepo):
+✅ Vite found in parent node_modules/.bin
+vite/5.4.18 linux-x64 node-v22.14.0
+
+Checking for global vite with which:
+✅ Vite available globally: /home/ahmad/.nvm/versions/node/v22.14.0/bin/vite
+vite/5.4.18 linux-x64 node-v22.14.0
+
+Checking for vite with npx:
+vite/5.4.18 linux-x64 node-v22.14.0
+✅ Vite available via npx
+
+======== PACKAGE.JSON ========
+Build script from package.json:
+    "build": "npx vite build --mode production",
+    "build:standalone": "npm install --no-workspaces && npx vite build --mode production",
+    "build:amplify": "npm install --no-workspaces && npx vite build --mode production",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+
+Vite dependency in package.json:
+    "dev": "vite",
+    "build": "npx vite build --mode production",
+--
+    "vite": "^5.4.18",
+    "yup": "^1.6.1",
+
+======== NODE_MODULES ========
+node_modules/.bin contents:
+❌ node_modules/.bin directory not found
+
+Checking npm dependency hoisting:
+propease@1.0.0 /home/ahmad/Desktop/propease
+└─┬ propease-frontend@0.1.0 -> ./frontend
+  ├─┬ @vitejs/plugin-react@4.3.4
+  │ └── vite@5.4.18 deduped
+  └── vite@5.4.18
+
+======== END DIAGNOSTIC ========
+Cleaning node_modules
+Installing dependencies (standalone mode)
+npm error code EUSAGE
+npm error
+npm error The `npm ci` command can only install with an existing package-lock.json or
+npm error npm-shrinkwrap.json with lockfileVersion >= 1. Run an install with npm@5 or
+npm error later to generate a package-lock.json file, then try again.
+npm error
+npm error Clean install a project
+npm error
+npm error Usage:
+npm error npm ci
+npm error
+npm error Options:
+npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+npm error [--no-bin-links] [--no-fund] [--dry-run]
+npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+npm error
+npm error aliases: clean-install, ic, install-clean, isntall-clean
+npm error
+npm error Run "npm help ci" for more info
+npm error A complete log of this run can be found in: /home/ahmad/.npm/_logs/2025-04-19T19_28_48_660Z-debug-0.log
+npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+npm warn deprecated @humanwhocodes/config-array@0.13.0: Use @eslint/config-array instead
+npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+npm warn deprecated @humanwhocodes/object-schema@2.0.3: Use @eslint/object-schema instead
+npm warn deprecated eslint@8.57.1: This version is no longer supported. Please see https://eslint.org/version-support for other options.
+
+> propease-frontend@0.1.0 postinstall
+> npx vite --version || npm install vite
+
+vite/5.4.18 linux-x64 node-v22.14.0
+
+added 532 packages, and audited 533 packages in 2m
+
+97 packages are looking for funding
+  run `npm fund` for details
+
+2 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+✅ Vite found in node_modules/.bin
+Setting environment variables
+Cleaning previous build artifacts
+Building frontend with multiple methods
+vite v5.4.18 building for production...
+✓ 3287 modules transformed.
+build/index.html                      0.70 kB │ gzip:   0.43 kB
+build/assets/index-CR6ZcbiH.css       3.47 kB │ gzip:   0.84 kB
+build/assets/browser-C1nJ8HMD.js      0.30 kB │ gzip:   0.25 kB
+build/assets/index-DlWTSN1Z.js    1,948.40 kB │ gzip: 498.34 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 14.62s
+✅ Build succeeded using npx vite build
+✅ Build output verified successfully
+total 160
+drwxrwxr-x 3 ahmad ahmad   4096 Apr 19 21:31 .
+drwxrwxr-x 8 ahmad ahmad   4096 Apr 19 21:31 ..
+drwxrwxr-x 2 ahmad ahmad   4096 Apr 19 21:31 assets
+-rw-rw-r-- 1 ahmad ahmad    695 Apr 19 21:31 index.html
+-rwxrwxr-x 1 ahmad ahmad 144791 Apr 19 21:31 PropEase.png
+Total files in build directory: 5
+Build completed successfully!

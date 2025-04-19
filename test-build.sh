@@ -1,96 +1,102 @@
 #!/bin/bash
+
+# Test build script for PropEase frontend (monorepo architecture)
+# This script simulates the build process that will run in AWS Amplify
+
+# Set strict mode
 set -e
 
-# Test script to simulate the AWS Amplify build process with appRoot: frontend
-echo "==== PropEase Amplify Build Test Script ===="
-
-# Navigate to root directory of the workspace
+# Navigate to project root first
 cd ~/Desktop/propease
-echo "Current directory (workspace root): $(pwd)"
-
-# Create a temporary directory to simulate the Amplify build environment
-TMP_BUILD_DIR=$(mktemp -d)
-echo "Creating temporary build directory at: $TMP_BUILD_DIR"
-
-# Copy project files to the temp directory
-echo "Copying project files to temporary directory..."
-cp -r . $TMP_BUILD_DIR
-
-# Change to the temporary directory
-cd $TMP_BUILD_DIR
-echo "Current directory (temporary build root): $(pwd)"
-
-# Important: Move into frontend directory to simulate appRoot: frontend
-cd frontend
-echo "Changed to frontend directory to simulate appRoot setting: $(pwd)"
-
-# Phase: preBuild - as defined in amplify.yml
-echo "==== PHASE: preBuild ===="
 echo "Running in: $(pwd)"
 
-# Install Node.js
+# Check Node.js version
 NODE_VERSION=$(node -v)
 echo "Node version: $NODE_VERSION"
-if [[ $NODE_VERSION != v20* && $NODE_VERSION != v22* ]]; then
-  echo "Error: Node.js version 20.x.x or 22.x.x is required. Current version: $NODE_VERSION"
+
+if [[ $NODE_VERSION =~ ^v20\. ]] || [[ $NODE_VERSION =~ ^v22\. ]]; then
+  echo "✅ Node.js version compatible: $NODE_VERSION"
+else
+  echo "❌ Node.js version incompatible: $NODE_VERSION (required: 20.x.x or 22.x.x)"
+  echo "Please run: nvm use 20"
   exit 1
 fi
 
-# Install dependencies from parent directory
-echo "Installing dependencies from parent directory..."
-cd ..
-rm -rf node_modules
-npm ci
-echo "Dependencies installed at root level"
+# Navigate to frontend directory
 cd frontend
+echo "Changed to frontend directory: $(pwd)"
 
-# Create PostCSS config
-echo "Creating postcss.config.cjs..."
-echo 'module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };' > postcss.config.cjs
+# Run diagnostic script
+if [ -f "./check-env.sh" ]; then
+  echo "Running diagnostic script"
+  chmod +x check-env.sh
+  ./check-env.sh
+else
+  echo "⚠️ Diagnostic script not found"
+fi
 
-# Phase: build - as defined in amplify.yml
-echo "==== PHASE: build ===="
-echo "Running in: $(pwd)"
+# Clean existing node_modules
+echo "Cleaning node_modules"
+rm -rf node_modules
+
+# Install dependencies (standalone mode - not using workspaces)
+echo "Installing dependencies (standalone mode)"
+npm ci --no-workspaces || npm install --no-workspaces
+
+# Check if Vite is available
+if [ -f "node_modules/.bin/vite" ]; then
+  echo "✅ Vite found in node_modules/.bin"
+else
+  echo "⚠️ Vite not found in local node_modules, installing globally as fallback"
+  npm install -g vite
+fi
+
+# Create PostCSS config if needed
+if [ ! -f "postcss.config.cjs" ]; then
+  echo "Creating PostCSS config"
+  echo "module.exports = {plugins: {autoprefixer: {}}};" > postcss.config.cjs
+fi
 
 # Set environment variables
+echo "Setting environment variables"
 export NODE_ENV=production
-export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
-echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
+export VITE_API_URL=https://api.propease.com
 
-# Clean previous build output
-echo "Cleaning previous build artifacts..."
-rm -rf dist build .vite
+# Clean previous build
+echo "Cleaning previous build artifacts"
+rm -rf build
 
-# Build with explicitly referenced Vite binary from root
-echo "Building with Vite..."
-if [ -f "../node_modules/.bin/vite" ]; then
-  echo "Using Vite from ../node_modules/.bin..."
-  ../node_modules/.bin/vite build --mode production
+# Attempt to build with multiple methods
+echo "Building frontend with multiple methods"
+
+BUILD_SUCCESS=false
+
+# Method 1: npx vite build
+if npx vite build --mode production; then
+  echo "✅ Build succeeded using npx vite build"
+  BUILD_SUCCESS=true
+elif vite build --mode production; then
+  echo "✅ Build succeeded using global vite"
+  BUILD_SUCCESS=true
+elif npm run build; then
+  echo "✅ Build succeeded using npm run build"
+  BUILD_SUCCESS=true
 else
-  echo "Vite not found in expected location, trying npm..."
-  npm run build
+  echo "❌ All build methods failed"
+  BUILD_SUCCESS=false
 fi
 
-# Verify build output
-if [ -d "build" ]; then
-  echo "✅ Build successful! Output directory: build/"
+# Verify build output exists
+if [ -d "build" ] && [ -f "build/index.html" ]; then
+  echo "✅ Build output verified successfully"
   ls -la build
+  echo "Total files in build directory: $(find build -type f | wc -l)"
+  echo "Build completed successfully!"
+  exit 0
 else
-  echo "❌ ERROR: Build directory not found"
-  echo "Current directory: $(pwd)"
-  ls -la
+  echo "❌ Build verification failed - build directory or index.html missing"
+  echo "Creating minimal build for testing"
+  mkdir -p build
+  echo "<html><body>Error during build</body></html>" > build/index.html
   exit 1
 fi
-
-echo "==== Build Test Complete ===="
-echo "The test successfully simulated the Amplify build process."
-echo "The build artifacts are in: $(pwd)/build"
-
-# Navigate back to project root
-cd ../..
-
-# Cleanup the temporary directory
-echo "Cleaning up temporary directory..."
-rm -rf $TMP_BUILD_DIR
-
-echo "Test completed successfully!"
