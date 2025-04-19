@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-# Navigate to project root
+# Navigate to root directory of the workspace
 cd ~/Desktop/propease
-echo "Current directory: $(pwd)"
+echo "Current directory (workspace root): $(pwd)"
 
 # Verify Node version
 NODE_VERSION=$(node -v)
@@ -13,74 +13,77 @@ if [[ $NODE_VERSION != v20* && $NODE_VERSION != v22* ]]; then
   exit 1
 fi
 
-# Check frontend directory
-if [ -d "frontend" ]; then
-  echo "frontend exists"
-else
-  echo "frontend missing"
-  exit 1
-fi
+# Clean node_modules at workspace root
+echo "Cleaning workspace node_modules directory..."
+rm -rf node_modules
 
-# Navigate to frontend directory
-echo "Changing to frontend directory..."
-cd frontend
-echo "Current directory: $(pwd)"
+# Install all dependencies for all workspaces
+echo "Installing all workspace dependencies via npm ci..."
+npm ci
 
-# Clean previous installations
-echo "Cleaning previous installations..."
-rm -rf node_modules package-lock.json
-npm cache clean --force
+# Debug: Check where Vite is installed
+echo "Checking if root node_modules/.bin exists..."
+ls -la node_modules/.bin/ || echo "Root node_modules/.bin directory not found"
 
-# Install dependencies in frontend directory
-echo "Installing frontend dependencies..."
-npm install --legacy-peer-deps
+echo "Checking for Vite in node_modules/.bin..."
+ls -la node_modules/.bin/vite 2>/dev/null || echo "Vite binary not found in node_modules/.bin"
 
-# Explicitly install Vite with exact version
-echo "Installing Vite and plugins explicitly..."
-npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
+echo "Checking if Vite is installed in node_modules..."
+ls -la node_modules/vite/ 2>/dev/null || echo "Vite package not found in node_modules"
 
-# Create a simplified PostCSS config
-echo 'module.exports = {plugins: {}};' > postcss.config.cjs
+# Create a simplified PostCSS config in frontend directory
+echo "Creating frontend/postcss.config.cjs..."
+echo 'module.exports = { plugins: {} };' > frontend/postcss.config.cjs
 
 # Set environment variables
 export NODE_ENV=production
 export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
+echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
 
-# Create .env.production.local
-echo 'VITE_API_URL=$VITE_API_URL' > .env.production.local
+# Create Vite config in the frontend directory
+echo "Creating frontend/vite.config.js with explicit root path..."
+cat > frontend/vite.config.js << EOL
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-# Create Vite config file line by line
-echo "Creating vite.config.js..."
-echo 'import { defineConfig } from "vite";' > vite.config.js
-echo 'import react from "@vitejs/plugin-react";' >> vite.config.js
-echo 'import path from "path";' >> vite.config.js
-echo 'import { fileURLToPath } from "url";' >> vite.config.js
-echo '' >> vite.config.js
-echo 'const __dirname = path.dirname(fileURLToPath(import.meta.url));' >> vite.config.js
-echo '' >> vite.config.js
-echo 'export default defineConfig({' >> vite.config.js
-echo '  plugins: [react()],' >> vite.config.js
-echo '  resolve: {' >> vite.config.js
-echo '    alias: {' >> vite.config.js
-echo '      "@": path.resolve(__dirname, "./src"),' >> vite.config.js
-echo '    },' >> vite.config.js
-echo '  },' >> vite.config.js
-echo '  build: {' >> vite.config.js
-echo '    outDir: "build",' >> vite.config.js
-echo '  },' >> vite.config.js
-echo '});' >> vite.config.js
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
+  plugins: [react()],
+  root: __dirname, // Set the root to frontend directory
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    outDir: 'build',
+  },
+});
+EOL
 
 # Clean any previous build artifacts
-echo "Cleaning previous build artifacts..."
-rm -rf dist build
+echo "Cleaning previous build artifacts in frontend directory..."
+rm -rf frontend/dist frontend/build
 
-# Build with npx vite
-echo "Building with npx vite..."
-npx vite build --mode production
+# Build with Vite using workspace-aware command
+echo "Building frontend with workspace-aware command..."
+
+# Change to the frontend directory and use relative path to node_modules
+cd frontend
+if [ -f "../node_modules/.bin/vite" ]; then
+  echo "Using Vite binary from workspace root..."
+  ../node_modules/.bin/vite build --mode production
+else
+  echo "Vite binary not found, trying with npx..."
+  npx vite build --mode production
+fi
 
 # Verify build output
 if [ -d "build" ]; then 
-  echo "Build successful in $(pwd)"
+  echo "Build successful! Output in: $(pwd)/build"
 else
   echo "Build failed - build directory not found"
   exit 1
