@@ -3,32 +3,33 @@ frontend:
   phases:
     preBuild:
       commands:
-        - nvm install 20
-        - nvm use 20
-        - pwd
-        - ls -la
-        - rm -rf node_modules
-        - npm ci
+        - 'nvm install 20'
+        - 'nvm use 20'
+        - 'pwd'
+        - 'ls -la'
+        - 'rm -rf node_modules'
+        - 'npm ci'
     
     build:
       commands:
-        - export NODE_ENV=production
-        - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
+        - 'export NODE_ENV=production'
+        - 'export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com'
         
         # Debug: Show current directory and structure
-        - pwd
-        - ls -la
+        - 'pwd'
+        - 'ls -la'
         
         # Create frontend directory if it doesn't exist
-        - mkdir -p frontend
+        - 'mkdir -p frontend'
         
         # Create necessary files in frontend
-        - echo 'module.exports = { plugins: {} };' > frontend/postcss.config.cjs
-        - echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
+        - 'echo ''module.exports = { plugins: {} };'' > frontend/postcss.config.cjs'
+        - 'echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local'
         
         # Create vite.config.js file
-        - |
+        - >-
           cat > frontend/vite.config.js << 'EOL'
+
           import { defineConfig } from 'vite';
           import react from '@vitejs/plugin-react';
           import path from 'path';
@@ -51,32 +52,32 @@ frontend:
           EOL
         
         # Clean any previous build artifacts
-        - rm -rf frontend/dist frontend/build
+        - 'rm -rf frontend/dist frontend/build'
         
         # Build step - attempt with both relative and absolute paths
-        - echo "Building frontend (NPM method)..."
-        - cd frontend && npm run build || echo "NPM build failed, trying direct Vite"
+        - 'echo "Building frontend (NPM method)..."'
+        - 'cd frontend && npm run build || echo "NPM build failed, trying direct Vite"'
         
         # Attempt direct Vite build if npm build fails
-        - |
+        - >-
           if [ ! -d "frontend/build" ]; then
             echo "Trying direct Vite build..."
             cd frontend && ../node_modules/.bin/vite build --mode production || echo "Direct Vite build failed"
           fi
         
         # Attempt npx build if other methods fail
-        - |
+        - >-
           if [ ! -d "frontend/build" ]; then
             echo "Trying npx Vite build..."
             cd frontend && npx vite build --mode production || echo "NPX Vite build failed"
           fi
         
         # Debug: Check if build exists
-        - ls -la frontend || echo "Frontend directory doesn't exist"
-        - ls -la frontend/build || echo "Build directory doesn't exist"
+        - 'ls -la frontend || echo "Frontend directory doesn''t exist"'
+        - 'ls -la frontend/build || echo "Build directory doesn''t exist"'
         
         # Create a minimal build if all else fails
-        - |
+        - >-
           if [ ! -d "frontend/build" ]; then
             echo "All build methods failed. Creating minimal placeholder build..."
             mkdir -p frontend/build
@@ -86,13 +87,13 @@ frontend:
           fi
         
         # Final debug: Show what we're deploying
-        - echo "FINAL BUILD CONTENTS:"
-        - ls -la frontend/build
+        - 'echo "FINAL BUILD CONTENTS:"'
+        - 'ls -la frontend/build'
 
   artifacts:
     baseDirectory: frontend/build
     files:
-      - "**/*"
+      - '**/*'
 
   cache:
     paths:
