@@ -3,46 +3,26 @@ frontend:
   phases:
     preBuild:
       commands:
-        # Setup Node.js environment
         - nvm install 20
         - nvm use 20
-        - echo "👉 Current directory: $(pwd)"
-        
-        # Verify frontend directory exists
-        - 'if [ -d "frontend" ]; then echo "frontend/ exists"; else echo "frontend/ missing"; exit 1; fi'
-        
-        # Navigate to frontend directory
+        - echo "Current directory: $(pwd)"
+        - if [ -d "frontend" ]; then echo "frontend exists"; else echo "frontend missing"; exit 1; fi
         - cd frontend
-        - echo "👉 Current directory: $(pwd)"
-        
-        # Backup any existing configuration
-        - 'if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; rm vite.config.ts; fi'
-        - 'if [ -f "vite.config.js" ]; then cp vite.config.js vite.config.js.bak; rm vite.config.js; fi'
-        - 'if [ -f "postcss.config.cjs" ]; then cp postcss.config.cjs postcss.config.cjs.bak; fi'
-        
-        # Clean previous installations
+        - if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; rm vite.config.ts; fi
+        - if [ -f "vite.config.js" ]; then cp vite.config.js vite.config.js.bak; rm vite.config.js; fi
+        - if [ -f "postcss.config.cjs" ]; then cp postcss.config.cjs postcss.config.cjs.bak; fi
         - rm -rf node_modules package-lock.json
         - npm cache clean --force
-        
-        # Install frontend dependencies
-        - echo "Installing frontend dependencies..."
         - npm install --legacy-peer-deps
-        
-        # Create a simplified PostCSS config
-        - echo "module.exports = {plugins: {}};" > postcss.config.cjs
+        - |
+          echo "module.exports = {plugins: {}};" > postcss.config.cjs
     
     build:
       commands:
-        # Set environment variables
         - export NODE_ENV=production
         - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
-        
-        # Create .env.production.local
         - echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
-        
-        # Create Vite config file with ES module syntax
         - |
-          echo "Creating vite.config.js..."
           cat > vite.config.js << 'EOF'
           import { defineConfig } from 'vite';
           import react from '@vitejs/plugin-react';
@@ -63,16 +43,10 @@ frontend:
             },
           });
           EOF
-        
-        # Clean any previous build artifacts
         - rm -rf dist build
-        
-        # Build with npx to ensure proper local dependency resolution
-        - echo "🧪 Building with npx vite..."
+        - echo "Building with npx vite..."
         - npx vite build
-        
-        # Verify build output
-        - 'if [ -d "build" ]; then echo "✅ Build successful"; else echo "❌ Build failed - build directory not found"; exit 1; fi'
+        - if [ -d "build" ]; then echo "Build successful"; else echo "Build failed - build directory not found"; exit 1; fi
 
   artifacts:
     baseDirectory: frontend/build

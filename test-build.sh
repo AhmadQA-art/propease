@@ -3,7 +3,7 @@ set -e
 
 # Navigate to project root
 cd ~/Desktop/propease
-echo "👉 Current directory: $(pwd)"
+echo "Current directory: $(pwd)"
 
 # Verify Node version
 NODE_VERSION=$(node -v)
@@ -15,16 +15,16 @@ fi
 
 # Check frontend directory
 if [ -d "frontend" ]; then
-  echo "frontend/ exists"
+  echo "frontend exists"
 else
-  echo "frontend/ missing"
+  echo "frontend missing"
   exit 1
 fi
 
 # Navigate to frontend directory
 echo "Changing to frontend directory..."
 cd frontend
-echo "👉 Current directory: $(pwd)"
+echo "Current directory: $(pwd)"
 
 # Create backup of existing configuration files
 if [ -f "vite.config.ts" ]; then
@@ -45,10 +45,10 @@ rm -rf node_modules package-lock.json
 npm cache clean --force
 
 # Install dependencies in frontend directory
-echo "Installing frontend dependencies in $(pwd)..."
+echo "Installing frontend dependencies..."
 npm install --legacy-peer-deps
 
-# Create a simplified PostCSS config that doesn't require plugins
+# Create a simplified PostCSS config
 echo "module.exports = {plugins: {}};" > postcss.config.cjs
 
 # Set environment variables
@@ -58,8 +58,8 @@ export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasti
 # Create .env.production.local
 echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
 
-# Create Vite config - use ES module format since package.json has "type": "module"
-echo "Creating vite.config.js in $(pwd)..."
+# Create Vite config using the same format as in amplify.yml
+echo "Creating vite.config.js..."
 cat > vite.config.js << 'EOF'
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -82,17 +82,17 @@ export default defineConfig({
 EOF
 
 # Clean any previous build artifacts
-echo "Cleaning previous build artifacts in $(pwd)..."
+echo "Cleaning previous build artifacts..."
 rm -rf dist build
 
-# Build with npx to ensure proper local dependency resolution
-echo "🧪 Building with npx vite in $(pwd)..."
+# Build with npx
+echo "Building with npx vite..."
 npx vite build
 
 # Verify build output
 if [ -d "build" ]; then 
-  echo "✅ Build completed successfully in $(pwd)!"
+  echo "Build successful in $(pwd)"
 else
-  echo "❌ Build failed - build directory not found"
+  echo "Build failed - build directory not found"
   exit 1
 fi
