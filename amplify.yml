@@ -42,6 +42,8 @@ frontend:
           # Build using workspace-aware command with explicit root
           echo "Building frontend with workspace command..."
           cd frontend && ../node_modules/.bin/vite build --mode production
+        - ls -la frontend/build || echo "WARNING: frontend/build directory does not exist!"
+        - pwd && ls -la frontend || echo "Listing frontend directory contents for debugging"
 
   artifacts:
     baseDirectory: frontend/build
