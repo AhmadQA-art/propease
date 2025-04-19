@@ -1,82 +1,8 @@
-even thought the build suceeds in github and passes the tests locally it keeps failing in the AWS amplify dahsboard, can you pin point the reason for that, here is the yaml script:
-version: 1
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - nvm install 20
-        - nvm use 20
-        - ls -l
-        - 'if [ -d "frontend" ]; then echo "frontend/ exists"; else echo "frontend/ missing"; exit 1; fi'
-        - rm -rf node_modules package-lock.json
-        - npm cache clean --force
-        - npm install --legacy-peer-deps
-        - 'npm list vite || echo "Vite not listed in root dependencies"'
-        - npm install --workspaces --legacy-peer-deps --include=optional
-        - npm install --save-dev esbuild@0.21.5 @esbuild/linux-x64@0.21.5 @rollup/rollup-linux-x64-gnu client-only @tanstack/react-virtual --legacy-peer-deps
-        - cd frontend
-        - 'if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; fi'
-        - 'if [ -f "vite.config.js" ]; then cp vite.config.js vite.config.js.bak; fi'
-        - |
-          cat > vite.config.ts << 'EOF'
-          import { defineConfig } from 'vite'
-          import react from '@vitejs/plugin-react'
-
-          export default defineConfig({
-            plugins: [react()],
-            build: {
-              rollupOptions: {
-                external: ['client-only', '@tanstack/react-virtual']
-              }
-            }
-          })
-          EOF
-        - rm -rf node_modules package-lock.json
-        - npm cache clean --force
-        # Install Vite globally to ensure it's available
-        - npm install -g vite@5.4.18
-        - npm install --no-optional --legacy-peer-deps
-        # Explicitly install Vite and the React plugin
-        - npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
-        - echo "Checking for Vite availability..."
-        # Create a simple test file to verify Vite works
-        - |
-          echo "console.log('Vite test');" > vite-test.js
-          if command -v vite >/dev/null 2>&1; then
-            echo "Vite is available in PATH"
-          else
-            echo "ERROR: Vite command not found in PATH"
-            npm list vite -g
-            npm list vite
-            exit 1
-          fi
-        - cd ..
-    build:
-      commands:
-        - echo "Building frontend application..."
-        - export NODE_ENV=production
-        - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
-        - mkdir -p frontend
-        - 'echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local'
-        - cd frontend
-        - rm -rf dist
-        # Use direct path to vite from global install
-        - 'PATH="$PATH:$(npm bin -g)" npm run build || { echo "Build failed"; exit 1; }'
-  artifacts:
-    baseDirectory: frontend/dist
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - node_modules/**/*
-      - frontend/node_modules/**/*
-
-here is the full buld logs:
-2025-04-18T22:51:27.660Z [INFO]: # Cloning repository: git@github.com:AhmadQA-art/propease.git
-2025-04-18T22:51:29.059Z [INFO]: 
-2025-04-18T22:51:29.060Z [INFO]: Cloning into 'propease'...
-2025-04-18T22:51:29.060Z [INFO]: # Switching to commit: e7804731a76a918dccf72dacf007ca547c27af43
-2025-04-18T22:51:29.089Z [INFO]: Note: switching to 'e7804731a76a918dccf72dacf007ca547c27af43'.
+2025-04-19T00:50:02.905Z [INFO]: # Cloning repository: git@github.com:AhmadQA-art/propease.git
+2025-04-19T00:50:04.350Z [INFO]: 
+2025-04-19T00:50:04.350Z [INFO]: Cloning into 'propease'...
+2025-04-19T00:50:04.351Z [INFO]: # Switching to commit: cd69c9eaa45f09c494f3a98e158aa86db92e8f6d
+2025-04-19T00:50:04.380Z [INFO]: Note: switching to 'cd69c9eaa45f09c494f3a98e158aa86db92e8f6d'.
                                  You are in 'detached HEAD' state. You can look around, make experimental
                                  changes and commit them, and you can discard any commits you make in this
                                  state without impacting any branches by switching back to a branch.
@@ -86,199 +12,123 @@ here is the full buld logs:
                                  Or undo this operation with:
                                  git switch -
                                  Turn off this advice by setting config variable advice.detachedHead to false
-                                 HEAD is now at e780473 fixed the amplify yaml file
-2025-04-18T22:51:29.129Z [INFO]: Successfully cleaned up Git credentials
-2025-04-18T22:51:29.130Z [INFO]: # Checking for Git submodules at: /codebuild/output/src2151954591/src/propease/.gitmodules
-2025-04-18T22:51:29.137Z [INFO]: # Retrieving environment cache...
-2025-04-18T22:51:29.205Z [INFO]: # Retrieved environment cache
-2025-04-18T22:51:29.205Z [INFO]: ---- Setting Up SSM Secrets ----
-2025-04-18T22:51:29.205Z [INFO]: SSM params {"Path":"/amplify/d3fa4pbfi6dm3q/main/","WithDecryption":true}
-2025-04-18T22:51:29.250Z [WARNING]: !Failed to set up process.env.secrets
-2025-04-18T22:51:30.071Z [INFO]: # No package override configuration found.
-2025-04-18T22:51:30.076Z [INFO]: # Retrieving cache...
-2025-04-18T22:51:30.452Z [INFO]: # Extracting cache...
-2025-04-18T22:51:30.961Z [INFO]: # Extraction completed
-2025-04-18T22:51:31.051Z [INFO]: # Retrieved cache
-2025-04-18T22:51:34.796Z [INFO]: ## Starting Backend Build
+                                 HEAD is now at cd69c9e pushed to live
+2025-04-19T00:50:04.431Z [INFO]: Successfully cleaned up Git credentials
+2025-04-19T00:50:04.431Z [INFO]: # Checking for Git submodules at: /codebuild/output/src3018505336/src/propease/.gitmodules
+2025-04-19T00:50:04.438Z [INFO]: # Retrieving environment cache...
+2025-04-19T00:50:04.535Z [INFO]: # Retrieved environment cache
+2025-04-19T00:50:04.536Z [INFO]: ---- Setting Up SSM Secrets ----
+2025-04-19T00:50:04.536Z [INFO]: SSM params {"Path":"/amplify/d3fa4pbfi6dm3q/main/","WithDecryption":true}
+2025-04-19T00:50:04.573Z [WARNING]: !Failed to set up process.env.secrets
+2025-04-19T00:50:05.356Z [INFO]: # No package override configuration found.
+2025-04-19T00:50:05.361Z [INFO]: # Retrieving cache...
+2025-04-19T00:50:05.695Z [INFO]: # Extracting cache...
+2025-04-19T00:50:06.256Z [INFO]: # Extraction completed
+2025-04-19T00:50:06.360Z [INFO]: # Retrieved cache
+2025-04-19T00:50:10.939Z [INFO]: ## Starting Backend Build
                                  ## Checking for associated backend environment...
                                  ## No backend environment association found, continuing...
                                  ## Completed Backend Build
-2025-04-18T22:51:34.802Z [INFO]: ## Starting Frontend Build
+2025-04-19T00:50:10.945Z [INFO]: {"backendDuration": 0}
+                                 ## Starting Frontend Build
                                  # Starting phase: preBuild
-2025-04-18T22:51:34.803Z [INFO]: # Executing command: nvm install 20
-2025-04-18T22:51:35.158Z [INFO]: Downloading and installing node v20.19.0...
-2025-04-18T22:51:35.309Z [WARNING]: Downloading https://nodejs.org/dist/v20.19.0/node-v20.19.0-linux-x64.tar.xz...
-2025-04-18T22:51:35.427Z [WARNING]: ########################################
-2025-04-18T22:51:35.427Z [WARNING]: 56.4%
-2025-04-18T22:51:35.455Z [WARNING]: ##################################
-2025-04-18T22:51:35.456Z [WARNING]: ###################################### 100.0%
-2025-04-18T22:51:35.470Z [WARNING]: Computing checksum with sha256sum
-2025-04-18T22:51:35.585Z [WARNING]: Checksums matched!
-2025-04-18T22:51:38.320Z [INFO]: Now using node v20.19.0 (npm v10.8.2)
-2025-04-18T22:51:38.384Z [INFO]: Installing default global packages from /root/.nvm/default-packages...
-2025-04-18T22:51:38.384Z [INFO]: npm install -g --quiet @aws-amplify/cli bower cypress grunt-cli hugo-extended vuepress yarn
-2025-04-18T22:52:25.984Z [WARNING]: npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
-2025-04-18T22:52:26.030Z [WARNING]: npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
-2025-04-18T22:52:26.052Z [WARNING]: npm warn deprecated stable@0.1.8: Modern JS already guarantees Array#sort() is a stable sort, so this library is deprecated. See the compatibility table on MDN: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort#browser_compatibility
-2025-04-18T22:52:26.053Z [WARNING]: npm warn deprecated source-map-url@0.4.1: See https://github.com/lydell/source-map-url#deprecated
-2025-04-18T22:52:26.066Z [WARNING]: npm warn deprecated move-concurrently@1.0.1: This package is no longer supported.
-2025-04-18T22:52:26.092Z [WARNING]: npm warn deprecated @babel/plugin-proposal-class-properties@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-class-properties instead.
-2025-04-18T22:52:26.137Z [WARNING]: npm warn deprecated rimraf@2.7.1: Rimraf versions prior to v4 are no longer supported
-2025-04-18T22:52:26.137Z [WARNING]: npm warn deprecated figgy-pudding@3.5.2: This module is no longer supported.
-2025-04-18T22:52:26.188Z [WARNING]: npm warn deprecated urix@0.1.0: Please see https://github.com/lydell/urix#deprecated
-2025-04-18T22:52:26.191Z [WARNING]: npm warn deprecated har-validator@5.1.5: this library is no longer supported
-2025-04-18T22:52:26.241Z [WARNING]: npm warn deprecated lodash.template@4.5.0: This package is deprecated. Use https://socket.dev/npm/package/eta instead.
-2025-04-18T22:52:26.256Z [WARNING]: npm warn deprecated copy-concurrently@1.0.5: This package is no longer supported.
-2025-04-18T22:52:26.284Z [WARNING]: npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
-2025-04-18T22:52:26.351Z [WARNING]: npm warn deprecated consolidate@0.15.1: Please upgrade to consolidate v1.0.0+ as it has been modernized with several long-awaited fixes implemented. Maintenance is supported by Forward Email at https://forwardemail.net ; follow/watch https://github.com/ladjs/consolidate for updates and release changelog
-2025-04-18T22:52:26.357Z [WARNING]: npm warn deprecated resolve-url@0.2.1: https://github.com/lydell/resolve-url#deprecated
-2025-04-18T22:52:26.425Z [WARNING]: npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
-2025-04-18T22:52:26.456Z [WARNING]: npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
-2025-04-18T22:52:26.475Z [WARNING]: npm warn deprecated source-map-resolve@0.5.3: See https://github.com/lydell/source-map-resolve#deprecated
-2025-04-18T22:52:26.571Z [WARNING]: npm warn deprecated q@1.5.1: You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
+                                 # Executing command: nvm install 20
+2025-04-19T00:50:11.482Z [INFO]: Downloading and installing node v20.19.0...
+2025-04-19T00:50:11.618Z [WARNING]: Downloading https://nodejs.org/dist/v20.19.0/node-v20.19.0-linux-x64.tar.xz...
+2025-04-19T00:50:11.733Z [WARNING]: ###############################
+2025-04-19T00:50:11.733Z [WARNING]: ###############                            64.5%
+2025-04-19T00:50:11.760Z [WARNING]: ######################
+2025-04-19T00:50:11.760Z [WARNING]: ################################################## 100.0%
+2025-04-19T00:50:11.775Z [WARNING]: Computing checksum with sha256sum
+2025-04-19T00:50:11.901Z [WARNING]: Checksums matched!
+2025-04-19T00:50:14.920Z [INFO]: Now using node v20.19.0 (npm v10.8.2)
+2025-04-19T00:50:14.993Z [INFO]: Installing default global packages from /root/.nvm/default-packages...
+                                 npm install -g --quiet @aws-amplify/cli bower cypress grunt-cli hugo-extended vuepress yarn
+2025-04-19T00:51:08.218Z [WARNING]: npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2025-04-19T00:51:08.264Z [WARNING]: npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2025-04-19T00:51:08.290Z [WARNING]: npm warn deprecated stable@0.1.8: Modern JS already guarantees Array#sort() is a stable sort, so this library is deprecated. See the compatibility table on MDN: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort#browser_compatibility
+2025-04-19T00:51:08.291Z [WARNING]: npm warn deprecated source-map-url@0.4.1: See https://github.com/lydell/source-map-url#deprecated
+2025-04-19T00:51:08.304Z [WARNING]: npm warn deprecated move-concurrently@1.0.1: This package is no longer supported.
+2025-04-19T00:51:08.335Z [WARNING]: npm warn deprecated @babel/plugin-proposal-class-properties@7.18.6: This proposal has been merged to the ECMAScript standard and thus this plugin is no longer maintained. Please use @babel/plugin-transform-class-properties instead.
+2025-04-19T00:51:08.383Z [WARNING]: npm warn deprecated rimraf@2.7.1: Rimraf versions prior to v4 are no longer supported
+2025-04-19T00:51:08.384Z [WARNING]: npm warn deprecated figgy-pudding@3.5.2: This module is no longer supported.
+2025-04-19T00:51:08.441Z [WARNING]: npm warn deprecated urix@0.1.0: Please see https://github.com/lydell/urix#deprecated
+2025-04-19T00:51:08.444Z [WARNING]: npm warn deprecated har-validator@5.1.5: this library is no longer supported
+2025-04-19T00:51:08.511Z [WARNING]: npm warn deprecated lodash.template@4.5.0: This package is deprecated. Use https://socket.dev/npm/package/eta instead.
+2025-04-19T00:51:08.523Z [WARNING]: npm warn deprecated copy-concurrently@1.0.5: This package is no longer supported.
+2025-04-19T00:51:08.561Z [WARNING]: npm warn deprecated rimraf@3.0.2: Rimraf versions prior to v4 are no longer supported
+2025-04-19T00:51:08.645Z [WARNING]: npm warn deprecated consolidate@0.15.1: Please upgrade to consolidate v1.0.0+ as it has been modernized with several long-awaited fixes implemented. Maintenance is supported by Forward Email at https://forwardemail.net ; follow/watch https://github.com/ladjs/consolidate for updates and release changelog
+2025-04-19T00:51:08.649Z [WARNING]: npm warn deprecated resolve-url@0.2.1: https://github.com/lydell/resolve-url#deprecated
+2025-04-19T00:51:08.724Z [WARNING]: npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+2025-04-19T00:51:08.748Z [WARNING]: npm warn deprecated glob@7.2.3: Glob versions prior to v9 are no longer supported
+2025-04-19T00:51:08.770Z [WARNING]: npm warn deprecated source-map-resolve@0.5.3: See https://github.com/lydell/source-map-resolve#deprecated
+2025-04-19T00:51:08.877Z [WARNING]: npm warn deprecated q@1.5.1: You or someone you depend on is using Q, the JavaScript Promise library that gave JavaScript developers strong feelings about promises. They can almost certainly migrate to the native JavaScript promise now. Thank you literally everyone for joining me in this bet against the odds. Be excellent to each other.
                                     npm warn deprecated
                                     npm warn deprecated (For a CapTP with native promises, see @endo/eventual-send and @endo/captp)
-2025-04-18T22:52:26.663Z [WARNING]: npm warn deprecated fs-write-stream-atomic@1.0.10: This package is no longer supported.
-2025-04-18T22:52:27.023Z [WARNING]: npm warn deprecated mkdirp@0.3.0: Legacy versions of mkdirp are no longer supported. Please update to mkdirp 1.x. (Note that the API surface has changed to use Promises in 1.x.)
-2025-04-18T22:52:27.089Z [WARNING]: npm warn deprecated uuid@3.4.0: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
-2025-04-18T22:52:27.092Z [WARNING]: npm warn deprecated webpack-chain@4.12.1: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-2025-04-18T22:52:27.320Z [WARNING]: npm warn deprecated webpack-chain@6.5.1: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-2025-04-18T22:52:27.418Z [WARNING]: npm warn deprecated request@2.88.2: request has been deprecated, see https://github.com/request/request/issues/3142
-2025-04-18T22:52:27.983Z [WARNING]: npm warn deprecated svgo@1.3.2: This SVGO version is no longer supported. Upgrade to v2.x.x.
-2025-04-18T22:52:28.023Z [WARNING]: npm warn deprecated docsearch.js@2.6.3: This package has been deprecated and is no longer maintained. Please use @docsearch/js.
-2025-04-18T22:52:28.693Z [WARNING]: npm warn deprecated highlight.js@9.18.5: Support has ended for 9.x series. Upgrade to @latest
-2025-04-18T22:52:28.870Z [WARNING]: npm warn deprecated vue@2.7.16: Vue 2 has reached EOL and is no longer actively maintained. See https://v2.vuejs.org/eol/ for more details.
-2025-04-18T22:52:53.269Z [INFO]: added 1798 packages in 1m
-2025-04-18T22:52:53.274Z [INFO]: 191 packages are looking for funding
+2025-04-19T00:51:08.926Z [WARNING]: npm warn deprecated fs-write-stream-atomic@1.0.10: This package is no longer supported.
+2025-04-19T00:51:09.236Z [WARNING]: npm warn deprecated mkdirp@0.3.0: Legacy versions of mkdirp are no longer supported. Please update to mkdirp 1.x. (Note that the API surface has changed to use Promises in 1.x.)
+2025-04-19T00:51:09.286Z [WARNING]: npm warn deprecated uuid@3.4.0: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+2025-04-19T00:51:09.290Z [WARNING]: npm warn deprecated webpack-chain@4.12.1: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+2025-04-19T00:51:09.425Z [WARNING]: npm warn deprecated webpack-chain@6.5.1: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+2025-04-19T00:51:09.505Z [WARNING]: npm warn deprecated request@2.88.2: request has been deprecated, see https://github.com/request/request/issues/3142
+2025-04-19T00:51:09.970Z [WARNING]: npm warn deprecated svgo@1.3.2: This SVGO version is no longer supported. Upgrade to v2.x.x.
+2025-04-19T00:51:10.009Z [WARNING]: npm warn deprecated docsearch.js@2.6.3: This package has been deprecated and is no longer maintained. Please use @docsearch/js.
+2025-04-19T00:51:10.676Z [WARNING]: npm warn deprecated highlight.js@9.18.5: Support has ended for 9.x series. Upgrade to @latest
+2025-04-19T00:51:10.842Z [WARNING]: npm warn deprecated vue@2.7.16: Vue 2 has reached EOL and is no longer actively maintained. See https://v2.vuejs.org/eol/ for more details.
+2025-04-19T00:51:34.448Z [INFO]: added 1798 packages in 1m
+2025-04-19T00:51:34.454Z [INFO]: 191 packages are looking for funding
                                  run `npm fund` for details
-2025-04-18T22:52:53.294Z [INFO]: # Executing command: nvm use 20
-2025-04-18T22:52:53.494Z [INFO]: Now using node v20.19.0 (npm v10.8.2)
-2025-04-18T22:52:53.496Z [INFO]: # Executing command: ls -l
-2025-04-18T22:52:53.497Z [INFO]: total 944
-                                 -rwxr-xr-x  1 amplify amplify   4729 Apr 18 22:51 Context.md
-                                 -rw-r--r--  1 amplify amplify   5557 Apr 18 22:51 DEPLOYMENT.md
-                                 -rwxr-xr-x  1 amplify amplify   1059 Apr 18 22:51 LICENSE
-                                 drwxr-xr-x  2 amplify amplify    185 Apr 18 22:51 Plans & Guides
-                                 drwxr-xr-x  2 amplify amplify    260 Apr 18 22:51 Prompts
-                                 -rwxr-xr-x  1 amplify amplify   8978 Apr 18 22:51 README.md
-                                 -rwxrwxrwx  1 amplify amplify   6809 Apr 18 22:51 amplify.sh
-                                 -rw-r--r--  1 amplify amplify   2722 Apr 18 22:51 amplify.yml
-                                 drwxr-xr-x 10 amplify amplify   4096 Apr 18 22:51 backend
-                                 -rw-r--r--  1 amplify amplify 191696 Apr 18 22:51 backend.zip
-                                 drwxr-xr-x  4 amplify amplify    122 Apr 18 22:51 database
-                                 -rwxr-xr-x  1 amplify amplify   4707 Apr 18 22:51 deploy-communication-functions.sh
-                                 drwxr-xr-x  2 amplify amplify     72 Apr 18 22:51 docs
-                                 -rwxr-xr-x  1 amplify amplify   1045 Apr 18 22:51 fix-package-lock.sh
-                                 drwxr-xr-x  2 amplify amplify    177 Apr 18 22:51 fixes_log
-                                 drwxr-xr-x  7 amplify amplify   4096 Apr 18 22:51 frontend
-                                 -rw-r--r--  1 amplify amplify    951 Apr 18 22:51 netlify.toml
-                                 -rw-r--r--  1 amplify amplify 333126 Apr 18 22:51 package-lock.json
-                                 -rw-r--r--  1 amplify amplify 326781 Apr 18 22:51 package-lock.json.bak
-                                 -rwxr-xr-x  1 amplify amplify   1333 Apr 18 22:51 package.json
-                                 drwxr-xr-x  3 amplify amplify     22 Apr 18 22:51 propease
-                                 -rw-r--r--  1 amplify amplify  10988 Apr 18 22:51 propease_api.json
-                                 -rw-r--r--  1 amplify amplify    261 Apr 18 22:51 propease_api_env.json
-                                 drwxr-xr-x  2 amplify amplify    134 Apr 18 22:51 scripts
-                                 drwxr-xr-x  4 amplify amplify     40 Apr 18 22:51 src
-                                 drwxr-xr-x  5 amplify amplify     91 Apr 18 22:51 supabase
-                                 -rw-r--r--  1 amplify amplify      9 Apr 18 22:51 supabase.tar.gz
-                                 -rwxr-xr-x  1 amplify amplify    331 Apr 18 22:51 test-amplify-build.sh
-                                 -rwxr-xr-x  1 amplify amplify   3056 Apr 18 22:51 test-build.sh
-                                 -rw-r--r--  1 amplify amplify   4736 Apr 18 22:51 test_lease_charges.sql
-                                 drwxr-xr-x 12 amplify amplify    232 Apr 18 22:51 trash
-2025-04-18T22:52:53.497Z [INFO]: # Executing command: if [ -d "frontend" ]; then echo "frontend/ exists"; else echo "frontend/ missing"; exit 1; fi
-                                 frontend/ exists
-                                 # Executing command: rm -rf node_modules package-lock.json
-2025-04-18T22:52:53.499Z [INFO]: # Executing command: npm cache clean --force
-2025-04-18T22:52:53.588Z [WARNING]: npm warn using --force Recommended protections disabled.
-2025-04-18T22:52:54.931Z [INFO]: # Executing command: npm install --legacy-peer-deps
-2025-04-18T22:53:21.404Z [WARNING]: npm warn deprecated lodash.get@4.4.2: This package is deprecated. Use the optional chaining (?.) operator instead.
-2025-04-18T22:53:21.549Z [WARNING]: npm warn deprecated lodash.isequal@4.5.0: This package is deprecated. Use require('node:util').isDeepStrictEqual instead.
-2025-04-18T22:53:21.641Z [WARNING]: npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
-2025-04-18T22:53:23.147Z [WARNING]: npm warn deprecated glob@7.1.6: Glob versions prior to v9 are no longer supported
-2025-04-18T22:53:32.298Z [INFO]: added 417 packages, and audited 425 packages in 37s
-2025-04-18T22:53:32.304Z [INFO]: 48 packages are looking for funding
+2025-04-19T00:51:34.479Z [INFO]: # Executing command: nvm use 20
+2025-04-19T00:51:34.703Z [INFO]: Now using node v20.19.0 (npm v10.8.2)
+2025-04-19T00:51:34.704Z [INFO]: # Executing command: echo "Current directory: $(pwd)"
+2025-04-19T00:51:34.705Z [INFO]: Current directory: /codebuild/output/src3018505336/src/propease
+2025-04-19T00:51:34.705Z [INFO]: # Executing command: if [ -d "frontend" ]; then echo "frontend exists"; else echo "frontend missing"; exit 1; fi
+                                 frontend exists
+                                 # Executing command: cd frontend
+2025-04-19T00:51:34.747Z [INFO]: # Executing command: if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; rm vite.config.ts; fi
+2025-04-19T00:51:34.747Z [INFO]: # Executing command: if [ -f "vite.config.js" ]; then cp vite.config.js vite.config.js.bak; rm vite.config.js; fi
+2025-04-19T00:51:34.750Z [INFO]: # Executing command: if [ -f "postcss.config.cjs" ]; then cp postcss.config.cjs postcss.config.cjs.bak; fi
+2025-04-19T00:51:34.752Z [INFO]: # Executing command: rm -rf node_modules package-lock.json
+2025-04-19T00:51:34.782Z [INFO]: # Executing command: npm cache clean --force
+2025-04-19T00:51:34.905Z [WARNING]: npm warn using --force Recommended protections disabled.
+2025-04-19T00:51:36.251Z [INFO]: # Executing command: npm install --legacy-peer-deps
+2025-04-19T00:51:38.093Z [WARNING]: npm warn deprecated inflight@1.0.6: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
+2025-04-19T00:51:46.660Z [INFO]: added 294 packages, and audited 296 packages in 10s
+2025-04-19T00:51:46.666Z [INFO]: 32 packages are looking for funding
                                  run `npm fund` for details
                                  found 0 vulnerabilities
-2025-04-18T22:53:32.324Z [INFO]: # Executing command: npm list vite || echo "Vite not listed in root dependencies"
-2025-04-18T22:53:32.836Z [INFO]: propease@1.0.0 /codebuild/output/src2151954591/src/propease
-                                 `-- (empty)
-2025-04-18T22:53:32.842Z [INFO]: Vite not listed in root dependencies
-2025-04-18T22:53:32.842Z [INFO]: # Executing command: npm install --workspaces --legacy-peer-deps --include=optional
-2025-04-18T22:53:33.807Z [INFO]: up to date, audited 425 packages in 904ms
-2025-04-18T22:53:33.807Z [INFO]: 48 packages are looking for funding
-                                 run `npm fund` for details
-2025-04-18T22:53:33.808Z [INFO]: found 0 vulnerabilities
-2025-04-18T22:53:33.815Z [INFO]: # Executing command: npm install --save-dev esbuild@0.21.5 @esbuild/linux-x64@0.21.5 @rollup/rollup-linux-x64-gnu client-only @tanstack/react-virtual --legacy-peer-deps
-2025-04-18T22:53:34.855Z [INFO]: up to date, audited 425 packages in 979ms
-2025-04-18T22:53:34.855Z [INFO]: 48 packages are looking for funding
-                                 run `npm fund` for details
-2025-04-18T22:53:34.856Z [INFO]: found 0 vulnerabilities
-2025-04-18T22:53:34.865Z [INFO]: # Executing command: cd frontend
-2025-04-18T22:53:34.874Z [INFO]: # Executing command: if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; fi
-2025-04-18T22:53:34.875Z [INFO]: # Executing command: if [ -f "vite.config.js" ]; then cp vite.config.js vite.config.js.bak; fi
-2025-04-18T22:53:34.877Z [INFO]: # Executing command: cat > vite.config.ts << 'EOF'
-                                 import { defineConfig } from 'vite'
-                                 import react from '@vitejs/plugin-react'
-                                 export default defineConfig({
-                                 plugins: [react()],
-                                 build: {
-                                 rollupOptions: {
-                                 external: ['client-only', '@tanstack/react-virtual']
-                                 }
-                                 }
-                                 })
-                                 EOF
-2025-04-18T22:53:34.878Z [INFO]: # Executing command: rm -rf node_modules package-lock.json
-2025-04-18T22:53:34.912Z [INFO]: # Executing command: npm cache clean --force
-2025-04-18T22:53:35.040Z [WARNING]: npm warn using --force Recommended protections disabled.
-2025-04-18T22:53:35.402Z [INFO]: # Executing command: npm install -g vite@5.4.18
-2025-04-18T22:53:38.588Z [INFO]: added 10 packages in 3s
-2025-04-18T22:53:38.593Z [INFO]: 3 packages are looking for funding
-                                 run `npm fund` for details
-2025-04-18T22:53:38.608Z [INFO]: # Executing command: npm install --no-optional --legacy-peer-deps
-2025-04-18T22:53:38.727Z [WARNING]: npm warn config optional Use `--omit=optional` to exclude optional dependencies, or
-                                    npm warn config `--include=optional` to include them.
-                                    npm warn config
-                                    npm warn config       Default value does install optional deps unless otherwise omitted.
-2025-04-18T22:53:41.374Z [INFO]: added 7 packages, and audited 423 packages in 3s
-2025-04-18T22:53:41.375Z [INFO]: 48 packages are looking for funding
-                                 run `npm fund` for details
-2025-04-18T22:53:41.376Z [INFO]: found 0 vulnerabilities
-2025-04-18T22:53:41.387Z [INFO]: # Executing command: npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
-2025-04-18T22:53:44.958Z [INFO]: added 99 packages, and audited 521 packages in 4s
-2025-04-18T22:53:44.963Z [INFO]: 73 packages are looking for funding
-                                 run `npm fund` for details
-                                 found 0 vulnerabilities
-2025-04-18T22:53:44.975Z [INFO]: # Executing command: echo "Checking for Vite availability..."
-                                 Checking for Vite availability...
-                                 # Executing command: echo "console.log('Vite test');" > vite-test.js
-                                 if command -v vite >/dev/null 2>&1; then
-                                 echo "Vite is available in PATH"
-                                 else
-                                 echo "ERROR: Vite command not found in PATH"
-                                 npm list vite -g
-                                 npm list vite
-                                 exit 1
-                                 fi
-                                 Vite is available in PATH
-                                 # Executing command: cd ..
-2025-04-18T22:53:44.981Z [INFO]: # Completed phase: preBuild
+2025-04-19T00:51:46.681Z [INFO]: # Executing command: echo "module.exports = {plugins: {}};" > postcss.config.cjs
+2025-04-19T00:51:46.681Z [INFO]: # Completed phase: preBuild
                                  # Starting phase: build
-2025-04-18T22:53:44.982Z [INFO]: # Executing command: echo "Building frontend application..."
-                                 Building frontend application...
                                  # Executing command: export NODE_ENV=production
                                  # Executing command: export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
-                                 # Executing command: mkdir -p frontend
-2025-04-18T22:53:44.983Z [INFO]: # Executing command: echo "VITE_API_URL=$VITE_API_URL" > frontend/.env.production.local
-2025-04-18T22:53:44.983Z [INFO]: # Executing command: cd frontend
-2025-04-18T22:53:44.990Z [INFO]: # Executing command: rm -rf dist
-2025-04-18T22:53:44.991Z [INFO]: # Executing command: PATH="$PATH:$(npm bin -g)" npm run build || { echo "Build failed"; exit 1; }
-2025-04-18T22:53:45.236Z [INFO]: > propease-frontend@0.1.0 build
-                                 > vite build --mode production
-2025-04-18T22:53:45.425Z [WARNING]: failed to load config from /codebuild/output/src2151954591/src/propease/frontend/vite.config.js
-2025-04-18T22:53:45.425Z [WARNING]: error during build:
-                                    Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /codebuild/output/src2151954591/src/propease/frontend/vite.config.js.timestamp-1745016825422-de630f60d8794.mjs
+                                 # Executing command: echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
+2025-04-19T00:51:46.681Z [INFO]: # Executing command: cat > vite.config.js << 'EOL'
+                                 import { defineConfig } from 'vite';
+                                 import react from '@vitejs/plugin-react';
+                                 import path from 'path';
+                                 import { fileURLToPath } from 'url';
+                                 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+                                 export default defineConfig({
+                                 plugins: [react()],
+                                 resolve: {
+                                 alias: {
+                                 '@': path.resolve(__dirname, './src'),
+                                 },
+                                 },
+                                 build: {
+                                 outDir: 'build',
+                                 },
+                                 });
+                                 EOL
+2025-04-19T00:51:46.683Z [INFO]: # Executing command: rm -rf dist build
+2025-04-19T00:51:46.685Z [INFO]: # Executing command: echo "Building with npx vite..."
+2025-04-19T00:51:46.685Z [INFO]: Building with npx vite...
+                                 # Executing command: npx vite build
+2025-04-19T00:51:48.381Z [WARNING]: npm warn exec The following package was not found and will be installed: vite@6.3.2
+2025-04-19T00:51:52.056Z [WARNING]: failed to load config from /codebuild/output/src3018505336/src/propease/frontend/vite.config.js
+2025-04-19T00:51:52.062Z [WARNING]: error during build:
+                                    Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /codebuild/output/src3018505336/src/propease/frontend/node_modules/.vite-temp/vite.config.js.timestamp-1745023912053-23f1c7134402b.mjs
                                     at packageResolve (node:internal/modules/esm/resolve:873:9)
                                     at moduleResolve (node:internal/modules/esm/resolve:946:18)
                                     at defaultResolve (node:internal/modules/esm/resolve:1188:11)
@@ -287,17 +137,9 @@ here is the full buld logs:
                                     at ModuleLoader.resolve (node:internal/modules/esm/loader:574:38)
                                     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:236:38)
                                     at ModuleJob._link (node:internal/modules/esm/module_job:130:49)
-2025-04-18T22:53:45.431Z [WARNING]: npm error Lifecycle script `build` failed with error:
-2025-04-18T22:53:45.432Z [WARNING]: npm error code 1
-2025-04-18T22:53:45.432Z [WARNING]: npm error path /codebuild/output/src2151954591/src/propease/frontend
-                                    npm error workspace propease-frontend@0.1.0
-                                    npm error location /codebuild/output/src2151954591/src/propease/frontend
-                                    npm error command failed
-                                    npm error command sh -c vite build --mode production
-2025-04-18T22:53:45.436Z [INFO]: Build failed
-2025-04-18T22:53:45.438Z [ERROR]: !!! Build failed
-2025-04-18T22:53:45.438Z [ERROR]: !!! Error: Command failed with exit code 1
-2025-04-18T22:53:45.438Z [INFO]: # Starting environment caching...
-2025-04-18T22:53:45.438Z [INFO]: # Uploading environment cache artifact...
-2025-04-18T22:53:45.526Z [INFO]: # Uploaded environment cache artifact
-2025-04-18T22:53:45.526Z [INFO]: # Environment caching completed
+2025-04-19T00:51:52.146Z [ERROR]: !!! Build failed
+2025-04-19T00:51:52.146Z [ERROR]: !!! Error: Command failed with exit code 1
+2025-04-19T00:51:52.147Z [INFO]: # Starting environment caching...
+2025-04-19T00:51:52.147Z [INFO]: # Uploading environment cache artifact...
+2025-04-19T00:51:52.243Z [INFO]: # Uploaded environment cache artifact
+2025-04-19T00:51:52.243Z [INFO]: # Environment caching completed

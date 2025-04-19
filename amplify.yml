@@ -3,26 +3,28 @@ frontend:
   phases:
     preBuild:
       commands:
-        - "nvm install 20"
-        - "nvm use 20"
-        - "echo \"Current directory: $(pwd)\""
-        - "if [ -d \"frontend\" ]; then echo \"frontend exists\"; else echo \"frontend missing\"; exit 1; fi"
-        - "cd frontend"
-        - "if [ -f \"vite.config.ts\" ]; then cp vite.config.ts vite.config.ts.bak; rm vite.config.ts; fi"
-        - "if [ -f \"vite.config.js\" ]; then cp vite.config.js vite.config.js.bak; rm vite.config.js; fi"
-        - "if [ -f \"postcss.config.cjs\" ]; then cp postcss.config.cjs postcss.config.cjs.bak; fi"
-        - "rm -rf node_modules package-lock.json"
-        - "npm cache clean --force"
-        - "npm install --legacy-peer-deps"
-        - "echo \"module.exports = {plugins: {}};\" > postcss.config.cjs"
+        - nvm install 20
+        - nvm use 20
+        - echo "Current directory: $(pwd)"
+        - if [ -d "frontend" ]; then echo "frontend exists"; else echo "frontend missing"; exit 1; fi
+        - cd frontend
+        - if [ -f "vite.config.ts" ]; then cp vite.config.ts vite.config.ts.bak; rm vite.config.ts; fi
+        - if [ -f "vite.config.js" ]; then cp vite.config.js vite.config.js.bak; rm vite.config.js; fi
+        - if [ -f "postcss.config.cjs" ]; then cp postcss.config.cjs postcss.config.cjs.bak; fi
+        - rm -rf node_modules package-lock.json
+        - npm cache clean --force
+        - npm install --legacy-peer-deps
+        - npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4 autoprefixer postcss tailwindcss
+        - if ./node_modules/.bin/vite --version >/dev/null 2>&1; then echo "Vite installed successfully"; else echo "Vite installation failed"; exit 1; fi
+        - echo "module.exports = {plugins: {}};" > postcss.config.cjs
     
     build:
       commands:
-        - "export NODE_ENV=production"
-        - "export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com"
-        - "echo \"VITE_API_URL=$VITE_API_URL\" > .env.production.local"
+        - export NODE_ENV=production
+        - export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
+        - echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
         - |
-          cat > vite.config.js << 'EOL'
+          cat > vite.config.js << 'EOF'
           import { defineConfig } from 'vite';
           import react from '@vitejs/plugin-react';
           import path from 'path';
@@ -41,11 +43,11 @@ frontend:
               outDir: 'build',
             },
           });
-          EOL
-        - "rm -rf dist build"
-        - "echo \"Building with npx vite...\""
-        - "npx vite build"
-        - "if [ -d \"build\" ]; then echo \"Build successful\"; else echo \"Build failed - build directory not found\"; exit 1; fi"
+          EOF
+        - rm -rf dist build
+        - echo "Building with local Vite binary..."
+        - ./node_modules/.bin/vite build --mode production
+        - if [ -d "build" ]; then echo "Build successful"; else echo "Build failed - build directory not found"; exit 1; fi
 
   artifacts:
     baseDirectory: frontend/build
