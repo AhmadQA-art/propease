@@ -26,19 +26,6 @@ echo "Changing to frontend directory..."
 cd frontend
 echo "Current directory: $(pwd)"
 
-# Create backup of existing configuration files
-if [ -f "vite.config.ts" ]; then
-  cp vite.config.ts vite.config.ts.bak
-  rm vite.config.ts
-fi
-if [ -f "vite.config.js" ]; then
-  cp vite.config.js vite.config.js.bak
-  rm vite.config.js
-fi
-if [ -f "postcss.config.cjs" ]; then
-  cp postcss.config.cjs postcss.config.cjs.bak
-fi
-
 # Clean previous installations
 echo "Cleaning previous installations..."
 rm -rf node_modules package-lock.json
@@ -50,60 +37,50 @@ npm install --legacy-peer-deps
 
 # Explicitly install Vite with exact version
 echo "Installing Vite and plugins explicitly..."
-npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4 autoprefixer postcss tailwindcss
+npm install --save-dev vite@5.4.18 @vitejs/plugin-react@4.3.4
 
-# Verify Vite installation - exactly like in amplify.yml
-if ./node_modules/.bin/vite --version >/dev/null 2>&1; then 
-  echo "Vite installed successfully"
-else 
-  echo "Vite installation failed"
-  exit 1
-fi
-
-# Create a simplified PostCSS config - exactly like in amplify.yml
-echo "module.exports = {plugins: {}};" > postcss.config.cjs
+# Create a simplified PostCSS config
+echo 'module.exports = {plugins: {}};' > postcss.config.cjs
 
 # Set environment variables
 export NODE_ENV=production
 export VITE_API_URL=https://propease-backend-2-env.eba-mgfe8nm9.us-east-2.elasticbeanstalk.com
 
-# Create .env.production.local - exactly like in amplify.yml
-echo "VITE_API_URL=$VITE_API_URL" > .env.production.local
+# Create .env.production.local
+echo 'VITE_API_URL=$VITE_API_URL' > .env.production.local
 
-# Create Vite config using the same format as in amplify.yml
+# Create Vite config file line by line
 echo "Creating vite.config.js..."
-cat > vite.config.js << 'EOF'
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  build: {
-    outDir: 'build',
-  },
-});
-EOF
+echo 'import { defineConfig } from "vite";' > vite.config.js
+echo 'import react from "@vitejs/plugin-react";' >> vite.config.js
+echo 'import path from "path";' >> vite.config.js
+echo 'import { fileURLToPath } from "url";' >> vite.config.js
+echo '' >> vite.config.js
+echo 'const __dirname = path.dirname(fileURLToPath(import.meta.url));' >> vite.config.js
+echo '' >> vite.config.js
+echo 'export default defineConfig({' >> vite.config.js
+echo '  plugins: [react()],' >> vite.config.js
+echo '  resolve: {' >> vite.config.js
+echo '    alias: {' >> vite.config.js
+echo '      "@": path.resolve(__dirname, "./src"),' >> vite.config.js
+echo '    },' >> vite.config.js
+echo '  },' >> vite.config.js
+echo '  build: {' >> vite.config.js
+echo '    outDir: "build",' >> vite.config.js
+echo '  },' >> vite.config.js
+echo '});' >> vite.config.js
 
 # Clean any previous build artifacts
 echo "Cleaning previous build artifacts..."
 rm -rf dist build
 
-# Build with local Vite binary - exactly like in amplify.yml
-echo "Building with local Vite binary..."
-./node_modules/.bin/vite build --mode production
+# Build with npx vite
+echo "Building with npx vite..."
+npx vite build --mode production
 
-# Verify build output - exactly like in amplify.yml
+# Verify build output
 if [ -d "build" ]; then 
-  echo "Build successful"
+  echo "Build successful in $(pwd)"
 else
   echo "Build failed - build directory not found"
   exit 1
