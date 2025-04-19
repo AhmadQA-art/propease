@@ -1,0 +1,53 @@
+2025-04-19T19:34:14.311Z [INFO]: # Cloning repository: git@github.com:AhmadQA-art/propease.git
+2025-04-19T19:34:15.409Z [INFO]: 
+2025-04-19T19:34:15.409Z [INFO]: Cloning into 'propease'...
+2025-04-19T19:34:15.410Z [INFO]: # Switching to commit: a16f0872e34ec27c0650a6cf5ef09df5a47a8907
+2025-04-19T19:34:15.443Z [INFO]: Note: switching to 'a16f0872e34ec27c0650a6cf5ef09df5a47a8907'.
+                                 You are in 'detached HEAD' state. You can look around, make experimental
+                                 changes and commit them, and you can discard any commits you make in this
+                                 state without impacting any branches by switching back to a branch.
+                                 If you want to create a new branch to retain commits you create, you may
+                                 do so (now or later) by using -c with the switch command. Example:
+                                 git switch -c <new-branch-name>
+                                 Or undo this operation with:
+                                 git switch -
+                                 Turn off this advice by setting config variable advice.detachedHead to false
+                                 HEAD is now at a16f087 fixes
+2025-04-19T19:34:15.488Z [INFO]: Successfully cleaned up Git credentials
+2025-04-19T19:34:15.489Z [INFO]: # Checking for Git submodules at: /codebuild/output/src4090449963/src/propease/.gitmodules
+2025-04-19T19:34:15.497Z [INFO]: # Retrieving environment cache...
+2025-04-19T19:34:15.575Z [INFO]: # Retrieved environment cache
+2025-04-19T19:34:15.575Z [INFO]: ---- Setting Up SSM Secrets ----
+2025-04-19T19:34:15.575Z [INFO]: SSM params {"Path":"/amplify/d3fa4pbfi6dm3q/main/","WithDecryption":true}
+2025-04-19T19:34:15.622Z [WARNING]: !Failed to set up process.env.secrets
+2025-04-19T19:34:16.353Z [INFO]: # No package override configuration found.
+2025-04-19T19:34:16.358Z [INFO]: # Retrieving cache...
+2025-04-19T19:34:23.760Z [INFO]: # Extracting cache...
+2025-04-19T19:34:40.208Z [INFO]: # Extraction completed
+2025-04-19T19:34:40.328Z [INFO]: # Retrieved cache
+2025-04-19T19:34:44.851Z [INFO]: ## Starting Backend Build
+                                 ## Checking for associated backend environment...
+                                 ## No backend environment association found, continuing...
+                                 ## Completed Backend Build
+2025-04-19T19:34:44.857Z [INFO]: {"backendDuration": 0}
+                                 ## Starting Frontend Build
+                                 # Starting phase: preBuild
+                                 # Executing command: echo "Installing Node.js version 20.x.x"
+                                 Installing Node.js version 20.x.x
+                                 # Executing command: nvm use 20 || nvm install 20
+2025-04-19T19:34:57.541Z [INFO]: Now using node v20.9.0 (npm v10.1.0)
+2025-04-19T19:34:57.545Z [INFO]: # Executing command: node -v
+                                 v20.9.0
+2025-04-19T19:34:57.545Z [INFO]: 
+2025-04-19T19:34:57.546Z [INFO]: # Executing command: npm -v
+2025-04-19T19:34:57.772Z [INFO]: 10.1.0
+2025-04-19T19:34:57.777Z [INFO]: # Executing command: echo "Running diagnostic script"
+                                 Running diagnostic script
+2025-04-19T19:34:57.778Z [INFO]: # Executing command: cd frontend
+2025-04-19T19:34:57.778Z [WARNING]: /root/.rvm/scripts/extras/bash_zsh_support/chpwd/function.sh: line 5: cd: frontend: No such file or directory
+2025-04-19T19:34:57.779Z [ERROR]: !!! Build failed
+2025-04-19T19:34:57.779Z [ERROR]: !!! Error: Command failed with exit code 1
+2025-04-19T19:34:57.779Z [INFO]: # Starting environment caching...
+2025-04-19T19:34:57.780Z [INFO]: # Uploading environment cache artifact...
+2025-04-19T19:34:57.861Z [INFO]: # Uploaded environment cache artifact
+2025-04-19T19:34:57.861Z [INFO]: # Environment caching completed
